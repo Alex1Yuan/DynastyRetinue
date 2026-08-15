@@ -1,0 +1,10 @@
+﻿{
+  "Id": "KgdRetinue",
+  "DisplayName": "Kgd Retinue",
+  "Author": "kyua805",
+  "Version": "0.9.13",
+  "ManagerVersion": "0.23.0",
+  "Requirements": [],
+  "AssemblyName": "KgdRetinue.dll",
+  "EntryMethod": "KgdRetinue.Main.Load"
+}

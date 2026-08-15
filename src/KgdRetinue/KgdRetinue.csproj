@@ -1,0 +1,49 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <AssemblyName>KgdRetinue</AssemblyName>
+    <RootNamespace>KgdRetinue</RootNamespace>
+    <!-- 关键三行：必须用游戏自带的 BCL，不能用微软 net472 参考程序集。
+         否则 MathF / Math.Clamp / System.Index 一律 CS0103/CS0117/CS0518。 -->
+    <NoStdLib>true</NoStdLib>
+    <NoConfig>true</NoConfig>
+    <DisableImplicitFrameworkReferences>true</DisableImplicitFrameworkReferences>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <EnableDefaultItems>true</EnableDefaultItems>
+    <DebugType>portable</DebugType>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <GameManaged>H:\SteamLibrary\steamapps\common\Warhammer 40,000 Rogue Trader\WH40KRT_Data\Managed</GameManaged>
+    <UmmDir>C:\Users\kyua805\AppData\LocalLow\Owlcat Games\Warhammer 40000 Rogue Trader\UnityModManager</UmmDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- 游戏自带 BCL -->
+    <Reference Include="mscorlib"><HintPath>$(GameManaged)\mscorlib.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="netstandard"><HintPath>$(GameManaged)\netstandard.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="System"><HintPath>$(GameManaged)\System.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="System.Core"><HintPath>$(GameManaged)\System.Core.dll</HintPath><Private>false</Private></Reference>
+    <!-- 游戏与引擎 -->
+    <Reference Include="Code"><HintPath>$(GameManaged)\Code.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Kingmaker.UnitLogic.Enums"><HintPath>$(GameManaged)\Kingmaker.UnitLogic.Enums.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Kingmaker.Enums"><HintPath>$(GameManaged)\Kingmaker.Enums.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Kingmaker.PubSubSystem.Core.Interfaces"><HintPath>$(GameManaged)\Kingmaker.PubSubSystem.Core.Interfaces.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="RogueTrader.GameCore"><HintPath>$(GameManaged)\RogueTrader.GameCore.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="ContextData"><HintPath>$(GameManaged)\ContextData.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Kingmaker.EntitySystem.Stats.Base"><HintPath>$(GameManaged)\Kingmaker.EntitySystem.Stats.Base.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="0Harmony"><HintPath>$(GameManaged)\0Harmony.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Newtonsoft.Json"><HintPath>$(GameManaged)\Newtonsoft.Json.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Utility.DotNetExtensions"><HintPath>$(GameManaged)\Utility.DotNetExtensions.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="StateHasher"><HintPath>$(GameManaged)\StateHasher.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine"><HintPath>$(GameManaged)\UnityEngine.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.CoreModule"><HintPath>$(GameManaged)\UnityEngine.CoreModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.IMGUIModule"><HintPath>$(GameManaged)\UnityEngine.IMGUIModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.InputLegacyModule"><HintPath>$(GameManaged)\UnityEngine.InputLegacyModule.dll</HintPath><Private>false</Private></Reference>
+    <!-- UnityModManager -->
+    <Reference Include="UnityModManager"><HintPath>$(UmmDir)\UnityModManager.dll</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
+
+</Project>

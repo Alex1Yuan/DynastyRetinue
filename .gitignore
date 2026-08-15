@@ -1,0 +1,27 @@
+# 构建产物
+bin/
+obj/
+*.dll.*.cache
+*.dll.*.cache.pdb
+
+# ── ref/ 是分析工作区：反编译源码、蓝图索引、各种 dump，共 168MB。
+#    全部可以从游戏重新生成，不入库；只保留笔记和分析脚本（见末尾取反规则）。
+ref/*
+!ref/*.md
+!ref/rt_probe/
+ref/rt_probe/*
+!ref/rt_probe/*.py
+!ref/bbp/
+ref/bbp/*
+!ref/bbp/Program.cs
+!ref/bbp/bbp.csproj
+
+# 存档备份（含个人存档）
+savebackup_*/
+
+# 游戏内导出的大表，可由 mod 面板按钮重新导出
+*_zh.tsv
+items.tsv
+features.tsv
+armor_rank.tsv
+autotest.tsv
