@@ -163,22 +163,47 @@ namespace KgdRetinue
                 {
                     if (ws == null) continue;
                     string slotType = "?", wname = "(空)", wtype = "?";
+                    object item = null;
                     try
                     {
-                        var bpSlot = Get(ws, "Blueprint") ?? Get(ws, "SlotData");
-                        var t = Get(bpSlot, "Type"); if (t != null) slotType = t.ToString();
-                        var item = Get(ws, "MaybeItem");
+                        item = Get(ws, "MaybeItem");
                         if (item != null)
                         {
                             var bp = Get(item, "Blueprint");
                             var n = Get(bp, "Name"); if (n != null) wname = n.ToString();
                             var wt = Get(bp, "WeaponType"); if (wt != null) wtype = wt.ToString();
+
+                            // ★ 槽位类型要从**武器**上问，不是从槽位对象上问 ★
+                            // 之前读的是 slot.Blueprint.Type / slot.SlotData.Type，五件武器全读成 "?"，
+                            // 于是"挂点：没有"对所有武器无差别地打了一遍 —— 假警报，
+                            // 实际上宏炮是能正常挂上的。
+                            // StarshipChargesPatch.SlotName 走的是 weapon.WeaponSlot.Type，
+                            // 多打/射程加成靠它分左右舷且实测生效，是已验证可用的那条路。
+                            slotType = StarshipChargesPatch.SlotName(item);
                         }
                     }
                     catch { }
+
+                    if (slotType == "?")
+                    {
+                        // 退路：再从槽位对象那边试一次（空槽位也走这里）
+                        try
+                        {
+                            var bpSlot = Get(ws, "Blueprint") ?? Get(ws, "SlotData");
+                            var t = Get(bpSlot, "Type") ?? Get(ws, "Type") ?? Get(ws, "SlotType");
+                            if (t != null) slotType = t.ToString();
+                        }
+                        catch { }
+                    }
+
+                    if (item == null) { Main.Log("    槽位 " + slotType.PadRight(11) + " (空)"); continue; }
+
                     bool ok = have.ContainsKey(slotType);
+                    string verdict = slotType == "?"
+                        ? "槽位类型读不出来，无法判断"
+                        : (ok ? "有 ✓" : "★没有 —— 开火点会跑到虚空★");
                     Main.Log("    槽位 " + slotType.PadRight(11) + " 武器 " + wname
-                             + "  [" + wtype + "]   挂点: " + (ok ? "有 ✓" : "★没有 —— 开火点会跑到虚空★"));
+                             + "  [" + wtype + "]   挂点: " + verdict);
                 }
             }
             catch (Exception e) { Main.LogError("    读武器失败: " + e.Message); }
