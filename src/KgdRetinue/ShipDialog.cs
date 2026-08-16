@@ -1,186 +1,163 @@
-﻿using System;
+using System;
+using UnityEngine;
 using Kingmaker;
 using Kingmaker.Enums;
 
 namespace KgdRetinue
 {
     /// <summary>
-    /// 「向高阶顾问采购舰船改装」—— 用废料把座舰换成巡洋舰 / 大巡洋舰。
+    /// 船坞：用废料改装座舰。**一条对话选项 + 一个子菜单窗口**。
     ///
-    /// 走的是 RecruitDialog 那套注入式对话选项，一个字节的机制都不重复实现：
-    /// 那套里每个字段为什么必须非空、为什么必须绕开原版 SelectAnswer，
-    /// 都是一次次崩溃换来的（BlueprintAnswer.ShowCheck 的 NRE 会把整段对话打空，
-    /// BookEventLog 是类型化蓝图字典、写进去存档就带上我们的 GUID）。
-    /// 所以这里只提供三样东西：文案、价格、选中之后干什么。
+    /// 为什么不做成两条并列的对话选项（v0.38.0 那样）：
+    ///   · 价格随当前分档变（巡洋→大巡只补差价），并列选项要各自维护文案；
+    ///   · 还原/退款需要第三条，主菜单会被我们塞满；
+    ///   · 成交后要有顾问的台词，而并列选项一选就得关对话。
+    /// 一条入口 + 自己的窗口，这三件事都变成普通 UI 逻辑，不用去造 BlueprintCue
+    /// （造 cue 的风险和造 answer 同级：任何一个引用字段为 null 都会把整段对话打空）。
+    ///
+    /// 对话**不关闭** —— Entry.KeepDialog = true。玩家关掉窗口就回到顾问面前，
+    /// 而不是被一脚踢出对话。
     ///
     /// ================= 存档安全 =================
-    /// 三个动作全部落在**已经验证过的**通道上：
-    ///   · Scrap.Spend(int)             —— 纯数值
-    ///   · StarshipTool.SetSize(Size)   —— PartUnitState.Size，vanilla 枚举
-    ///   · StarshipViewTool.ApplyModelAtTier —— m_CustomPrefabGuid，裸 string + vanilla guid
+    ///   · Scrap.Spend/Receive(int)                —— 纯数值
+    ///   · StarshipTool.SetSize(Size)              —— vanilla 枚举
+    ///   · StarshipViewTool.ApplyModelAtTier/RevertAll —— m_CustomPrefabGuid，裸 string
     /// 一个 mod 自建蓝图都不写进存档。
     /// </summary>
     public static class ShipDialog
     {
-        // GUID 与招募那条同族，尾号区分。固定值，便于日志排查。
-        public const string CruiserGuid = "kgd00001000010000100001000010002";
-        public const string GrandGuid   = "kgd00001000010000100001000010003";
+        public const string YardGuid = "kgd00001000010000100001000010002";
+        public const string YardKey  = "kgd_ship_yard";
 
-        public const string CruiserKey  = "kgd_ship_cruiser";
-        public const string GrandKey    = "kgd_ship_grand";
-
-        /// <summary>把两条选项注册到 RecruitDialog 的注册表。幂等。</summary>
         public static void RegisterAll()
         {
             RecruitDialog.Register(new RecruitDialog.Entry
             {
-                Guid     = CruiserGuid,
-                TextKey  = CruiserKey,
-                Text     = Label(false),
-                Enabled  = delegate { return Enabled(false); },
-                OnPicked = delegate { Buy(false); },
-            });
-            RecruitDialog.Register(new RecruitDialog.Entry
-            {
-                Guid     = GrandGuid,
-                TextKey  = GrandKey,
-                Text     = Label(true),
-                Enabled  = delegate { return Enabled(true); },
-                OnPicked = delegate { Buy(true); },
+                Guid       = YardGuid,
+                TextKey    = YardKey,
+                Text       = delegate { return "（船坞）关于座舰的改装事宜……"; },
+                Enabled    = delegate { return Main.Settings != null && Main.Settings.ShipDialogEntry; },
+                KeepDialog = true,          // 留在对话里，好让顾问说完话
+                OnPicked   = ShipYardWindow.Open,
             });
         }
 
         // ---------------------------------------------------------------- 价格
 
-        /// <summary>
-        /// 当前分档下，升到目标档要花多少废料。
-        ///
-        /// 定价按玩家给的规则：护卫舰→巡洋 500，护卫舰→大巡 1000，
-        /// **巡洋→大巡只补差价 500** —— 已经花过的那 500 不重复收。
-        /// 实现成"目标总价 − 已投入总价"，这样将来加档位也不用改逻辑。
-        /// </summary>
-        public static int Price(bool grand)
+        /// <summary>玩家这条船**原本**是什么档 —— 还原的目标，也是"没投入过"的基准。</summary>
+        public static Size OriginalSize()
         {
-            int target = grand ? Main.Settings.ShipPriceGrand : Main.Settings.ShipPriceCruiser;
-            int paid   = InvestedSoFar();
-            int p = target - paid;
+            try
+            {
+                var s = StarshipViewTool.PlayerShip;
+                return s != null ? s.OriginalSize : Size.Frigate_1x2;
+            }
+            catch { return Size.Frigate_1x2; }
+        }
+
+        /// <summary>某个分档对应的"总投入"。还原退款和升级差价都从这里推。</summary>
+        public static int TotalFor(Size sz)
+        {
+            if (Main.Settings == null) return 0;
+            if (sz == Size.GrandCruiser_3x6) return Main.Settings.ShipPriceGrand;
+            if (sz == Size.Cruiser_2x4)      return Main.Settings.ShipPriceCruiser;
+            return 0;   // 原生档（护卫舰等）不算投入
+        }
+
+        public static Size Current()
+        {
+            try { return StarshipTool.CurrentSize(); } catch { return OriginalSize(); }
+        }
+
+        /// <summary>
+        /// 升到 target 还要补多少。**只补差价** —— 已经花过的不重复收。
+        /// 巡洋(已付500) → 大巡(总价1000) = 500，正是玩家要的规则。
+        /// </summary>
+        public static int PriceTo(Size target)
+        {
+            int p = TotalFor(target) - TotalFor(Current());
             return p < 0 ? 0 : p;
         }
 
-        /// <summary>当前分档等价于已经投入了多少 —— 用来算差价。</summary>
-        private static int InvestedSoFar()
+        /// <summary>还原到原本那档能退多少 —— 按当前档的总投入全额退。</summary>
+        public static int RefundOnRevert()
         {
-            try
-            {
-                switch (StarshipTool.CurrentSize())
-                {
-                    case Size.GrandCruiser_3x6: return Main.Settings.ShipPriceGrand;
-                    case Size.Cruiser_2x4:      return Main.Settings.ShipPriceCruiser;
-                    default:                            return 0;
-                }
-            }
-            catch { return 0; }
+            int r = TotalFor(Current()) - TotalFor(OriginalSize());
+            return r < 0 ? 0 : r;
         }
 
-        private static bool AlreadyAtOrAbove(bool grand)
+        public static string SizeName(Size s)
         {
-            try
-            {
-                var cur = StarshipTool.CurrentSize();
-                if (grand) return cur == Size.GrandCruiser_3x6;
-                // 巡洋这条：已经是巡洋或更高都不再显示
-                return cur == Size.Cruiser_2x4 || cur == Size.GrandCruiser_3x6;
-            }
-            catch { return false; }
+            if (s == Size.GrandCruiser_3x6) return "大巡洋舰";
+            if (s == Size.Cruiser_2x4)      return "巡洋舰";
+            if (s == Size.Frigate_1x2)      return "护卫舰";
+            if (s == Size.Raider_1x1)       return "劫掠舰";
+            return s.ToString();
         }
 
-        // ---------------------------------------------------------------- 显示
-
-        private static string Label(bool grand)
+        public static int Scrap()
         {
-            string name = grand ? "大巡洋舰" : "巡洋舰";
-            return "（船坞）把座舰改装成" + name + "　—— " + Price(grand) + " 废料";
-        }
-
-        /// <summary>
-        /// 这条选项要不要出现。
-        /// ★刻意**不**按"废料够不够"来隐藏★ —— 玩家看不到选项就不知道有这回事，
-        /// 也不知道要攒多少。买不起时照常显示，选中后告诉他差多少。
-        /// </summary>
-        private static bool Enabled(bool grand)
-        {
-            try
-            {
-                if (Main.Settings == null || !Main.Settings.ShipDialogEntry) return false;
-                if (Game.Instance == null || Game.Instance.Player == null) return false;
-                if (AlreadyAtOrAbove(grand)) return false;
-                return true;
-            }
-            catch { return false; }
+            try { return Game.Instance.Player.Scrap; } catch { return 0; }
         }
 
         // ---------------------------------------------------------------- 成交
 
-        private static void Buy(bool grand)
+        /// <summary>升级到 target。返回给玩家看的一句话。</summary>
+        public static string Buy(Size target)
         {
             try
             {
-                var player = Game.Instance != null ? Game.Instance.Player : null;
-                if (player == null) { Main.LogError("[船坞] 拿不到 Player。"); return; }
+                if (Current() == target) return "座舰已经是" + SizeName(target) + "了。";
 
-                int price = Price(grand);
-                int have  = 0;
-                try { have = player.Scrap; } catch { }   // Scrap 有 implicit operator int
-
+                int price = PriceTo(target);
+                int have  = Scrap();
                 if (have < price)
-                {
-                    Main.Log("[船坞] 废料不够：需要 " + price + "，现有 " + have
-                           + "（还差 " + (price - have) + "）。没有扣除任何资源。");
-                    Notify("废料不足：需要 " + price + "，现有 " + have);
-                    return;
-                }
+                    return "废料不够 —— 需要 " + price + "，账上只有 " + have
+                         + "。还差 " + (price - have) + "。（一枚都没扣。）";
 
-                var tier  = grand ? Size.GrandCruiser_3x6 : Size.Cruiser_2x4;
-                var model = ShipModelCatalog.DefaultFor(tier);
-                if (model == null)
-                {
-                    Main.LogError("[船坞] 目录里没有 " + tier + " 的默认船模，交易取消，未扣废料。");
-                    return;
-                }
+                var model = ShipModelCatalog.DefaultFor(target);
+                if (model == null) return "船坞里没有对应的船体图纸，交易取消，废料未扣。";
 
-                // ★先换船再扣钱★ 换船可能被拒（战斗中会拒，见 StarshipTool.SetSize），
+                // ★先换船再扣钱★ 换船可能被拒（战斗中 StarshipTool.SetSize 会拒），
                 // 顺序反了就是"钱花了船没换"。宁可白换不能白扣。
-                if (!StarshipViewTool.ApplyModelAtTier(model, tier))
-                {
-                    Main.LogError("[船坞] 改装失败（多半在战斗中），未扣废料。");
-                    Notify("现在无法改装（战斗中？），废料未扣除。");
-                    return;
-                }
+                if (!StarshipViewTool.ApplyModelAtTier(model, target))
+                    return "现在动不了船坞（在战斗中？）。废料未扣除。";
 
-                try { player.Scrap.Spend(price); }
-                catch (Exception e)
-                {
-                    // 到这一步船已经换了。扣不掉钱只报，不回滚 ——
-                    // 回滚要再换一次船，风险比少收 500 废料大得多。
-                    Main.LogError("[船坞] ★船已改装但废料扣除失败★: " + e.Message);
-                }
+                try { Game.Instance.Player.Scrap.Spend(price); }
+                catch (Exception e) { Main.LogError("[船坞] ★船已改装但废料扣除失败★: " + e.Message); }
 
-                Main.Log("[船坞] 成交：" + (grand ? "大巡洋舰" : "巡洋舰")
-                       + "　花费 " + price + " 废料　余额 " + Safe(player) + "　分档 " + tier);
-                Notify("座舰已改装为" + (grand ? "大巡洋舰" : "巡洋舰") + "，花费 " + price + " 废料。");
+                Main.Log("[船坞] 成交 -> " + SizeName(target) + "　花费 " + price + "　余额 " + Scrap());
+                return "改装完成。您的座舰现在是一艘" + SizeName(target) + "了，"
+                     + "船坞收讫 " + price + " 单位废料。";
             }
-            catch (Exception e) { Main.LogError("[船坞] 交易异常: " + e); }
+            catch (Exception e) { Main.LogError("[船坞] 交易异常: " + e); return "船坞出了点岔子，交易未完成。"; }
         }
 
-        private static string Safe(object player)
+        /// <summary>还原成玩家原本那条船，并退还废料。</summary>
+        public static string Revert()
         {
-            try { return ((int)Game.Instance.Player.Scrap).ToString(); } catch { return "?"; }
-        }
+            try
+            {
+                var orig = OriginalSize();
+                if (Current() == orig) return "座舰本来就是" + SizeName(orig) + "，无需还原。";
 
-        /// <summary>给玩家一条可见反馈。拿不到战斗日志就只进 mod 日志，不抛。</summary>
-        private static void Notify(string msg)
-        {
-            try { Main.Log("[船坞] " + msg); } catch { }
+                int refund = RefundOnRevert();
+
+                // 还原走 RevertAll：它同时把 m_CustomPrefabGuid 清空、把 Size 设回 OriginalSize。
+                // 只改一样会留下"新模型 + 旧档位"或反过来的中间态。
+                if (!StarshipViewTool.RevertAll())
+                    return "现在动不了船坞（在战斗中？）。什么都没改。";
+
+                if (refund > 0)
+                {
+                    try { Game.Instance.Player.Scrap.Receive(refund); }
+                    catch (Exception e) { Main.LogError("[船坞] 退款失败: " + e.Message); }
+                }
+                Main.Log("[船坞] 已还原为 " + SizeName(orig) + "　退款 " + refund + "　余额 " + Scrap());
+                return "已按原样复原。您的座舰重新是一艘" + SizeName(orig) + "，"
+                     + "船坞退还 " + refund + " 单位废料。";
+            }
+            catch (Exception e) { Main.LogError("[船坞] 还原异常: " + e); return "船坞出了点岔子，还原未完成。"; }
         }
     }
 }

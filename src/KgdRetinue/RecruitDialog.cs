@@ -40,11 +40,18 @@ namespace KgdRetinue
         {
             public string Guid;
             public string TextKey;
-            public string Text;
+            /// <summary>★必须是委托不能是字符串★ 文案里含价格，而价格随当前分档变
+            /// （巡洋→大巡只补差价）。写成 string 会在注册那一刻求值一次就冻住 ——
+            /// v0.38.0 的 bug：换成巡洋之后，大巡那条仍然显示 1000 而不是 500。
+            /// LocalizedString 每次取值都去查表，所以这里每次都能拿到最新的。</summary>
+            public Func<string> Text;
             /// <summary>玩家选中后要做的事。★绝不能在 answer 的 OnSelect 里做★</summary>
             public Action OnPicked;
             /// <summary>返回 false 就不注入（面板开关）。</summary>
             public Func<bool> Enabled;
+            /// <summary>true = 选中后**不**关闭对话框。船坞要留在对话里，
+            /// 好让顾问在成交后还能说话，而不是把玩家一脚踢出对话。</summary>
+            public bool KeepDialog;
         }
 
         private static readonly List<Entry> Entries = new List<Entry>();
@@ -55,11 +62,16 @@ namespace KgdRetinue
             Register(new Entry {
                 Guid     = AnswerGuid,
                 TextKey  = TextKey,
-                Text     = TextValue,
+                Text     = delegate { return TextValue; },
                 Enabled  = delegate { return Main.Settings != null && Main.Settings.DialogRecruitEntry; },
                 OnPicked = delegate { Main.OpenRecruitUI(null); },
             });
             ShipDialog.RegisterAll();
+        }
+
+        private static string Label(Entry e)
+        {
+            try { return e != null && e.Text != null ? e.Text() : "?"; } catch { return "?"; }
         }
 
         public static void Register(Entry e)
@@ -121,7 +133,9 @@ namespace KgdRetinue
             {
                 if (string.IsNullOrEmpty(key)) return true;
                 string val = null;
-                foreach (var e in Entries) if (e.TextKey == key) { val = e.Text; break; }
+                foreach (var e in Entries)
+                    if (e.TextKey == key)
+                    { try { val = e.Text != null ? e.Text() : null; } catch { val = null; } break; }
                 if (val == null) return true;
                 text = val;
                 __result = true;
@@ -238,7 +252,7 @@ namespace KgdRetinue
                 ResourcesLibrary.BlueprintsCache.AddCachedBlueprint(entry.Guid, a);
                 _answer = a;
                 _answers[entry.Guid] = a;
-                Main.Log("[对话注入] answer 已注册 " + entry.Guid + "  「" + entry.Text + "」");
+                Main.Log("[对话注入] answer 已注册 " + entry.Guid + "  「" + Label(entry) + "」");
             }
             catch (Exception e) { Main.LogError("[招募对话] 构造 answer 失败: " + e); }
             return _answer;
@@ -417,7 +431,7 @@ namespace KgdRetinue
                         // 现在直接跳过 SelectAnswer，NextCue 压根不会被消费。
                         // 指回 vanilla cue 反而有重放台词 / 撞 ShowOnce / 重复 ApplyShiftDialog 的风险。
                         n++;
-                        Main.Log("[对话注入] 「" + entry.Text + "」已插入到选项列表 " + best.name + "（" + bestWhere + "）"
+                        Main.Log("[对话注入] 「" + Label(entry) + "」已插入到选项列表 " + best.name + "（" + bestWhere + "）"
                                  + "  位置 " + at + "/" + best.Answers.Count
                                  + (at < best.Answers.Count - 1 ? "（退出项之前）" : "（末尾）"));
                     }
@@ -666,42 +680,43 @@ namespace KgdRetinue
                     var list = f.GetValue(__instance) as List<BlueprintAnswer>;
                     if (list == null || list.Count < 2) return;
 
-                    int mine = -1;
-                    for (int i = 0; i < list.Count; i++)
+                    // ★把我们**全部**条目一起挪到退出项之前★
+                    // v0.38.0 起我们有 3 条选项，原来只挪"找到的第一条"，
+                    // 剩下的留在原位 ⇒ 玩家看到「卫队」又跑回第六个位置。
+                    var ours = new List<BlueprintAnswer>();
+                    for (int i = list.Count - 1; i >= 0; i--)
                     {
                         if (list[i] == null) continue;
-                        bool ours = false;
-                        foreach (var e in Entries) if (e.Guid == list[i].AssetGuid) { ours = true; break; }
-                        if (ours) { mine = i; break; }
+                        bool isOurs = false;
+                        foreach (var e in Entries) if (e.Guid == list[i].AssetGuid) { isOurs = true; break; }
+                        if (isOurs) { ours.Insert(0, list[i]); list.RemoveAt(i); }
                     }
-                    if (mine < 0) return;
+                    if (ours.Count == 0) return;
 
+                    // 已经摘干净了，现在在**剩下的 vanilla 条目**里找退出项。
+                    // 不用再补偿下标 —— 上一版那套 mine/target 互相偏移的算术
+                    // 只在"只挪一条"时成立，条目变成 3 条之后就错了。
                     int target = -1;
                     for (int i = 0; i < list.Count; i++)
                     {
-                        if (i == mine || list[i] == null) continue;
+                        if (list[i] == null) continue;
                         string nm = list[i].name ?? "";
                         foreach (var k in ExitKeys)
                             if (nm.IndexOf(k, StringComparison.OrdinalIgnoreCase) >= 0) { target = i; break; }
                         if (target >= 0) break;
                     }
                     // 认不出退出项 ⇒ 放到最后一条之前（原版最后一个可见选项就是退出）
-                    if (target < 0) target = list.Count - 1;
-
-                    // 先摘出自己会让 target 左移一位，这里补偿
-                    if (mine < target) target--;
+                    if (target < 0) target = list.Count;
                     if (target < 0) target = 0;
-                    if (mine == target) return;
+                    if (target > list.Count) target = list.Count;
 
-                    var a = list[mine];
-                    list.RemoveAt(mine);
-                    list.Insert(target, a);
+                    list.InsertRange(target, ours);
 
                     if (!_orderLogged)
                     {
                         _orderLogged = true;
-                        Main.Log("[招募对话] 可见列表重排：" + mine + " -> " + target
-                                 + "（共 " + list.Count + " 条可见）");
+                        Main.Log("[对话注入] 可见列表重排：" + ours.Count + " 条我们的选项整体挪到第 "
+                                 + target + " 位（退出项之前），共 " + list.Count + " 条可见。");
                     }
                 }
                 catch (Exception e) { Main.LogError("[招募对话] 重排可见列表失败: " + e.Message); }
@@ -755,7 +770,7 @@ namespace KgdRetinue
 
                 try
                 {
-                    Main.Log("[对话注入] 玩家选择了「" + entry.Text + "」");
+                    Main.Log("[对话注入] 玩家选择了「" + Label(entry) + "」");
 
                     var dc = Game.Instance != null ? Game.Instance.DialogController : null;
 
@@ -788,8 +803,11 @@ namespace KgdRetinue
                     // 等价于玩家点了"退出对话"。force:true 会跳过 FinishActions，
                     // 可能留下原版预期该设的标记，反而更不安全。
                     // StopDialog 内部有 DialogStopScheduled 自锁，重复调用无害。
-                    if (dc != null) dc.StopDialog();
-                    else Main.LogError("[招募对话] 拿不到 DialogController，对话框不会自动关闭。");
+                    if (!entry.KeepDialog)
+                    {
+                        if (dc != null) dc.StopDialog();
+                        else Main.LogError("[对话注入] 拿不到 DialogController，对话框不会自动关闭。");
+                    }
 
                     // StopDialog() 同步派发 IDialogInteractionHandler，且 StopMode(Dialog) 是**延迟生效**的；
                     // 在 SelectAnswer 的 Harmony prefix 里同帧建 UI = 在 EventBus 派发中重入。推迟 2 帧跨过它。
