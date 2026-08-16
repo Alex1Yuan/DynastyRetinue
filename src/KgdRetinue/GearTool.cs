@@ -62,6 +62,10 @@ namespace KgdRetinue
             return n;
         }
 
+        /// <summary>上一次发装备的结果 —— 供「一键测装备」取用，免得去 parse 日志文本。</summary>
+        public static int LastOk, LastAlready, LastMiss, LastFail;
+        public static string LastNames = "", LastRejected = "";
+
         /// <summary>
         /// 给卫兵发装备。返回实际装上的件数。
         /// gear 由 GearFor 决定（精英 = 毕业套装，普通 = 玩家自配）。
@@ -144,6 +148,11 @@ namespace KgdRetinue
             }   // using IgnoreLock
 
             if (ok == 0 && already > 0 && fail == 0 && miss == 0) return 0;   // 全都已在身上，安静退出
+
+            // 供一键测装备取用（跟 Archetypes.LastAudit 同一个套路：把上一次的结果留在静态字段里）
+            LastOk = ok; LastAlready = already; LastMiss = miss; LastFail = fail;
+            LastNames = string.Join(", ", names.ToArray());
+            LastRejected = string.Join(" ; ", rejected.ToArray());
 
             Main.Log("  装备: 装上 " + ok + " 件"
                      + (already > 0 ? "，已在身上 " + already + " 件" : "")
@@ -485,7 +494,45 @@ namespace KgdRetinue
             if (arch == null) return null;
             if (Main.Settings == null || !Main.Settings.EquipGraduationGear) return null;
             var d = EliteDefOf(g, arch);
-            return d != null ? d.Gear : arch.PlayerGear;
+            if (d != null) return d.Gear;
+
+            // 普通卫兵按阶位发三套渐进装备。分档依据是物品 Rarity ——
+            // 实测 items_zh.tsv 里 ItemLevel 有 2755/2940 是 0，用不了；
+            // 而 Rarity 与护甲数值单调正相关（吸收中位 Common 40 / Pattern 45 / Unique 50）。
+            // 玩家自己在面板装配过 playerGear 的话，那个优先 —— 手动配置压过默认。
+            if (arch.PlayerGear != null && arch.PlayerGear.Length > 0) return arch.PlayerGear;
+
+            int tier = 1;
+            try
+            {
+                var leader = Kingmaker.Game.Instance != null && Kingmaker.Game.Instance.Player != null
+                           ? Kingmaker.Game.Instance.Player.MainCharacterEntity : null;
+                if (leader != null) tier = Archetypes.PlayerTier(leader);
+            }
+            catch { }
+
+            // 面板上的档位覆盖（0=自动）。纯测试用途：PlayerTier 由玩家等级推出，
+            // 55 级存档恒为 T3，不覆盖的话 T1/T2 两套装备一次都触发不到、没法验。
+            try
+            {
+                if (Main.Settings != null && Main.Settings.GearTierOverride > 0)
+                {
+                    tier = Main.Settings.GearTierOverride;
+                    Main.Log("  [装备] 档位被面板覆盖为 T" + tier + "（自动值 "
+                             + Archetypes.PlayerTier(Kingmaker.Game.Instance.Player.MainCharacterEntity) + "）");
+                }
+            }
+            catch { }
+
+            // 降级取用：T3 没配就退 T2，再退 T1。配置不全也不会让卫兵裸奔。
+            if (tier >= 3 && NotEmpty(arch.GearT3)) return arch.GearT3;
+            if (tier >= 2 && NotEmpty(arch.GearT2)) return arch.GearT2;
+            if (NotEmpty(arch.GearT1)) return arch.GearT1;
+            if (NotEmpty(arch.GearT2)) return arch.GearT2;
+            if (NotEmpty(arch.GearT3)) return arch.GearT3;
+            return null;
         }
+
+        private static bool NotEmpty(string[] a) { return a != null && a.Length > 0; }
     }
 }

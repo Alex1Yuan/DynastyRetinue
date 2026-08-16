@@ -105,12 +105,30 @@ namespace KgdRetinue
             try
             {
                 var sb = new StringBuilder();
-                sb.AppendLine("zh\tguid\ttype\tinternal");
+                // ★ 加 level/rarity/slot ★ 配"按章节渐进的三套装备"要靠它们：
+                // ItemLevel 是 RT 掉落门控的依据，等价于"第几章能拿到"；
+                // Rarity 区分同级里的好坏；type 决定它能进哪个槽。
+                sb.AppendLine("zh\tguid\ttype\tinternal\tlevel\trarity\tsubtype");
                 foreach (var r in rows)
+                {
+                    int lv = -1; string rar = "", sub = "";
+                    try
+                    {
+                        var bp = ResourcesLibrary.TryGetBlueprint<Kingmaker.Blueprints.Items.BlueprintItem>(r.Guid);
+                        if (bp != null)
+                        {
+                            lv = bp.ItemLevel;
+                            rar = bp.Rarity.ToString();
+                            try { sub = bp.SubtypeName ?? ""; } catch { }
+                        }
+                    }
+                    catch { }
                     sb.Append(r.ZhName).Append('\t').Append(r.Guid).Append('\t')
-                      .Append(r.Type).Append('\t').Append(r.InternalName).AppendLine();
+                      .Append(r.Type).Append('\t').Append(r.InternalName).Append('\t')
+                      .Append(lv).Append('\t').Append(rar).Append('\t').Append(sub).AppendLine();
+                }
                 File.WriteAllText(OutputPath, sb.ToString(), new UTF8Encoding(false));
-                Main.Log("已导出物品名录 -> " + OutputPath);
+                Main.Log("已导出物品名录（含 level/rarity）-> " + OutputPath);
             }
             catch (Exception e) { Main.LogError("导出失败: " + e.Message); }
         }

@@ -1,0 +1,944 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using JetBrains.Annotations;
+using Kingmaker.Blueprints;
+using Kingmaker.Blueprints.Base;
+using Kingmaker.Blueprints.Facts;
+using Kingmaker.Blueprints.Items;
+using Kingmaker.Blueprints.JsonSystem.Helpers;
+using Kingmaker.Blueprints.Root;
+using Kingmaker.Blueprints.Root.Strings;
+using Kingmaker.Controllers.Enums;
+using Kingmaker.Designers;
+using Kingmaker.ElementsSystem;
+using Kingmaker.EntitySystem.Entities;
+using Kingmaker.EntitySystem.Stats.Base;
+using Kingmaker.ResourceLinks.BaseInterfaces;
+using Kingmaker.RuleSystem.Rules;
+using Kingmaker.Settings;
+using Kingmaker.UI.Common;
+using Kingmaker.UI.SurfaceCombatHUD;
+using Kingmaker.UnitLogic.Abilities.Components;
+using Kingmaker.UnitLogic.Abilities.Components.Base;
+using Kingmaker.UnitLogic.Abilities.Components.CutsceneAttack;
+using Kingmaker.UnitLogic.Abilities.Components.TargetCheckers;
+using Kingmaker.UnitLogic.Buffs;
+using Kingmaker.UnitLogic.FactLogic;
+using Kingmaker.UnitLogic.Levelup.Obsolete.Blueprints.Spells;
+using Kingmaker.UnitLogic.Mechanics;
+using Kingmaker.UnitLogic.Mechanics.Actions;
+using Kingmaker.UnitLogic.Mechanics.Facts;
+using Kingmaker.UnitLogic.Parts;
+using Kingmaker.Utility.Attributes;
+using Kingmaker.Utility.DotNetExtensions;
+using Kingmaker.View.Mechadendrites;
+using Kingmaker.Visual.Animation.Kingmaker.Actions;
+using MemoryPack;
+using Owlcat.QA.Validation;
+using Owlcat.Runtime.Core.Utility.EditorAttributes;
+using UnityEngine;
+
+namespace Kingmaker.UnitLogic.Abilities.Blueprints;
+
+[Serializable]
+[TypeId("da11db195c86e0d4dae17a2c03a4ba9a")]
+[MemoryPackable(GenerateType.NoGenerate)]
+public class BlueprintAbility : BlueprintUnitFact, IBlueprintScanner, IResourceIdsHolder
+{
+	[Serializable]
+	public class MaterialComponentData
+	{
+		[SerializeField]
+		private BlueprintItemReference m_Item;
+
+		public int Count;
+
+		public BlueprintItem Item => m_Item?.Get();
+	}
+
+	public enum UsingInThreateningAreaType
+	{
+		WillCauseAOO,
+		CanUseWithoutAOO,
+		CannotUse
+	}
+
+	public enum UsingInOverwatchAreaType
+	{
+		WillCauseAttack,
+		WillNotCauseAttack
+	}
+
+	public enum CombatStateRestrictionType
+	{
+		NoRestriction,
+		InCombatOnly,
+		NotInCombatOnly
+	}
+
+	public AbilityType Type;
+
+	public AbilityRange Range;
+
+	[ShowIf("IsRangeCustom")]
+	public int CustomRange;
+
+	[HideIf("IsRangePersonal")]
+	public int MinRange;
+
+	public int ActionPointCost = 1;
+
+	public WarhammerAbilityParamsSource AbilityParamsSource = WarhammerAbilityParamsSource.None;
+
+	[ShowIf("IsPsykerAbility")]
+	public PsychicPower PsychicPower;
+
+	[ShowIf("IsPsykerAbility")]
+	[Tooltip("Используется для оверрайда значения выдаваемого от Psychic Power")]
+	public int VeilThicknessPointsToAdd = 1;
+
+	[ShowIf("IsSkillCheckAbilityParams")]
+	public StatType ParamsSkill = StatType.SkillAthletics;
+
+	public int CooldownRounds;
+
+	public bool CanTargetPoint;
+
+	public bool CanTargetEnemies;
+
+	[InfoBox("Allows to cast on allies. But does not prevent from casting on enemies if only selected")]
+	public bool CanTargetFriends;
+
+	public bool CanTargetSelf = true;
+
+	[InfoBox("Hidden in tooltips")]
+	public bool Hidden;
+
+	[InfoBox("Hidden in panels")]
+	public bool HiddenInUI;
+
+	[InfoBox("Default slot index (0-based) in the action bar when first initialized. -1 = no preference.")]
+	public int DefaultSlotIndex = -1;
+
+	[InfoBox("Disabled in log and overtips", order = -1)]
+	public bool DisableLog;
+
+	public bool DisableBestShootingPosition;
+
+	public bool NeedEquipWeapons;
+
+	public bool NotOffensive;
+
+	public bool ShowInDialogue;
+
+	public bool IsStarshipAbility;
+
+	public AbilityEffectOnUnit EffectOnAlly;
+
+	public AbilityEffectOnUnit EffectOnEnemy;
+
+	[SerializeField]
+	private BlueprintAbilityReference m_Parent;
+
+	public UnitAnimationActionCastSpell.CastAnimationStyle Animation;
+
+	public bool CastInOffHand;
+
+	public bool UseOnMechadendrite;
+
+	[ShowIf("UseOnMechadendrite")]
+	public MechadendritesType UsedMechadendrite = MechadendritesType.Utility;
+
+	[SerializeField]
+	private bool m_TargetMapObjects;
+
+	public bool IsFreeAction;
+
+	public bool ShouldTurnToTarget = true;
+
+	[ShowIf("ShouldTurnToTarget")]
+	public bool SyncRotationAndAttack;
+
+	[ShowIf("SyncRotationAndAttack")]
+	[Tooltip("Delay in seconds before executing the attack after rotation is complete.")]
+	public float SyncRotationDelay;
+
+	[SerializeField]
+	private bool m_IsStratagem;
+
+	public UsingInThreateningAreaType UsingInThreateningArea;
+
+	public UsingInOverwatchAreaType UsingInOverwatchArea;
+
+	public CombatStateRestrictionType CombatStateRestriction = CombatStateRestrictionType.InCombatOnly;
+
+	[SerializeField]
+	[ValidateNoNullEntries]
+	private BlueprintAbilityGroupReference[] m_AbilityGroups;
+
+	public MaterialComponentData MaterialComponent = new MaterialComponentData
+	{
+		Count = 1
+	};
+
+	public string[] ResourceAssetIds;
+
+	[SerializeField]
+	private BlueprintAbilityFXSettings.Reference m_FXSettings;
+
+	[CanBeNull]
+	private IAbilityRestriction[] m_CachedRestrictions;
+
+	[CanBeNull]
+	private IAbilityTargetRestriction[] m_CachedTargetRestrictions;
+
+	[CanBeNull]
+	private IAbilityCasterRestriction[] m_CachedCasterRestrictions;
+
+	[CanBeNull]
+	private IAbilityAllowTargetingType[] m_CachedTargetTypeExtensions;
+
+	[SerializeField]
+	private AbilityTag m_AbilityTag;
+
+	[SerializeField]
+	private CombatHudCommandSetAsset m_CombatHudCommandsOverride;
+
+	public AbilityTag AbilityTag => m_AbilityTag;
+
+	public bool IsMomentum => CasterRestrictions.Any((IAbilityCasterRestriction x) => x is AbilitySpecialMomentumAction || x is AbilityMomentumLogic);
+
+	public bool IsHeroicAct => CasterRestrictions.Any(delegate(IAbilityCasterRestriction x)
+	{
+		if (x is AbilitySpecialMomentumAction abilitySpecialMomentumAction)
+		{
+			if (abilitySpecialMomentumAction.MomentumType == MomentumAbilityType.HeroicAct)
+			{
+				goto IL_0026;
+			}
+		}
+		else if (x is AbilityMomentumLogic { HeroicAct: not false })
+		{
+			goto IL_0026;
+		}
+		return false;
+		IL_0026:
+		return true;
+	});
+
+	public bool IsDesperateMeasure => CasterRestrictions.Any((IAbilityCasterRestriction x) => x is AbilitySpecialMomentumAction abilitySpecialMomentumAction && abilitySpecialMomentumAction.MomentumType == MomentumAbilityType.DesperateMeasure);
+
+	public BlueprintAbility Parent
+	{
+		get
+		{
+			return m_Parent?.Get();
+		}
+		set
+		{
+			m_Parent = value.ToReference<BlueprintAbilityReference>();
+		}
+	}
+
+	public bool IsWeaponAbility => AbilityParamsSource.HasFlag(WarhammerAbilityParamsSource.Weapon);
+
+	public bool IsPsykerAbility => AbilityParamsSource.HasFlag(WarhammerAbilityParamsSource.PsychicPower);
+
+	public bool IsSkillCheckAbilityParams => AbilityParamsSource.HasFlag(WarhammerAbilityParamsSource.SkillCheck);
+
+	public bool IsGrenade => AbilityTag == AbilityTag.ThrowingGrenade;
+
+	[CanBeNull]
+	public BlueprintAbilityFXSettings FXSettings => m_FXSettings;
+
+	public ReferenceArrayProxy<BlueprintAbilityGroup> AbilityGroups
+	{
+		get
+		{
+			BlueprintReference<BlueprintAbilityGroup>[] abilityGroups = m_AbilityGroups;
+			return abilityGroups;
+		}
+	}
+
+	[UsedImplicitly]
+	private bool IsRangeCustom => Range == AbilityRange.Custom;
+
+	private bool IsRangeWeapon => Range == AbilityRange.Weapon;
+
+	[UsedImplicitly]
+	private bool IsRangePersonal => Range == AbilityRange.Personal;
+
+	public bool CanCastToDeadTarget => this.GetComponent<ICanTargetDeadUnits>() != null;
+
+	public AbilityCanTargetOnlyPetUnits CanTargetOnlyPetUnitsComponent => this.GetComponent<AbilityCanTargetOnlyPetUnits>();
+
+	public IAbilityAoEPatternProvider PatternSettings => GetPatternSettings();
+
+	public IAbilityRestriction[] Restrictions
+	{
+		get
+		{
+			if (m_CachedRestrictions == null)
+			{
+				m_CachedRestrictions = this.GetComponents<IAbilityRestriction>().ToArray();
+			}
+			return m_CachedRestrictions;
+		}
+	}
+
+	public IAbilityTargetRestriction[] TargetRestrictions
+	{
+		get
+		{
+			if (m_CachedTargetRestrictions == null)
+			{
+				m_CachedTargetRestrictions = this.GetComponents<IAbilityTargetRestriction>().ToArray();
+			}
+			return m_CachedTargetRestrictions;
+		}
+	}
+
+	public IAbilityCasterRestriction[] CasterRestrictions
+	{
+		get
+		{
+			if (m_CachedCasterRestrictions == null)
+			{
+				m_CachedCasterRestrictions = this.GetComponents<IAbilityCasterRestriction>().ToArray();
+			}
+			return m_CachedCasterRestrictions;
+		}
+	}
+
+	public IAbilityAllowTargetingType[] TargetTypeExtensions
+	{
+		get
+		{
+			if (m_CachedTargetTypeExtensions == null)
+			{
+				m_CachedTargetTypeExtensions = this.GetComponents<IAbilityAllowTargetingType>().ToArray();
+			}
+			return m_CachedTargetTypeExtensions;
+		}
+	}
+
+	public SpellSchool School => SpellSchool.None;
+
+	public int AoERadius => this.GetAoERadiusProvider()?.AoERadius ?? 0;
+
+	public TargetType AoETargets => PatternSettings?.Targets ?? this.GetAoERadiusProvider()?.Targets ?? TargetType.Any;
+
+	public bool HasVariants => this.GetComponent<AbilityVariants>();
+
+	public bool TargetMapObjects => m_TargetMapObjects;
+
+	public bool IsSpell => Type == AbilityType.Spell;
+
+	public bool IsCantrip => false;
+
+	public string RawDescription => base.Description;
+
+	public SpellDescriptor SpellDescriptor => this.GetComponent<SpellDescriptorComponent>()?.Descriptor ?? ((SpellDescriptorWrapper)SpellDescriptor.None);
+
+	public bool IsAoEDamage => base.ElementsArray.HasItem((Element e) => e is ContextActionDealDamage contextActionDealDamage && contextActionDealDamage.IsAoE);
+
+	public bool IsAoE
+	{
+		get
+		{
+			if (this.GetComponent<AbilityTargetsInPattern>() == null)
+			{
+				WarhammerAbilityAttackDelivery component = this.GetComponent<WarhammerAbilityAttackDelivery>();
+				if (component == null || !component.IsPattern)
+				{
+					AbilityMeleeBurst component2 = this.GetComponent<AbilityMeleeBurst>();
+					if (component2 == null || !component2.IsAoe)
+					{
+						return this.GetComponent<FakeAttackType>()?.CountAsAoE ?? false;
+					}
+				}
+			}
+			return true;
+		}
+	}
+
+	public AttackAbilityType? AttackType => GetAttackType();
+
+	public bool IsBurst => base.ComponentsArray.HasItem(delegate(BlueprintComponent i)
+	{
+		if (i is WarhammerAbilityAttackDelivery warhammerAbilityAttackDelivery)
+		{
+			if (warhammerAbilityAttackDelivery.IsBurst)
+			{
+				goto IL_004a;
+			}
+		}
+		else if (i is AbilityCutsceneAttack abilityCutsceneAttack)
+		{
+			if (abilityCutsceneAttack.IsBurst)
+			{
+				goto IL_004a;
+			}
+		}
+		else if (i is AbilityCustomBladeDance || i is AbilityMeleeBurst || i is FakeAttackType { CountAsScatter: not false })
+		{
+			goto IL_004a;
+		}
+		return false;
+		IL_004a:
+		return true;
+	});
+
+	public bool IsLosDefinedByPattern => base.ComponentsArray.HasItem((BlueprintComponent i) => i is WarhammerAbilityAttackDelivery { IsScatterOrRangedPattern: not false } warhammerAbilityAttackDelivery && warhammerAbilityAttackDelivery.IsLosDefinedByPattern);
+
+	public bool UseBestShootingPosition
+	{
+		get
+		{
+			if (!DisableBestShootingPosition && this.GetComponent<AbilityCustomDirectMovement>() == null)
+			{
+				WarhammerAbilityAttackDelivery component = this.GetComponent<WarhammerAbilityAttackDelivery>();
+				return component == null || component.UseBestShootingPosition;
+			}
+			return false;
+		}
+	}
+
+	public bool IsMoveUnit => this.GetComponent<AbilityCustomLogic>()?.IsMoveUnit ?? false;
+
+	public bool IsCharge => this.GetComponent<AbilityCustomDirectMovement>()?.IsCharge ?? false;
+
+	public bool IsDirectMovement => this.GetComponent<AbilityCustomDirectMovement>();
+
+	public bool IsStratagem => m_IsStratagem;
+
+	public CombatHudCommandSetAsset CombatHudCommandsOverride => m_CombatHudCommandsOverride;
+
+	public bool IsSummoningUnit
+	{
+		get
+		{
+			if ((bool)this.GetComponent<AbilityCustomStarshipNPCTorpedoLaunch>())
+			{
+				return true;
+			}
+			return this.GetComponent<AbilityEffectRunAction>()?.Actions.Actions.Any((GameAction a) => a is WarhammerContextActionSpawnChildStarship) ?? false;
+		}
+	}
+
+	public bool IsCustomProjectileDistribution => this.GetComponent<CustomProjectileDistribution>();
+
+	public string ShortenedDescription => UIUtilityTexts.GetLongOrShortText(base.Description, state: false);
+
+	public override string Description => UIUtilityTexts.GetLongOrShortText(base.Description, state: true);
+
+	private WarhammerAbilityTooltipHelper TooltipHelper => this.GetComponent<WarhammerAbilityTooltipHelper>();
+
+	public bool CanCastToAliveTarget()
+	{
+		return this.GetComponent<ICanTargetDeadUnits>()?.CanTargetAlive ?? true;
+	}
+
+	public bool CanTargetPointWithExtensions(AbilityData abilityData)
+	{
+		if (!CanTargetPoint)
+		{
+			return CanTargetViaExtensions(abilityData, IAbilityAllowTargetingType.TargetTypeEnum.CanTargetPoint);
+		}
+		return true;
+	}
+
+	public bool CanTargetEnemiesWithExtensions(AbilityData abilityData)
+	{
+		if (!CanTargetEnemies)
+		{
+			return CanTargetViaExtensions(abilityData, IAbilityAllowTargetingType.TargetTypeEnum.CanTargetEnemies);
+		}
+		return true;
+	}
+
+	public bool CanTargetFriendsWithExtensions(AbilityData abilityData)
+	{
+		if (!CanTargetFriends)
+		{
+			return CanTargetViaExtensions(abilityData, IAbilityAllowTargetingType.TargetTypeEnum.CanTargetFriends);
+		}
+		return true;
+	}
+
+	public bool CanTargetSelfWithExtensions(AbilityData abilityData)
+	{
+		if (!CanTargetSelf)
+		{
+			return CanTargetViaExtensions(abilityData, IAbilityAllowTargetingType.TargetTypeEnum.CanTargetSelf);
+		}
+		return true;
+	}
+
+	public bool CanTargetViaExtensions(AbilityData abilityData, IAbilityAllowTargetingType.TargetTypeEnum targetType)
+	{
+		if (abilityData == null)
+		{
+			return false;
+		}
+		IAbilityAllowTargetingType[] targetTypeExtensions = TargetTypeExtensions;
+		foreach (IAbilityAllowTargetingType abilityAllowTargetingType in targetTypeExtensions)
+		{
+			if (abilityAllowTargetingType.TargetType == targetType && abilityAllowTargetingType.IsRestrictionPassed(abilityData))
+			{
+				return true;
+			}
+		}
+		PartAbilityTargetExtension optional = abilityData.Caster.GetOptional<PartAbilityTargetExtension>();
+		if (optional != null && optional.CanTargetType(abilityData, targetType))
+		{
+			return true;
+		}
+		return false;
+	}
+
+	private AttackAbilityType? GetAttackType()
+	{
+		foreach (FakeAttackType component in this.GetComponents<FakeAttackType>())
+		{
+			if (component.CountAsScatter)
+			{
+				return AttackAbilityType.Scatter;
+			}
+			if (component.CountAsAoE)
+			{
+				return AttackAbilityType.Pattern;
+			}
+			if (component.CountAsSingleShot)
+			{
+				return AttackAbilityType.SingleShot;
+			}
+		}
+		using (BlueprintComponentsEnumerator<WarhammerAbilityAttackDelivery> blueprintComponentsEnumerator2 = this.GetComponents<WarhammerAbilityAttackDelivery>().GetEnumerator())
+		{
+			if (blueprintComponentsEnumerator2.MoveNext())
+			{
+				WarhammerAbilityAttackDelivery current2 = blueprintComponentsEnumerator2.Current;
+				if (current2.IsScatter)
+				{
+					return AttackAbilityType.Scatter;
+				}
+				if (current2.IsPattern)
+				{
+					return AttackAbilityType.Pattern;
+				}
+				return AttackAbilityType.SingleShot;
+			}
+		}
+		return null;
+	}
+
+	public int GetRange()
+	{
+		return Range switch
+		{
+			AbilityRange.Personal => 0, 
+			AbilityRange.Touch => 1, 
+			AbilityRange.Unlimited => 100000, 
+			AbilityRange.Weapon => -1, 
+			AbilityRange.Custom => CustomRange, 
+			_ => throw new ArgumentOutOfRangeException(), 
+		};
+	}
+
+	public int GetVeilThicknessPointsToAdd()
+	{
+		if (!IsPsykerAbility)
+		{
+			return 0;
+		}
+		int num = ((PsychicPower == PsychicPower.Major) ? BlueprintRoot.Instance.WarhammerRoot.PsychicPhenomenaRoot.VeilThicknessPointsToAddForMajor : BlueprintRoot.Instance.WarhammerRoot.PsychicPhenomenaRoot.VeilThicknessPointsToAddForMinor);
+		if (num != VeilThicknessPointsToAdd)
+		{
+			return VeilThicknessPointsToAdd;
+		}
+		return num;
+	}
+
+	protected override Type GetFactType()
+	{
+		return typeof(Ability);
+	}
+
+	public override MechanicEntityFact CreateFact(MechanicsContext parentContext, MechanicEntity owner, BuffDuration duration)
+	{
+		return new Ability(this, owner);
+	}
+
+	public bool HasVariant(BlueprintAbility other)
+	{
+		return this.GetComponent<AbilityVariants>()?.Variants.HasReference(other) ?? false;
+	}
+
+	public bool IsInSpellList(BlueprintSpellList spellList)
+	{
+		try
+		{
+			SpellLevelList[] spellsByLevel = spellList.SpellsByLevel;
+			for (int i = 0; i < spellsByLevel.Length; i++)
+			{
+				if (spellsByLevel[i].Spells.HasItem(this))
+				{
+					return true;
+				}
+			}
+			return false;
+		}
+		finally
+		{
+		}
+	}
+
+	public bool IsInSpellListOfUnit(BaseUnitEntity unit)
+	{
+		try
+		{
+			foreach (ClassData @class in unit.Progression.Classes)
+			{
+				BlueprintSpellbook spellbook = @class.Spellbook;
+				if (spellbook != null && IsInSpellList(spellbook.SpellList))
+				{
+					return true;
+				}
+			}
+			return false;
+		}
+		finally
+		{
+		}
+	}
+
+	public string[] GetResourceIds()
+	{
+		return ResourceAssetIds;
+	}
+
+	[BlueprintButton]
+	[UsedImplicitly]
+	public void FixParentForVariants()
+	{
+	}
+
+	public string GetShortenedDescription()
+	{
+		if (!SettingsRoot.Game.Tooltips.Shortened)
+		{
+			return Description;
+		}
+		return ShortenedDescription;
+	}
+
+	public string GetTarget(int weaponRange = -1, AbilityData abilityData = null)
+	{
+		AbilityTargetStrings abilityTargets = LocalizedTexts.Instance.AbilityTargets;
+		AbilityRangeStrings abilityTargetRanges = LocalizedTexts.Instance.AbilityTargetRanges;
+		StringBuilder stringBuilder = new StringBuilder();
+		if (IsStratagem)
+		{
+			switch (TooltipHelper?.TargetType ?? TargetType.Any)
+			{
+			case TargetType.Ally:
+				stringBuilder.Append(abilityTargets.AllAllies);
+				break;
+			case TargetType.Enemy:
+				stringBuilder.Append(abilityTargets.AllEnemies);
+				break;
+			default:
+				stringBuilder.Append(abilityTargets.AllCreatures);
+				break;
+			}
+			stringBuilder.Append(' ');
+			stringBuilder.Append(abilityTargets.InsideSelectedCombatArea);
+		}
+		else if (IsCharge)
+		{
+			stringBuilder.Append(abilityTargets.FirstCreature);
+			stringBuilder.Append(' ');
+			stringBuilder.Append(string.Format(abilityTargets.WithinLine, GetRange()));
+			stringBuilder.Append(' ');
+		}
+		else if (IsMoveUnit)
+		{
+			stringBuilder.Append(abilityTargets.Movement);
+			if (IsRangeCustom && CustomRange > 0)
+			{
+				stringBuilder.Append(' ');
+				stringBuilder.Append(string.Format(abilityTargetRanges.GetText(AbilityRange.Custom), CustomRange));
+			}
+		}
+		else if (Range == AbilityRange.Personal && PatternSettings == null)
+		{
+			switch (TooltipHelper?.TargetType)
+			{
+			case TargetType.Ally:
+				stringBuilder.Append(abilityTargets.AllAllies);
+				break;
+			case TargetType.Enemy:
+				stringBuilder.Append(abilityTargets.AllEnemies);
+				break;
+			default:
+				stringBuilder.Append(abilityTargets.AllCreatures);
+				break;
+			case null:
+				stringBuilder.Append(abilityTargets.Personal);
+				break;
+			}
+		}
+		else if (Range != AbilityRange.Personal && PatternSettings == null)
+		{
+			bool flag = CanTargetEnemiesWithExtensions(abilityData);
+			bool flag2 = CanTargetFriendsWithExtensions(abilityData);
+			if (CanTargetPointWithExtensions(abilityData))
+			{
+				stringBuilder.Append(abilityTargets.TargetPoint);
+			}
+			else
+			{
+				switch (TooltipHelper?.TargetType)
+				{
+				case TargetType.Ally:
+					stringBuilder.Append(abilityTargets.AllAllies);
+					break;
+				case TargetType.Enemy:
+					stringBuilder.Append(abilityTargets.AllEnemies);
+					break;
+				default:
+					stringBuilder.Append(abilityTargets.AllCreatures);
+					break;
+				case null:
+					if (flag & flag2)
+					{
+						stringBuilder.Append(abilityTargets.OneCreature);
+					}
+					else if (flag)
+					{
+						stringBuilder.Append(abilityTargets.OneEnemyCreature);
+					}
+					else if (flag2)
+					{
+						stringBuilder.Append(abilityTargets.OneFriendlyCreature);
+					}
+					else
+					{
+						if (!CanTargetSelf)
+						{
+							break;
+						}
+						ContextActionOnAllUnitsInCombat contextActionOnAllUnitsInCombat = GetContextActionOnAllUnitsInCombat();
+						if (contextActionOnAllUnitsInCombat == null)
+						{
+							stringBuilder.Append(abilityTargets.Personal);
+							stringBuilder.Append(".\n");
+							return stringBuilder.ToString();
+						}
+						if (contextActionOnAllUnitsInCombat.OnlyAllies)
+						{
+							stringBuilder.Append(abilityTargets.AllAllies);
+							break;
+						}
+						if (!contextActionOnAllUnitsInCombat.OnlyEnemies)
+						{
+							stringBuilder.Append(abilityTargets.Personal);
+							stringBuilder.Append(".\n");
+							return stringBuilder.ToString();
+						}
+						stringBuilder.Append(abilityTargets.AllEnemies);
+					}
+					break;
+				}
+			}
+			stringBuilder.Append(' ');
+			if (IsRangeCustom || !abilityTargetRanges.Contains(Range))
+			{
+				int num;
+				if (abilityData != null)
+				{
+					RuleCalculateAbilityRange ruleCalculateAbilityRange = RuleCalculateAbilityRange.TryGetCachedOrTrigger(abilityData);
+					num = ruleCalculateAbilityRange.OverrideRange ?? ruleCalculateAbilityRange.DefaultRange;
+				}
+				else
+				{
+					num = GetRange();
+				}
+				stringBuilder.Append(string.Format(abilityTargetRanges.GetText(AbilityRange.Custom), num));
+			}
+			else if (IsRangeWeapon && weaponRange > 0)
+			{
+				stringBuilder.Append(string.Format(abilityTargetRanges.GetText(AbilityRange.Custom), weaponRange));
+			}
+			else
+			{
+				stringBuilder.Append(string.Format(abilityTargetRanges.GetText(Range)));
+			}
+		}
+		else if (IsBurst)
+		{
+			bool flag3 = CanTargetEnemiesWithExtensions(abilityData);
+			bool flag4 = CanTargetFriendsWithExtensions(abilityData);
+			if (flag3 & flag4)
+			{
+				stringBuilder.Append(abilityTargets.FirstCreature);
+			}
+			else if (flag3)
+			{
+				stringBuilder.Append(abilityTargets.FirstEnemyCreature);
+			}
+			else if (flag4)
+			{
+				stringBuilder.Append(abilityTargets.FirstFriendlyCreature);
+			}
+			stringBuilder.Append(' ');
+			stringBuilder.Append(abilityTargets.EveryShot);
+			stringBuilder.Append(' ');
+			stringBuilder.Append(string.Format(abilityTargets.WithinCone, weaponRange));
+		}
+		else if (PatternSettings != null)
+		{
+			if (AoETargets == TargetType.Any)
+			{
+				stringBuilder.Append(abilityTargets.AllCreatures);
+			}
+			else if (AoETargets == TargetType.Enemy)
+			{
+				stringBuilder.Append(abilityTargets.AllEnemies);
+			}
+			else if (AoETargets == TargetType.Ally)
+			{
+				stringBuilder.Append(abilityTargets.AllAllies);
+			}
+			stringBuilder.Append(' ');
+			stringBuilder.Append(abilityTargets.InsideAreaOfEffect);
+			stringBuilder.Append(' ');
+			if (Range == AbilityRange.Personal)
+			{
+				stringBuilder.Remove(stringBuilder.Length - 1, 1);
+			}
+			else if (IsRangeCustom)
+			{
+				stringBuilder.Append(string.Format(abilityTargetRanges.GetText(AbilityRange.Custom), CustomRange));
+			}
+			else if (IsRangeWeapon)
+			{
+				stringBuilder.Append(string.Format(abilityTargetRanges.GetText(AbilityRange.Custom), weaponRange));
+			}
+			else
+			{
+				stringBuilder.Append(abilityTargetRanges.GetText(Range));
+			}
+		}
+		stringBuilder.Append(".\n");
+		return stringBuilder.ToString();
+	}
+
+	private ContextActionOnAllUnitsInCombat GetContextActionOnAllUnitsInCombat()
+	{
+		return (from c in base.ComponentsArray
+			select c as AbilityEffectRunAction into c
+			where c != null
+			select c).SelectMany((AbilityEffectRunAction a) => a.Actions.Actions).FirstOrDefault((GameAction a) => a is ContextActionOnAllUnitsInCombat) as ContextActionOnAllUnitsInCombat;
+	}
+
+	public Sprite GetTargetImage()
+	{
+		UIIcons uIIcons = BlueprintRoot.Instance.UIConfig.UIIcons;
+		switch (TooltipHelper?.TargetType)
+		{
+		case TargetType.Enemy:
+			return uIIcons.TargetEnemyAll;
+		case TargetType.Ally:
+			return uIIcons.TargetAllyAll;
+		default:
+			return uIIcons.TargetAnyAll;
+		case null:
+			if (PatternSettings != null)
+			{
+				if (IsMoveUnit)
+				{
+					return uIIcons.TargetCharge;
+				}
+				if (AoETargets == TargetType.Any)
+				{
+					return uIIcons.TargetAnyAll;
+				}
+				if (AoETargets == TargetType.Enemy)
+				{
+					return uIIcons.TargetEnemyAll;
+				}
+				if (AoETargets == TargetType.Ally)
+				{
+					return uIIcons.TargetAllyAll;
+				}
+				return null;
+			}
+			if (Range == AbilityRange.Personal)
+			{
+				return uIIcons.TargetPersonal;
+			}
+			if (CanTargetPoint)
+			{
+				return uIIcons.SpellTargetPoint;
+			}
+			if (CanTargetEnemies && CanTargetFriends)
+			{
+				return uIIcons.TargetAnyOne;
+			}
+			if (CanTargetEnemies && !CanTargetFriends)
+			{
+				return uIIcons.TargetEnemyOne;
+			}
+			if (!CanTargetEnemies && CanTargetFriends)
+			{
+				return uIIcons.TargetAllyOne;
+			}
+			if (CanTargetSelf)
+			{
+				ContextActionOnAllUnitsInCombat contextActionOnAllUnitsInCombat = GetContextActionOnAllUnitsInCombat();
+				if (contextActionOnAllUnitsInCombat != null)
+				{
+					if (contextActionOnAllUnitsInCombat.OnlyAllies)
+					{
+						return uIIcons.TargetAllyAll;
+					}
+					if (contextActionOnAllUnitsInCombat.OnlyEnemies)
+					{
+						return uIIcons.TargetEnemyAll;
+					}
+				}
+				return uIIcons.TargetPersonal;
+			}
+			return null;
+		}
+	}
+
+	private IAbilityAoEPatternProvider GetPatternSettings()
+	{
+		IAbilityAoEPatternProvider abilityAoEPatternProvider = this.GetComponent<IAbilityAoEPatternProviderHolder>()?.PatternProvider ?? this.GetComponent<IAbilityAoEPatternProvider>();
+		if (abilityAoEPatternProvider != null)
+		{
+			return abilityAoEPatternProvider;
+		}
+		foreach (Element item in base.ElementsArray)
+		{
+			if (item is ContextActionSpawnAreaEffect contextActionSpawnAreaEffect)
+			{
+				return contextActionSpawnAreaEffect.AreaEffect;
+			}
+		}
+		return null;
+	}
+
+	public void Scan()
+	{
+	}
+
+	private void ScanAbility(ICollection<ContextDiceValue> diceValues, ICollection<ContextDurationValue> durationValues)
+	{
+	}
+}

@@ -1,0 +1,151 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using Kingmaker.Blueprints.Root.Strings;
+using Kingmaker.Code.UI.MVVM.VM.Common.UnitState;
+using Kingmaker.Code.UI.MVVM.VM.Other;
+using Kingmaker.Code.UI.MVVM.VM.Tooltip.Bricks;
+using Kingmaker.EntitySystem.Entities;
+using Kingmaker.RuleSystem;
+using Kingmaker.RuleSystem.Rules;
+using Kingmaker.UI.Common;
+using Kingmaker.UnitLogic;
+using Kingmaker.UnitLogic.Buffs;
+using Kingmaker.UnitLogic.Buffs.Blueprints;
+using Kingmaker.UnitLogic.Enums;
+using Kingmaker.UnitLogic.Parts;
+using Owlcat.Runtime.UI.Tooltips;
+using UniRx;
+using Warhammer.SpaceCombat.Blueprints;
+using Warhammer.SpaceCombat.StarshipLogic;
+
+namespace Kingmaker.UI.MVVM.VM.Inspect;
+
+public class InspectExtensions
+{
+	public static bool TryGetWoundsText(MechanicEntityUIWrapper unitUIWrapper, out string woundsValue, out string woundsAddValue)
+	{
+		PartHealth health = unitUIWrapper.Health;
+		if (health == null)
+		{
+			woundsValue = string.Empty;
+			woundsAddValue = string.Empty;
+			return false;
+		}
+		if (unitUIWrapper.MechanicEntity.HasMechanicFeature(MechanicsFeatureType.HideRealHealthInUI))
+		{
+			woundsValue = "???";
+			woundsAddValue = string.Empty;
+			return true;
+		}
+		woundsValue = UIUtility.GetHpText(unitUIWrapper, unitUIWrapper.IsDead);
+		string text = ((health.TemporaryHitPoints > 0) ? "+" : "-") + health.TemporaryHitPoints + " " + UIStrings.Instance.CharacterSheet.TemporaryHP.Text;
+		woundsAddValue = ((health.TemporaryHitPoints == 0) ? "" : text);
+		return true;
+	}
+
+	public static string GetDeflection(BaseUnitEntity unit)
+	{
+		return Rulebook.Trigger(new RuleCalculateStatsArmor(unit)).ResultDeflection.ToString();
+	}
+
+	public static string GetArmor(BaseUnitEntity unit)
+	{
+		return Rulebook.Trigger(new RuleCalculateStatsArmor(unit)).ResultAbsorption + "%";
+	}
+
+	public static string GetDodge(BaseUnitEntity unit)
+	{
+		return Rulebook.Trigger(new RuleCalculateDodgeChance((UnitEntity)unit)).Result + "%";
+	}
+
+	public static string GetMovementPoints(BaseUnitEntity unit)
+	{
+		return unit.CombatState.ActionPointsBlueMax.ToString();
+	}
+
+	public static List<TooltipBrickBuff> GetBuffs(BaseUnitEntity unit)
+	{
+		List<Buff> list = unit.Buffs.RawFacts;
+		if (!(unit.Blueprint is BlueprintStarship))
+		{
+			list = list.Where((Buff b) => !b.Blueprint.IsStarshipBuff).ToList();
+		}
+		List<TooltipBrickBuff> list2 = (from buff2 in list
+			where !buff2.Hidden && !buff2.Blueprint.NeedCollapseStack
+			select new TooltipBrickBuff(buff2, GetGroup(buff2))).ToList();
+		Dictionary<BlueprintBuff, List<Buff>> dictionary = new Dictionary<BlueprintBuff, List<Buff>>();
+		foreach (Buff item in list)
+		{
+			if (!item.Hidden && item.Blueprint.NeedCollapseStack)
+			{
+				if (!dictionary.TryGetValue(item.Blueprint, out var value))
+				{
+					value = (dictionary[item.Blueprint] = new List<Buff>());
+				}
+				value.Add(item);
+			}
+		}
+		foreach (KeyValuePair<BlueprintBuff, List<Buff>> item2 in dictionary)
+		{
+			Buff buff = item2.Value.FirstOrDefault();
+			if (buff != null)
+			{
+				list2.Add(new TooltipBrickBuff(buff, GetGroup(buff), item2.Value));
+			}
+		}
+		return list2;
+		BuffUIGroup GetGroup(Buff buff2)
+		{
+			if (buff2.Blueprint.IsDOTVisual)
+			{
+				return BuffUIGroup.DOT;
+			}
+			if (!unit.IsEnemy(buff2.Context.MaybeCaster))
+			{
+				return BuffUIGroup.Ally;
+			}
+			return BuffUIGroup.Enemy;
+		}
+	}
+
+	public static ReactiveCollection<ITooltipBrick> GetBuffsTooltipBricks(BaseUnitEntity unit)
+	{
+		List<Buff> list = unit.Buffs.RawFacts;
+		Dictionary<BlueprintBuff, List<Buff>> dictionary = new Dictionary<BlueprintBuff, List<Buff>>();
+		if (!unit.IsStarship())
+		{
+			list = list.Where((Buff b) => !b.Blueprint.IsStarshipBuff).ToList();
+		}
+		foreach (Buff item in list)
+		{
+			if (item.Blueprint.NeedCollapseStack)
+			{
+				dictionary.TryAdd(item.Blueprint, new List<Buff>());
+			}
+		}
+		foreach (KeyValuePair<BlueprintBuff, List<Buff>> kvp in dictionary)
+		{
+			List<Buff> collection = list.Where((Buff b) => b.Blueprint == kvp.Key && !b.Hidden).ToList();
+			if (dictionary.TryGetValue(kvp.Key, out var value))
+			{
+				value.AddRange(collection);
+			}
+		}
+		ReactiveCollection<ITooltipBrick> reactiveCollection = list.Where((Buff b) => !b.Hidden && !b.Blueprint.NeedCollapseStack).Select((Func<Buff, ITooltipBrick>)delegate(Buff buff2)
+		{
+			BuffUIGroup buffUIGroup2 = ((!buff2.Blueprint.IsDOTVisual) ? (unit.IsEnemy(buff2.Context.MaybeCaster) ? BuffUIGroup.Enemy : BuffUIGroup.Ally) : BuffUIGroup.DOT);
+			return new TooltipBrickBuff(buff2, buffUIGroup2);
+		}).ToReactiveCollection();
+		foreach (KeyValuePair<BlueprintBuff, List<Buff>> item2 in dictionary)
+		{
+			Buff buff = item2.Value.FirstOrDefault();
+			if (buff != null)
+			{
+				BuffUIGroup buffUIGroup = ((!buff.Blueprint.IsDOTVisual) ? (unit.IsEnemy(buff.Context.MaybeCaster) ? BuffUIGroup.Enemy : BuffUIGroup.Ally) : BuffUIGroup.DOT);
+				reactiveCollection.Add(new TooltipBrickBuff(buff, buffUIGroup, item2.Value));
+			}
+		}
+		return reactiveCollection;
+	}
+}

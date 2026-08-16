@@ -27,17 +27,114 @@ namespace KgdRetinue
             modEntry.OnUpdate  = OnUpdate;
 
             HarmonyInstance = new Harmony(modEntry.Info.Id);
-            try
-            {
-                HarmonyInstance.PatchAll(System.Reflection.Assembly.GetExecutingAssembly());
-                Log("Harmony 补丁已应用。");
-            }
-            catch (Exception e) { LogError("Harmony 补丁失败（不影响其余功能）: " + e); }
+            PatchAllSafe(HarmonyInstance, System.Reflection.Assembly.GetExecutingAssembly());
 
             RetinueLifecycle.Subscribe();
 
             Log("loaded.  版本 " + (modEntry.Info != null ? modEntry.Info.Version : "?"));
             return true;
+        }
+
+        /// <summary>
+        /// 逐类打补丁，替代 Harmony.PatchAll(Assembly)。
+        ///
+        /// 为什么不能用 PatchAll（0Harmony 2.2.2.0）：
+        ///     PatchAll(asm) => AccessTools.GetTypesFromAssembly(asm)
+        ///                         .Do(t => CreateClassProcessor(t).Patch());
+        /// CollectionExtensions.Do 是裸的 while(MoveNext()){action(...)}，没有逐项 try/catch；
+        /// PatchClassProcessor.Patch() 末尾的 ReportException 又会把异常重新抛出去。
+        /// ⇒ 第一个抛异常的补丁类会让**排在它后面的**全部被静默跳过，
+        ///    而外面那层 try/catch 只看得到一条错误，看不出还丢了什么。
+        /// 遍历顺序 = 程序集 TypeDef 表行号（Roslyn 先发全部顶层类型、再发嵌套类型），
+        /// 纯属编译顺序运气 —— v0.10.1~0.10.9 只死了 SelectPatch 一个，是因为它恰好是
+        /// 嵌套类型被排到队尾。今后随便加个文件名靠前的补丁类出问题就会连坐大半个 mod。
+        ///
+        /// ★ 三态，别把 inert 当成功也别当失败 ★
+        ///   ok    : Patch() 返回非空列表 —— 真挂上了
+        ///   failed: 抛异常 —— 被下面 catch 住并记名
+        ///   inert : 返回 null（无 [HarmonyPatch] 标注）或空列表
+        ///           （Prepare() 返回 false / TargetMethod() 返回 null）
+        ///           —— 这一态原本**完全静默**：Patch() 走 ReportException(null, null)，
+        ///              而它第一句就是 if (exception == null) return。
+        ///              LocalizationPatch 因此死了一整晚没人发现。所以这里专门把
+        ///              "带标注却一个方法都没打上"的类挑出来报错。
+        /// </summary>
+        private static void PatchAllSafe(Harmony harmony, System.Reflection.Assembly asm)
+        {
+            if (harmony == null || asm == null)
+            {
+                LogError("[Harmony] 实例或程序集为空，补丁全部跳过。");
+                return;
+            }
+
+            System.Collections.Generic.IEnumerable<Type> types;
+            try
+            {
+                // 与 PatchAll 内部同一个取法：它已处理 ReflectionTypeLoadException 并滤掉 null
+                types = AccessTools.GetTypesFromAssembly(asm);
+            }
+            catch (Exception e)
+            {
+                LogError("[Harmony] 取类型列表失败，补丁全部跳过: " + e);
+                return;
+            }
+
+            int ok = 0;
+            var failedNames = new System.Collections.Generic.List<string>();
+            var inertNames  = new System.Collections.Generic.List<string>();
+
+            foreach (var t in types)
+            {
+                if (t == null) continue;
+
+                bool isPatchClass;
+                try { isPatchClass = t.GetCustomAttributes(typeof(HarmonyPatch), false).Length > 0; }
+                catch { isPatchClass = false; }
+
+                try
+                {
+                    // CreateClassProcessor 对没标注的类型很廉价：Patch() 首句就 return null
+                    var applied = harmony.CreateClassProcessor(t).Patch();
+                    if (applied != null && applied.Count > 0)
+                    {
+                        ok++;
+                        Log("[Harmony] OK   " + t.FullName + "  → " + applied.Count + " 个方法");
+                    }
+                    else if (isPatchClass) inertNames.Add(t.FullName);
+                }
+                catch (Exception e)
+                {
+                    failedNames.Add(t.FullName);
+                    var root = e;
+                    while (root.InnerException != null) root = root.InnerException;
+                    LogError("[Harmony] FAIL " + t.FullName + "  —— " + root.GetType().Name + ": " + root.Message);
+                    LogError(e.ToString());
+                }
+            }
+
+            Log("[Harmony] 补丁完成：成功 " + ok + " 个类，失败 " + failedNames.Count
+                + "，带标注却未生效 " + inertNames.Count + " 个。");
+
+            if (failedNames.Count > 0)
+                LogError("[Harmony] 失败清单: " + string.Join(", ", failedNames.ToArray()));
+            if (inertNames.Count > 0)
+                LogError("[Harmony] 静默未生效清单（多半是 Prepare() 返回 false 或 TargetMethod() 返回 null）: "
+                         + string.Join(", ", inertNames.ToArray()));
+        }
+
+        /// <summary>
+        /// 统一的开窗入口。新的 uGUI 窗口是主力，旧的 IMGUI 窗口留作退路 ——
+        /// 万一 uGUI 那套在某台机器/某个版本上出问题，翻个开关就能继续用，
+        /// 不至于让"招募"这个核心功能整个不可用。
+        /// </summary>
+        public static void OpenRecruitUI(Kingmaker.EntitySystem.Entities.BaseUnitEntity npc)
+        {
+            if (Settings != null && Settings.UseNewUI)
+            {
+                try { UI.RetinueUI.Open(); return; }
+                catch (Exception e) { LogError("[UI] 新窗口开启失败，回退到旧窗口: " + e); }
+            }
+            RecruitWindow.Open(npc);
         }
 
         private static bool OnToggle(UnityModManager.ModEntry modEntry, bool value)
@@ -47,6 +144,9 @@ namespace KgdRetinue
             else
             {
                 RetinueLifecycle.Unsubscribe();
+                RecruitWindow.Shutdown();   // 连宿主 GameObject 一起销毁，不留残留
+                UI.RetinueUI.Shutdown();    // 新的 uGUI 窗口：销毁 Canvas 根
+                UnitPortraits.Cleanup();    // 把 hold 住的立绘资源还回去
                 // 刻意不自动遣散：卫兵现在是持久实体，误触开关不该清掉满级卫队。
                 // 遣散必须由玩家显式点按钮。
                 int n = RetinueRegistry.Count;
@@ -127,6 +227,38 @@ namespace KgdRetinue
             if (GUILayout.Button("列出加点方案", GUILayout.Width(130))) BuildPlans.Reload();
             GUILayout.EndHorizontal();
 
+            // ---------- 招募入口 ----------
+            GUILayout.Space(8);
+            GUILayout.Label("<b>招募入口</b>（挂在 NPC 身上的原生点击交互，不进存档）");
+            Settings.NpcRecruitEntry = GUILayout.Toggle(Settings.NpcRecruitEntry, "点击 NPC 弹招募面板（原生点击交互）");
+            Settings.DialogRecruitEntry = GUILayout.Toggle(Settings.DialogRecruitEntry, "在 NPC 对话里加一条「征募护卫队」选项");
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("目标 NPC 关键字", GUILayout.Width(110));
+            Settings.RecruitNpcKeys = GUILayout.TextField(Settings.RecruitNpcKeys ?? "", GUILayout.Width(220));
+            if (GUILayout.Button("挂到当前区域", GUILayout.Width(110)))
+            { RecruitEntry.AttachInArea(true); RecruitDialog.InjectInArea(true); }
+            if (GUILayout.Button("列出可挂载 NPC", GUILayout.Width(130))) RecruitEntry.ListCandidates();
+            if (GUILayout.Button("直接开窗", GUILayout.Width(90))) OpenRecruitUI(null);
+            GUILayout.EndHorizontal();
+            GUILayout.BeginHorizontal();
+            Settings.UseNewUI = GUILayout.Toggle(Settings.UseNewUI, "用新窗口（uGUI，仿原版配色/字体）");
+            if (GUILayout.Button("预览新窗口", GUILayout.Width(110))) UI.RetinueUI.Open();
+            if (GUILayout.Button("摘素材自检", GUILayout.Width(110))) UI.VanillaSkin.DumpNineSliceCandidates();
+            GUILayout.EndHorizontal();
+            GUILayout.Label("<color=#aaaaaa>名单打在 kgd_log.txt 里。本船的高阶顾问蓝图名是 HighFactotum，音阵大师是 VoxMaster。</color>");
+
+            // ---------- 装备档位覆盖 ----------
+            GUILayout.Space(8);
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("<b>装备档位</b>（普通卫兵）", GUILayout.Width(150));
+            string[] tierNames = { "自动（跟玩家等级）", "强制 T1", "强制 T2", "强制 T3" };
+            for (int i = 0; i < 4; i++)
+                if (GUILayout.Toggle(Settings.GearTierOverride == i, tierNames[i], "Button", GUILayout.Width(i == 0 ? 150 : 80)))
+                    Settings.GearTierOverride = i;
+            GUILayout.EndHorizontal();
+            GUILayout.Label("<color=#aaaaaa>自动档由主角等级推出（≥36 = T3，≥16 = T2）。"
+                          + "55 级存档恒为 T3，要验 T1/T2 那两套就在这里强制。改完对已招募的卫兵无效，重新招一个才会按新档位发。</color>");
+
             // ---------- 规则 ----------
             GUILayout.Space(8);
             GUILayout.Label("<b>规则</b>");
@@ -172,6 +304,7 @@ namespace KgdRetinue
             if (GUILayout.Button("探测候选单位", GUILayout.Width(130))) Probe.ProbeUnits();
             if (GUILayout.Button("批量试算方案", GUILayout.Width(130))) PlanProbe.Run();
             if (GUILayout.Button("★ 一键全测 ★", GUILayout.Width(130))) AutoTest.RunAll();
+            if (GUILayout.Button("★ 一键测装备 ★", GUILayout.Width(140))) AutoTest.RunGearMatrix();
             if (GUILayout.Button("导出天赋名录", GUILayout.Width(130))) ItemTool.ExportFeatures();
             GUILayout.Label("<i>一键全测：清场 → 每个分型生成全部精英+一个普通 → 收集命中率/属性/装备 → 写 autotest.tsv → 自动遣散。临时解除数量与解锁限制。</i>");
             GUILayout.EndHorizontal();
@@ -328,6 +461,26 @@ namespace KgdRetinue
         /// <summary>卫兵放灵能不推高帷幕（亚空间威胁）。
         /// 帷幕是区域级的单一值，做不了独立池，只能选择计不计入。</summary>
         public bool GuardPsykerNoVeil = true;
+        /// <summary>在船上的 NPC 身上挂招募入口（走原生点击交互，不进存档）。</summary>
+        public bool NpcRecruitEntry = true;
+        /// <summary>挂载目标的蓝图名关键字，逗号分隔、大小写不敏感、子串匹配。
+        /// 默认高阶顾问（管家/总管，设定上最贴，且是非可直控 NPC）。
+        /// 面板上的【列出可挂载 NPC】会把当前区域的候选打到日志里。</summary>
+        public string RecruitNpcKeys = "Factotum";
+        /// <summary>把「征募护卫队」作为原生对话选项插进 NPC 的对话列表。
+        /// 运行时改蓝图纯内存、重启复原；选中记录只是 GUID 字符串，卸载安全。</summary>
+        public bool DialogRecruitEntry = true;
+
+        /// <summary>普通卫兵装备档位覆盖。0=自动（按主角等级推 PlayerTier），1/2/3=强制该档。
+        /// 纯测试用途：55 级存档恒为 T3，不覆盖的话 T1/T2 两套装备一次都触发不到。</summary>
+        public int GearTierOverride = 0;
+
+        /// <summary>用新的 uGUI 窗口（仿原版配色/字体）。关掉则回退到旧的 IMGUI 窗口。</summary>
+        public bool UseNewUI = true;
+
+        /// <summary>上次看到的植入物层级（AugmentTier）。-1 = 还没记录过。
+        /// 用来判断"剧情解锁了"，从而给已有卫兵补发更好的植入物。存在 UMM 的设置文件里，不进游戏存档。</summary>
+        public int LastAugmentTier = -1;
         // 卫兵杀敌同时也给卫队池加一份（不动玩家那份）
         public bool GuardKillFeedsOwnPool = true;
         // 每次区域加载按当前阶位补升级 —— 卫兵"跟久了自己成长"

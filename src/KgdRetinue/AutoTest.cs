@@ -94,6 +94,107 @@ namespace KgdRetinue
             }
         }
 
+        /// <summary>
+        /// 一键测装备：5 个分型 × T1/T2/T3 三档 = 15 组，全部跑一遍。
+        ///
+        /// 为什么要有它：装备档位由玩家等级推出（PlayerTier），55 级存档恒为 T3；
+        /// 要验 T1/T2 得手动切面板档位再一个个招，15 组要点几十次。
+        /// 这里把「切档位 → 招一个 → 记结果 → 遣散」整个循环自动化，只点一次。
+        ///
+        /// 结果同时写进 geartest.tsv，方便离线对着 items_zh.tsv 排查装不上的那些。
+        /// </summary>
+        public static void RunGearMatrix()
+        {
+            var game = Game.Instance;
+            var leader = game != null && game.Player != null ? game.Player.MainCharacterEntity : null;
+            if (leader == null) { Main.LogError("请先进入游戏内。"); return; }
+
+            bool oldUnlockTier = Main.Settings.UnlockTierLimits;
+            bool oldUnlockElite = Main.Settings.UnlockEliteLimit;
+            bool oldIgnoreUnlock = Main.Settings.EliteIgnoreUnlock;
+            int  oldTier = Main.Settings.GearTierOverride;
+            Main.Settings.UnlockTierLimits = true;
+            Main.Settings.UnlockEliteLimit = true;
+            Main.Settings.EliteIgnoreUnlock = true;
+
+            var lines = new List<string>();
+            int totalFail = 0;
+            try
+            {
+                Main.Log("================ 一键测装备开始（5 分型 × 3 档）================");
+                RetinueRegistry.DismissAll();
+
+                var archs = Archetypes.All;
+                for (int ai = 0; ai < archs.Length; ai++)
+                {
+                    var a = archs[ai];
+                    for (int tier = 1; tier <= 3; tier++)
+                    {
+                        Main.Settings.GearTierOverride = tier;
+                        GearTool.LastOk = GearTool.LastFail = GearTool.LastMiss = GearTool.LastAlready = 0;
+                        GearTool.LastNames = GearTool.LastRejected = "";
+
+                        Main.Log("---- " + a.Name + "  T" + tier + " ----");
+                        BaseUnitEntity g = null;
+                        try { g = RetinueTest.SpawnOne(ai, null, true, true); }   // forceNormal
+                        catch (Exception e) { Main.LogError("  生成失败: " + e.Message); }
+
+                        int want = 0;
+                        try
+                        {
+                            var arr = tier == 1 ? a.GearT1 : tier == 2 ? a.GearT2 : a.GearT3;
+                            want = arr == null ? 0 : arr.Length;
+                        }
+                        catch { }
+
+                        lines.Add(string.Join("\t", new[]{
+                            a.Name, "T" + tier, want.ToString(),
+                            GearTool.LastOk.ToString(), GearTool.LastFail.ToString(),
+                            GearTool.LastMiss.ToString(), GearTool.LastNames, GearTool.LastRejected }));
+                        totalFail += GearTool.LastFail;
+
+                        if (GearTool.LastFail > 0)
+                            Main.Log("  ⚠ " + a.Name + " T" + tier + " 有 " + GearTool.LastFail
+                                     + " 格装不上: " + GearTool.LastRejected);
+
+                        try { RetinueRegistry.DismissAll(); } catch { }
+                    }
+                }
+
+                // 汇总表
+                Main.Log("======== 装备矩阵汇总（配置数 / 装上 / 装不上 / 解析不到）========");
+                foreach (var l in lines)
+                {
+                    var f = l.Split('\t');
+                    Main.Log(string.Format("  {0,-14} {1}   配{2,2}  装上{3,2}  装不上{4,2}  缺蓝图{5,2}",
+                        f[0], f[1], f[2], f[3], f[4], f[5]));
+                }
+                Main.Log("  合计装不上 " + totalFail + " 格。" +
+                         (totalFail == 0 ? "" : " 明细见 geartest.tsv"));
+
+                try
+                {
+                    var sb = new StringBuilder("archetype\ttier\tconfigured\tequipped\tfailed\tmissing\tnames\trejected\n");
+                    foreach (var l in lines) sb.AppendLine(l);
+                    File.WriteAllText(
+                        Path.Combine(Main.ModEntry != null ? Main.ModEntry.Path : ".", "geartest.tsv"),
+                        sb.ToString(), new System.Text.UTF8Encoding(false));
+                    Main.Log("  -> geartest.tsv");
+                }
+                catch (Exception e) { Main.LogError("写 geartest.tsv 失败: " + e.Message); }
+            }
+            catch (Exception e) { Main.LogError("一键测装备异常: " + e); }
+            finally
+            {
+                Main.Settings.UnlockTierLimits = oldUnlockTier;
+                Main.Settings.UnlockEliteLimit = oldUnlockElite;
+                Main.Settings.EliteIgnoreUnlock = oldIgnoreUnlock;
+                Main.Settings.GearTierOverride = oldTier;   // 还原，别把测试档位留给玩家
+                try { RetinueRegistry.DismissAll(); } catch { }
+                Main.Log("================ 一键测装备结束 ================");
+            }
+        }
+
         private static Row Collect(ChainProbe.Archetype a, ChainProbe.EliteDef ed, BaseUnitEntity g, bool elite)
         {
             var r = new Row

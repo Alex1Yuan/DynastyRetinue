@@ -119,6 +119,77 @@ namespace KgdRetinue
         {
             if (!Main.Enabled) return;
             _pendingPlaceFrames = InPartyArea() ? 3 : 0;
+            // 招募入口是运行时交互、不进存档，所以每次进区域都要重挂一遍。
+            // 放在这里而不是 TickPending 里：它不依赖导航图，也不限于队伍区域
+            //（船上那些 NPC 所在的区域不一定被 InPartyArea 认作队伍区域）。
+            try { RecruitEntry.ResetForNewArea(); RecruitEntry.AttachInArea();
+                  RecruitDialog.ResetForNewArea(); RecruitDialog.InjectInArea(); }
+            catch (Exception e) { Main.LogError("[招募] 区域挂载异常: " + e.Message); }
+
+            try { RefreshGearOnAugmentUnlock(); }
+            catch (Exception e) { Main.LogError("[植入物] 层级检查异常: " + e.Message); }
+        }
+
+        /// <summary>
+        /// 植入物层级解锁后，给**已有**卫兵补发装备。
+        ///
+        /// 为什么需要：装备只在招募时发一次。植入物在 archetypes.json 里写成候选链
+        /// "MK2|MK1"，GearTool 会依次试到能装上为止 —— 这对**解锁之后新招**的卫兵够用，
+        /// 但早期招的那批已经穿着 MK-I 了，不会自己升级。
+        ///
+        /// 门在哪：EquipmentRestrictionAugmentTier.CanBeEquippedBy(MechanicEntity _) 把参数丢掉，
+        /// 直接问 Game.Instance.Player.PartyAugmentManager.CanEquipAugment(tier)，
+        /// 而 CanEquipAugment(t) => t &lt;= m_CurrentAvailableTier。
+        /// 所以这是**队伍全局**的剧情门（DLC3 无限缪斯博物馆那条线推进的），不是针对卫兵的。
+        /// 我们只读 CurrentAvailableTier，不动那个限制 —— 豁免等于给玩家自己开后门。
+        ///
+        /// 为什么只在**层级变化时**重发，而不是每次进区域都发：
+        /// 重发会覆盖玩家手动改过的装备（第二阶段的装配界面）。层级一局里最多变两次
+        /// （None -> Tier1 -> Tier2），代价近乎零。
+        /// </summary>
+        private static void RefreshGearOnAugmentUnlock()
+        {
+            if (!Main.Enabled || Main.Settings == null) return;
+
+            int cur;
+            try
+            {
+                var pam = Game.Instance != null && Game.Instance.Player != null
+                        ? Game.Instance.Player.PartyAugmentManager : null;
+                if (pam == null) return;
+                cur = (int)pam.CurrentAvailableTier;
+            }
+            catch { return; }
+
+            if (cur == Main.Settings.LastAugmentTier) return;
+
+            int prev = Main.Settings.LastAugmentTier;
+            Main.Settings.LastAugmentTier = cur;
+
+            // 首次运行（-1）只记录不重发：那不是"解锁了"，只是我们第一次看到。
+            if (prev < 0) { Main.Log("[植入物] 当前层级 Tier" + cur + "（首次记录，不重发装备）"); return; }
+            if (cur < prev) { Main.Log("[植入物] 层级回退 " + prev + " -> " + cur + "（多半是读了旧档），不重发。"); return; }
+
+            var list = RetinueRegistry.All();
+            if (list == null || list.Count == 0)
+            { Main.Log("[植入物] 层级 " + prev + " -> " + cur + "，但没有在册卫兵。"); return; }
+
+            Main.Log("[植入物] 层级解锁 " + prev + " -> " + cur + "，给 " + list.Count + " 名已有卫兵补发装备……");
+            int upgraded = 0;
+            foreach (var g in list)
+            {
+                try
+                {
+                    int ai = RetinueRegistry.ArchetypeOf(g);
+                    var arch = Archetypes.Get(ai >= 0 ? ai : Main.Settings.ArchetypeIndex);
+                    if (arch == null) continue;
+                    // Equip 自带幂等：已经穿着的候选会被跳过，只有真能升级的那格会动
+                    int n = GearTool.Equip(g, arch);
+                    if (n > 0) upgraded++;
+                }
+                catch (Exception e) { Main.LogError("[植入物] 补发失败: " + e.Message); }
+            }
+            Main.Log("[植入物] 补发完成，" + upgraded + " 名卫兵有装备变化。");
         }
 
         /// <summary>由 Main.OnUpdate 每帧调用，消费摆位标记。</summary>

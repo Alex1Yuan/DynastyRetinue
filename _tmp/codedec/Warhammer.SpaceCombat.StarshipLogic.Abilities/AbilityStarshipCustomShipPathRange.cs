@@ -1,0 +1,89 @@
+using System.Collections.Generic;
+using System.Linq;
+using Kingmaker;
+using Kingmaker.Blueprints;
+using Kingmaker.EntitySystem.Entities;
+using Kingmaker.Pathfinding;
+using Kingmaker.PubSubSystem;
+using Kingmaker.PubSubSystem.Core.Interfaces;
+using Kingmaker.UI.Pointer.AbilityTarget;
+using Kingmaker.UI.SurfaceCombatHUD;
+using Kingmaker.UnitLogic;
+using Kingmaker.UnitLogic.Abilities;
+using Kingmaker.UnitLogic.Abilities.Components.Patterns;
+using Kingmaker.Utility;
+using Owlcat.Runtime.Core.Utility;
+using Pathfinding;
+using UnityEngine;
+
+namespace Warhammer.SpaceCombat.StarshipLogic.Abilities;
+
+public class AbilityStarshipCustomShipPathRange : AbilityRange, IShowAoEAffectedUIHandler, ISubscriber
+{
+	[SerializeField]
+	private GameObject DefaultMarker;
+
+	private ICustomShipPathProvider CustomPathProvider => Ability.Blueprint.GetComponent<ICustomShipPathProvider>();
+
+	protected override bool CanEnable()
+	{
+		if (base.CanEnable())
+		{
+			return CustomPathProvider != null;
+		}
+		return false;
+	}
+
+	protected override void SetFirstSpecs()
+	{
+		if (Ability.Caster is StarshipEntity starshipEntity)
+		{
+			Vector3 desiredPosition = Game.Instance.VirtualPositionController.GetDesiredPosition(starshipEntity);
+			Vector3 currentUnitDirection = UnitPredictionManager.Instance.CurrentUnitDirection;
+			Dictionary<GraphNode, CustomPathNode> customPath = CustomPathProvider.GetCustomPath(starshipEntity, desiredPosition, currentUnitDirection);
+			if (customPath != null)
+			{
+				Game.Instance.StarshipPathController.ShowCustomShipPath(customPath, DefaultMarker);
+			}
+		}
+	}
+
+	protected override void SetRangeToWorldPosition(Vector3 castPosition, bool ignoreCache = false)
+	{
+		if (!(Ability.Caster is StarshipEntity starship))
+		{
+			return;
+		}
+		Vector3 currentUnitDirection = UnitPredictionManager.Instance.CurrentUnitDirection;
+		Dictionary<GraphNode, CustomPathNode> customPath = CustomPathProvider.GetCustomPath(starship, castPosition, currentUnitDirection);
+		if (customPath != null)
+		{
+			List<CustomGridNodeBase> list = customPath.Keys.Select((GraphNode x) => x as CustomGridNodeBase).ToTempList();
+			OrientedPatternData pattern = new OrientedPatternData(list, list.FirstOrDefault());
+			if (GridPatterns.TryGetEnclosingRect(Ability.Caster.GetOccupiedNodes(Ability.Caster.Position), out var result))
+			{
+				CombatHUDRenderer.AbilityAreaHudInfo abilityAreaHUD = new CombatHUDRenderer.AbilityAreaHudInfo
+				{
+					pattern = pattern,
+					casterRect = result,
+					minRange = Ability.MinRangeCells,
+					maxRange = Ability.RangeCells,
+					effectiveRange = 0,
+					ignoreRangesByDefault = false,
+					ignorePatternPrimaryAreaByDefault = false,
+					combatHudCommandsOverride = Ability.Blueprint.CombatHudCommandsOverride
+				};
+				CombatHUDRenderer.Instance.SetAbilityAreaHUD(abilityAreaHUD);
+			}
+		}
+	}
+
+	public void HandleAoEMove(Vector3 pos, AbilityData ability)
+	{
+	}
+
+	public void HandleAoECancel()
+	{
+		Game.Instance.StarshipPathController.ShowCurrentShipPath();
+	}
+}

@@ -131,6 +131,9 @@ namespace KgdRetinue
                     // 不该导致整条分型作废，装备时再逐件跳过。
                     a.Gear       = ReadGuidList(item["gear"]);
                     a.PlayerGear = ReadGuidList(item["playerGear"]);
+                    a.GearT1     = ReadGuidList(item["gearT1"]);
+                    a.GearT2     = ReadGuidList(item["gearT2"]);
+                    a.GearT3     = ReadGuidList(item["gearT3"]);
                     a.GrantFeatures = ReadGuidList(item["grantFeatures"]);
                     a.PreGrant      = ReadGuidList(item["preGrant"]);
 

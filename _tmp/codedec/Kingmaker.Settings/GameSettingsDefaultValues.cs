@@ -1,0 +1,34 @@
+using System;
+using JetBrains.Annotations;
+
+namespace Kingmaker.Settings;
+
+[Serializable]
+public class GameSettingsDefaultValues
+{
+	public GameMainSettingsDefaultValues Main;
+
+	public GameSwitchSettingsDefaultValues Switch;
+
+	public GameTutorialSettingsDefaultValues Tutorial;
+
+	[UsedImplicitly]
+	public GameSaveSettingsDefaultValues Save;
+
+	[UsedImplicitly]
+	public GameSaveSettingsDefaultValues SaveConsole;
+
+	public GameTooltipsSettingsDefaultValues Tooltips;
+
+	public GameMainMenuSettingsDefaultValues MainMenu;
+
+	public GameCombatTextsSettingsDefaultValues CombatTexts;
+
+	public GameDialogsSettingsDefaultValues Dialogs;
+
+	public GameAutopauseSettingsDefaultValues Autopause;
+
+	public GameTurnBasedSettingsDefaultValues TurnBased;
+
+	public GameSillyCheatCodesSettingsDefaultValues SillyCheatCodes;
+}

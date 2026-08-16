@@ -1,0 +1,551 @@
+[
+ {
+  "label": "Melee/铁壁·先锋队长",
+  "guid": "91cfd33f7d6144028d7211ef746f54cd",
+  "name": "BoardedShip_Arbites_Bryce_Pregen",
+  "exists": true,
+  "bloblen": 1719,
+  "typeid": "fa4fa7e4548127a47a2846c91b051065",
+  "is_unit": true,
+  "chain": [
+   "BoardedShip_Arbites_Bryce_Pregen",
+   "StartGame_Player_Unit",
+   "Character"
+  ],
+  "companion": [],
+  "proto_tok": [],
+  "spacemarine": [],
+  "race": [
+   "HumanRace"
+  ],
+  "army": [],
+  "faction": [
+   "Player",
+   "Player",
+   "Player"
+  ],
+  "vis": [
+   "Arbites_Male_VisualSettings",
+   "Character_VisualSettings",
+   "Character_VisualSettings"
+  ],
+  "portrait": [
+   [
+    "a23953738df04e5b9f1d04a52aab3582",
+    "ArbitratorBryce"
+   ],
+   [
+    "37b60641d5545b642ae4d3699298d3f5",
+    "PlayerAasimarPaladin01_Portrait"
+   ]
+  ],
+  "brain": [],
+  "weapon": [
+   "3Arbites_ExcruciatorMaul_BoardedShip_Unlootable_Item",
+   ".Arbites_ShotPistol_BoardedShip_Unlootable_Item",
+   "StubRevolverSingleShot_Item"
+  ],
+  "armor": [
+   "Arbites_BryceArmour_BoardedShip_Unlootable_Item"
+  ],
+  "nfeat": 4,
+  "feat": [
+   "BoardedShip_Arbites_Bryce_FeatureList",
+   "Close-quartersCombatMasterProgena_Feature",
+   "SubductorsMastery_Feature",
+   "IsPlayer_Feature"
+  ],
+  "prefab_raw": [
+   "81b85e74c8f3f4d43a60198998370d49",
+   "132189ef4ab1c11418614e5085b91c05",
+   "985ea43c8d52eb7478f65edc31cc87b1"
+  ],
+  "prefab_real": [
+   "81b85e74c8f3f4d43a60198998370d49",
+   "132189ef4ab1c11418614e5085b91c05",
+   "985ea43c8d52eb7478f65edc31cc87b1"
+  ]
+ },
+ {
+  "label": "Melee/磐石·首席战士",
+  "guid": "9f1b785d6baa4189a54f3596024a91f2",
+  "name": "BoardedShip_Arbites_Stein_Pregen",
+  "exists": true,
+  "bloblen": 1750,
+  "typeid": "fa4fa7e4548127a47a2846c91b051065",
+  "is_unit": true,
+  "chain": [
+   "BoardedShip_Arbites_Stein_Pregen",
+   "StartGame_Player_Unit",
+   "Character"
+  ],
+  "companion": [],
+  "proto_tok": [],
+  "spacemarine": [],
+  "race": [
+   "HumanRace"
+  ],
+  "army": [],
+  "faction": [
+   "Player",
+   "Player",
+   "Player"
+  ],
+  "vis": [
+   "Arbites_Male_VisualSettings",
+   "Character_VisualSettings",
+   "Character_VisualSettings"
+  ],
+  "portrait": [
+   [
+    "942c9ad5ac1146dea04f03d2d35c6bdf",
+    "ArbitratorStein"
+   ],
+   [
+    "37b60641d5545b642ae4d3699298d3f5",
+    "PlayerAasimarPaladin01_Portrait"
+   ]
+  ],
+  "brain": [],
+  "weapon": [
+   "1Arbites_DominatorMaul_BoardedShip_Unlootable_Item",
+   ".Arbites_ShotPistol_BoardedShip_Unlootable_Item",
+   "StubRevolverSingleShot_Item"
+  ],
+  "armor": [
+   "2Arbites_StandartArmour_BoardedShip_Unlootable_Item"
+  ],
+  "nfeat": 4,
+  "feat": [
+   "BoardedShip_Arbites_Stein_FeatureList",
+   "Close-quartersCombatMasterProgena_Feature",
+   "SubductorsMastery_Feature",
+   "IsPlayer_Feature"
+  ],
+  "prefab_raw": [
+   "e632ea2bc8258484cb48596c67ded999",
+   "132189ef4ab1c11418614e5085b91c05",
+   "985ea43c8d52eb7478f65edc31cc87b1"
+  ],
+  "prefab_real": [
+   "e632ea2bc8258484cb48596c67ded999",
+   "132189ef4ab1c11418614e5085b91c05",
+   "985ea43c8d52eb7478f65edc31cc87b1"
+  ]
+ },
+ {
+  "label": "Sniper/寂静之眼",
+  "guid": "aca1e823dbf64d6999d2132e3198dd5a",
+  "name": "Quetza_EldarRangerHard",
+  "exists": true,
+  "bloblen": 1173,
+  "typeid": "fa4fa7e4548127a47a2846c91b051065",
+  "is_unit": true,
+  "chain": [
+   "Quetza_EldarRangerHard"
+  ],
+  "companion": [],
+  "proto_tok": [],
+  "spacemarine": [],
+  "race": [],
+  "army": [
+   "NewAeldariArmy"
+  ],
+  "faction": [
+   "CutsceneNeutrals"
+  ],
+  "vis": [
+   "JungleWorldEldarUnit_VisualSettings"
+  ],
+  "portrait": [
+   [
+    "64e9b06686bf4514ac7091cb5862afad",
+    "BCT_Eldar_Male_Guardian2_Portrait"
+   ]
+  ],
+  "brain": [
+   "QuetzaEldarRangeHard_Brain"
+  ],
+  "weapon": [
+   "LongRifleT2_Item"
+  ],
+  "armor": [
+   "EldarRangerArmour_Item"
+  ],
+  "nfeat": 3,
+  "feat": [
+   "Quetza_Aeldari_Avenge_Feature",
+   "Adept_Keystone_MobFeature",
+   "DrukhariSniper_HighGround_Feature"
+  ],
+  "prefab_raw": [
+   "785e082e1d92d904489b327346d0c095"
+  ],
+  "prefab_real": [
+   "785e082e1d92d904489b327346d0c095"
+  ]
+ },
+ {
+  "label": "Sniper/赏金·猎首",
+  "guid": "53281ae602a34756a47c3e23f66c06cd",
+  "name": "FootfallAnverSniper_Ranged_Elite",
+  "exists": true,
+  "bloblen": 997,
+  "typeid": "fa4fa7e4548127a47a2846c91b051065",
+  "is_unit": true,
+  "chain": [
+   "FootfallAnverSniper_Ranged_Elite"
+  ],
+  "companion": [],
+  "proto_tok": [],
+  "spacemarine": [],
+  "race": [],
+  "army": [
+   "NewHumanBanditsArmy"
+  ],
+  "faction": [
+   "Mobs"
+  ],
+  "vis": [
+   "FootfallBanditHeavy_VisualSettings"
+  ],
+  "portrait": [],
+  "brain": [
+   "RangedSniperBrain"
+  ],
+  "weapon": [
+   "SniperRifle_Item"
+  ],
+  "armor": [
+   "Synskin_Item"
+  ],
+  "nfeat": 3,
+  "feat": [
+   "EagleEye_Feature",
+   "CullTheWeakFeature",
+   "TargetWeaknessFeature"
+  ],
+  "prefab_raw": [
+   "6aa8ff680252d73409a351948de1a435"
+  ],
+  "prefab_real": [
+   "6aa8ff680252d73409a351948de1a435"
+  ]
+ },
+ {
+  "label": "Suppress/怒火·首席连射",
+  "guid": "9bc515c1b1b84c3ab0f65544807e22ee",
+  "name": "TaintedStreets_Arbites_SolomonSquad_V1",
+  "exists": true,
+  "bloblen": 974,
+  "typeid": "fa4fa7e4548127a47a2846c91b051065",
+  "is_unit": true,
+  "chain": [
+   "TaintedStreets_Arbites_SolomonSquad_V1"
+  ],
+  "companion": [],
+  "proto_tok": [],
+  "spacemarine": [],
+  "race": [],
+  "army": [
+   "NewHumanImperiumArmy"
+  ],
+  "faction": [
+   "CutsceneNeutrals"
+  ],
+  "vis": [
+   "Arbites_Male_VisualSettings"
+  ],
+  "portrait": [
+   [
+    "1704807cd8944603b71331183ff36a1f",
+    "ArbitratorClayton"
+   ]
+  ],
+  "brain": [
+   "TreasureWorld_Arbites_PetMaster_Brain"
+  ],
+  "weapon": [
+   "BolterT1_Item"
+  ],
+  "armor": [
+   "ArmoredBodyglove4_Item"
+  ],
+  "nfeat": 5,
+  "feat": [
+   "TreasureWorld_Arbites_SquadTactics_Feature",
+   "4TreasureWorld_Arbites_UnifiedCommandProtocol_Feature",
+   "BoltWeaponSpecialization_Feature",
+   "3TreasureWorld_ArbitesPetMaster_BrokenChains_Feature",
+   "1TreasureWorld_ArbitesPetmaster_Reactivate_Feature"
+  ],
+  "prefab_raw": [
+   "1ff432c48e6a9bd4295f3be741f2e71d"
+  ],
+  "prefab_real": [
+   "1ff432c48e6a9bd4295f3be741f2e71d"
+  ]
+ },
+ {
+  "label": "Suppress/圣焰·净罪修女",
+  "guid": "2cf75c27e6d34681ab623101b0be1135",
+  "name": "DLC3_DL_Sororitas_Melta_Unit",
+  "exists": true,
+  "bloblen": 994,
+  "typeid": "fa4fa7e4548127a47a2846c91b051065",
+  "is_unit": true,
+  "chain": [
+   "DLC3_DL_Sororitas_Melta_Unit"
+  ],
+  "companion": [],
+  "proto_tok": [],
+  "spacemarine": [],
+  "race": [],
+  "army": [
+   "NewHumanImperiumArmy"
+  ],
+  "faction": [
+   "Mobs"
+  ],
+  "vis": [
+   "DLC3_DL_Sororitas01_VisualSettings"
+  ],
+  "portrait": [],
+  "brain": [
+   "DLC3_DL_Sororitas_Melta_Brain",
+   "DLC3_DL_Sororitas_Melta_Brain_ReactDamage"
+  ],
+  "weapon": [
+   "DLC3_DL_Sororitas_MultiMelta_Item"
+  ],
+  "armor": [
+   "DLC3_DL_Sororitas_Armor_Item"
+  ],
+  "nfeat": 5,
+  "feat": [
+   "DLC3_DL_Sororitas_MeltaProficiency_Feature",
+   "DLC3_DL_Sororitas_PowerArmourProficiency",
+   "DLC3_DL_Sororitas_Stats_Feature",
+   "1DLC3_DL_Inquisitor_Shelling_InvalidTarget_Feature",
+   "DLC3_DL_Inquisitor_React_SorMelta_Feature"
+  ],
+  "prefab_raw": [
+   "b8810e8e006e3db4a83e2c069f6c0721"
+  ],
+  "prefab_real": [
+   "b8810e8e006e3db4a83e2c069f6c0721"
+  ]
+ },
+ {
+  "label": "Psy/亚空间审判者",
+  "guid": "d1287134a3e64a4dbdae16b58d21bd8b",
+  "name": "Ch05Inquisitor_Psyker_unit",
+  "exists": true,
+  "bloblen": 807,
+  "typeid": "fa4fa7e4548127a47a2846c91b051065",
+  "is_unit": true,
+  "chain": [
+   "Ch05Inquisitor_Psyker_unit"
+  ],
+  "companion": [],
+  "proto_tok": [],
+  "spacemarine": [],
+  "race": [],
+  "army": [
+   "NewHumanImperiumArmy"
+  ],
+  "faction": [
+   "CutsceneNeutrals"
+  ],
+  "vis": [
+   "JungleWorldRebelMeleeTough_VisualSettings"
+  ],
+  "portrait": [],
+  "brain": [
+   "Inquisitor_Psyker_brain"
+  ],
+  "weapon": [
+   "DivinersStaff_Item"
+  ],
+  "armor": [
+   "LeathersArmor_Item"
+  ],
+  "nfeat": 6,
+  "feat": [
+   "PsyRating3",
+   "Divination_Forewarning_Feature",
+   "Divination_Prescience_Feature",
+   "Divination_Fatebringer_Feature",
+   "Divination_UnnaturalLuck_Feature",
+   "Divination_Foreboding_Feature"
+  ],
+  "prefab_raw": [
+   "b9f4bb23e988c9a4788371d8af7b44dd"
+  ],
+  "prefab_real": [
+   "b9f4bb23e988c9a4788371d8af7b44dd"
+  ]
+ },
+ {
+  "label": "Psy/火杖行刑者",
+  "guid": "638ab19bfae74bb99dacc93e7d6fe7f3",
+  "name": "Ch04Chorda_Pyromancer_unit",
+  "exists": true,
+  "bloblen": 1040,
+  "typeid": "fa4fa7e4548127a47a2846c91b051065",
+  "is_unit": true,
+  "chain": [
+   "Ch04Chorda_Pyromancer_unit"
+  ],
+  "companion": [],
+  "proto_tok": [],
+  "spacemarine": [],
+  "race": [],
+  "army": [
+   "NewHumanImperiumArmy"
+  ],
+  "faction": [
+   "CutsceneNeutrals"
+  ],
+  "vis": [
+   "JungleWorldRebelMeleeTough_VisualSettings"
+  ],
+  "portrait": [
+   [
+    "07256027631f4f698d643446f23e2cca",
+    "JungleWorldRebelOfficerMelee_Portrait"
+   ]
+  ],
+  "brain": [
+   "Ch04_Pyromancer_brain"
+  ],
+  "weapon": [
+   "StaffofEndlessFlame_Item"
+  ],
+  "armor": [
+   "LeathersArmor_Item"
+  ],
+  "nfeat": 8,
+  "feat": [
+   "SanctionedPsyker",
+   "Pyromancy_Ignite_Feature",
+   "Pyromancy_FireStorm_Feature",
+   "PyromancyBackdraftTalentFeature",
+   "PsyRating0",
+   "PsyRating1",
+   "PsyRating2",
+   "PsyRating3"
+  ],
+  "prefab_raw": [
+   "5ea04a48b7f2be046976303edcf836e1"
+  ],
+  "prefab_real": [
+   "5ea04a48b7f2be046976303edcf836e1"
+  ]
+ },
+ {
+  "label": "Officer/谕令·灵能军官",
+  "guid": "bc5ca9badb2042b48afb13c1829619b3",
+  "name": "VC2_Astropath",
+  "exists": true,
+  "bloblen": 893,
+  "typeid": "fa4fa7e4548127a47a2846c91b051065",
+  "is_unit": true,
+  "chain": [
+   "VC2_Astropath"
+  ],
+  "companion": [],
+  "proto_tok": [],
+  "spacemarine": [],
+  "race": [
+   "HumanRace"
+  ],
+  "army": [
+   "NewHumanImperiumArmy"
+  ],
+  "faction": [
+   "CutsceneNeutrals"
+  ],
+  "vis": [
+   "VC2_Lord_Male_VisualSetting"
+  ],
+  "portrait": [],
+  "brain": [
+   "VC2_Astropath_Brain"
+  ],
+  "weapon": [
+   "AstropathsStaffUnlootable_Item"
+  ],
+  "armor": [
+   "ArmoredBodyglove_BoardedShip_Unlootable_Item"
+  ],
+  "nfeat": 7,
+  "feat": [
+   "PsyRating0",
+   "SanctionedPsyker",
+   "PsyRating1",
+   "PsyRating2",
+   "TelepathyMindSiegeTalent_Feature",
+   "TelepathyMindThiefTalent_Feature",
+   "TelepathyVisionsOfDoomTalent_Feature"
+  ],
+  "prefab_raw": [
+   "80f76544447085b4ab1f52c42736bf3d"
+  ],
+  "prefab_real": [
+   "80f76544447085b4ab1f52c42736bf3d"
+  ]
+ },
+ {
+  "label": "Officer/铁律·政委军官",
+  "guid": "5990a9129d6648a68aa7b62ebe2cdc05",
+  "name": "HumanCommissar_MeleeRanged_Prison_True",
+  "exists": true,
+  "bloblen": 3305,
+  "typeid": "fa4fa7e4548127a47a2846c91b051065",
+  "is_unit": true,
+  "chain": [
+   "HumanCommissar_MeleeRanged_Prison_True"
+  ],
+  "companion": [],
+  "proto_tok": [],
+  "spacemarine": [],
+  "race": [],
+  "army": [
+   "NewHumanImperiumArmy"
+  ],
+  "faction": [
+   "CutsceneNeutrals"
+  ],
+  "vis": [],
+  "portrait": [
+   [
+    "a2699823ca3140eba4a1445871d456c5",
+    "CommorraghCommissar_Portrait"
+   ]
+  ],
+  "brain": [
+   "HumanCommissar_MeleeRanged_Brain_True_Ranged"
+  ],
+  "weapon": [
+   "BoltPistol_CommissarSpecial_Item",
+   "ChainSword_CommissarSpecial_Item",
+   "BoltPistol_Item",
+   "EliteChainSword_Item"
+  ],
+  "armor": [
+   "ArmoredBodyglove3_Item"
+  ],
+  "nfeat": 2,
+  "feat": [
+   "HumanCommissar_MeleeRangedStance_Feature",
+   "Common_MoreAttacks_Feature"
+  ],
+  "prefab_raw": [
+   "f680bbc5489ea6a4fac4a617cf8308c4"
+  ],
+  "prefab_real": [
+   "f680bbc5489ea6a4fac4a617cf8308c4"
+  ]
+ }
+]

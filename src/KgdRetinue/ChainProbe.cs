@@ -67,6 +67,11 @@ namespace KgdRetinue
             /// BlueprintSelectionFeature.GetSelectionItems 会把 unit.Facts 上的这些并进候选池；
             /// 不授予的话火系/生物系灵能一条都进不来（实测火杖行刑者 7 条全灭）。</summary>
             public string[] PreGrant;
+            /// <summary>可选：普通卫兵按阶位发的三套渐进装备。
+            /// 分档依据是物品 Rarity（Common → Pattern → Unique）——
+            /// ItemLevel 在本作里 2755/2940 是 0，用不了。
+            /// playerGear 有配置时优先用 playerGear（手动压过默认）。</summary>
+            public string[] GearT1, GearT2, GearT3;
             /// <summary>可选：按段拼装方案。pathGuid -> { 桶 -> 方案名列表 }，
             /// 桶取值 "FirstCareer" / "SecondCareer" / "FirstOrSecondCareer" / "default"
             ///（只写一个 default 就是整段照抄）。一个桶可以给多个方案名 ——
@@ -110,6 +115,11 @@ namespace KgdRetinue
             /// 它们没有 EliteDef，不给的话分型方案里的学派天赋照样一条都进不来。
             /// 精英自己声明了 preGrant 就用自己的，没声明才回落到这里。</summary>
             public string[] PreGrant;
+            /// <summary>可选：普通卫兵按阶位发的三套渐进装备。
+            /// 分档依据是物品 Rarity（Common → Pattern → Unique）——
+            /// ItemLevel 在本作里 2755/2940 是 0，用不了。
+            /// playerGear 有配置时优先用 playerGear（手动压过默认）。</summary>
+            public string[] GearT1, GearT2, GearT3;
             /// <summary>可选：该分型的多个精英（每个有自己的单位/名字/装备/链）。
             /// 配了这个就忽略上面的 EliteUnitId/EliteName/Gear 单精英字段。</summary>
             public EliteDef[] Elites;

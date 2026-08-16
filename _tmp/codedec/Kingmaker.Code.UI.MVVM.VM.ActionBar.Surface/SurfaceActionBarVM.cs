@@ -1,0 +1,516 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using Kingmaker.Blueprints;
+using Kingmaker.Blueprints.Root.Strings;
+using Kingmaker.Code.UI.MVVM.VM.SurfaceCombat;
+using Kingmaker.Code.UI.MVVM.VM.SurfaceCombat.MomentumAndVeil;
+using Kingmaker.Controllers.Dialog;
+using Kingmaker.Controllers.TurnBased;
+using Kingmaker.DialogSystem.Blueprints;
+using Kingmaker.EntitySystem.Entities;
+using Kingmaker.EntitySystem.Interfaces;
+using Kingmaker.GameModes;
+using Kingmaker.Networking;
+using Kingmaker.PubSubSystem;
+using Kingmaker.PubSubSystem.Core;
+using Kingmaker.PubSubSystem.Core.Interfaces;
+using Kingmaker.RuleSystem.Rules;
+using Kingmaker.UI.Common;
+using Kingmaker.UI.Models;
+using Kingmaker.UI.Models.UnitSettings;
+using Kingmaker.UnitLogic.Abilities;
+using Kingmaker.UnitLogic.Abilities.Blueprints;
+using Kingmaker.UnitLogic.Abilities.Components;
+using Kingmaker.UnitLogic.Commands.Base;
+using Kingmaker.UnitLogic.Levelup;
+using Kingmaker.Utility;
+using Kingmaker.Utility.DotNetExtensions;
+using Kingmaker.View.Mechanics.Entities;
+using Owlcat.Runtime.UI.MVVM;
+using Owlcat.Runtime.UI.Utility;
+using Owlcat.Runtime.UniRx;
+using Photon.Realtime;
+using UniRx;
+
+namespace Kingmaker.Code.UI.MVVM.VM.ActionBar.Surface;
+
+public class SurfaceActionBarVM : BaseDisposable, IViewModel, IBaseDisposable, IDisposable, IGameModeHandler, ISubscriber, IUnitCommandStartHandler, ISubscriber<IMechanicEntity>, IWarhammerAttackHandler, IUnitCommandActHandler, IUnitCommandEndHandler, IUnitActiveEquipmentSetHandler, ISubscriber<IBaseUnitEntity>, IDeliverAbilityEffectHandler, IUnitAbilityCooldownHandler, IAbilityExecutionProcessHandler, ILevelUpCompleteUIHandler, ILevelUpManagerUIHandler, IDialogInteractionHandler, IHoverActionBarSlotHandler, IAbilityTargetSelectionUIHandler, IAreaActivationHandler, IUnitDirectHoverUIHandler, IFullScreenUIHandler, IPreparationTurnBeginHandler, IPreparationTurnEndHandler, INetLobbyPlayersHandler, INetRoleSetHandler, IInterruptTurnStartHandler, IInterruptTurnEndHandler, ITurnStartHandler, IContinueTurnHandler, IAbilityExecutionProcessClearedHandler, IInterruptTurnContinueHandler, IUnitOverdriveAugmentHandler, IPlayerInputLockHandler
+{
+	public readonly SurfaceActionBarPartConsumablesVM Consumables;
+
+	public readonly SurfaceActionBarPartWeaponsVM Weapons;
+
+	public readonly SurfaceActionBarPartAbilitiesVM Abilities;
+
+	public readonly SurfaceMomentumVM SurfaceMomentumVM;
+
+	public readonly VeilThicknessVM VeilThickness;
+
+	public readonly ReactiveProperty<SurfaceCombatUnitVM> CurrentCombatUnit;
+
+	private readonly BoolReactiveProperty m_ShouldShow = new BoolReactiveProperty();
+
+	private readonly BoolReactiveProperty m_IsVisible = new BoolReactiveProperty();
+
+	private bool m_IsInGame;
+
+	private bool m_IsInFullScreenUI;
+
+	public readonly ReactiveProperty<string> EndTurnText = new ReactiveProperty<string>();
+
+	public readonly ReactiveProperty<bool> IsAttackAbilityGroupCooldownAlertActive = new ReactiveProperty<bool>(initialValue: false);
+
+	public readonly ReactiveProperty<AbstractUnitEntityView> HighlightedUnit = new ReactiveProperty<AbstractUnitEntityView>();
+
+	private bool m_TargetSelectionStarted;
+
+	public readonly ReactiveProperty<ActionBarSlotVM> QuickAccessSlot = new ReactiveProperty<ActionBarSlotVM>();
+
+	public readonly BoolReactiveProperty IsNotControllableCharacter = new BoolReactiveProperty();
+
+	public readonly StringReactiveProperty ControllablePlayerNickname = new StringReactiveProperty();
+
+	private readonly ReactiveCommand UpdateSlotsCommand = new ReactiveCommand();
+
+	private bool m_SlotsUpdateQueued;
+
+	private IFullScreenUIHandler m_FullScreenUIHandlerImplementation;
+
+	private BaseUnitEntity CurrentUnit
+	{
+		get
+		{
+			if (CurrentCombatUnit?.Value?.UnitAsBaseUnitEntity?.IsPet != true)
+			{
+				return CurrentCombatUnit?.Value?.UnitAsBaseUnitEntity;
+			}
+			return CurrentCombatUnit.Value.UnitAsBaseUnitEntity.Master;
+		}
+	}
+
+	public IReadOnlyReactiveProperty<bool> IsVisible => m_IsVisible;
+
+	public IReadOnlyReactiveProperty<bool> IsVisibleAndShown { get; }
+
+	public SurfaceActionBarVM(ReactiveProperty<SurfaceCombatUnitVM> currentUnit)
+	{
+		AddDisposable(Consumables = new SurfaceActionBarPartConsumablesVM());
+		AddDisposable(Weapons = new SurfaceActionBarPartWeaponsVM());
+		AddDisposable(Abilities = new SurfaceActionBarPartAbilitiesVM(isInCharScreen: false, IsNotControllableCharacter));
+		AddDisposable(SurfaceMomentumVM = new SurfaceMomentumVM());
+		AddDisposable(VeilThickness = new VeilThicknessVM());
+		IsVisibleAndShown = m_IsVisible.And(m_ShouldShow).ToReactiveProperty();
+		AddDisposable(UniRxExtensionMethods.Subscribe(UpdateSlotsCommand.ObserveLastValueOnLateUpdate(), delegate
+		{
+			UpdateSlotsCommandHandler();
+		}));
+		CurrentCombatUnit = currentUnit;
+		AddDisposable(CurrentCombatUnit.Subscribe(delegate
+		{
+			OnUnitChanged();
+		}));
+		m_IsInGame = IsInGameMode(Game.Instance.CurrentMode);
+		AddDisposable(EventBus.Subscribe(this));
+	}
+
+	protected override void DisposeImplementation()
+	{
+	}
+
+	private void UpdateSlotsCommandHandler(bool onTurnStart = false)
+	{
+		UpdateFunc(Consumables.Slots);
+		foreach (SurfaceActionBarPartWeaponSetVM set in Weapons.Sets)
+		{
+			UpdateFunc(set.AllSlots);
+		}
+		UpdateFunc(Abilities.Slots);
+		UpdateFunc(SurfaceMomentumVM.DesperateMeasureSlots);
+		UpdateFunc(SurfaceMomentumVM.HeroicActSlots);
+		if (Abilities.OverdriveSlotVM != null)
+		{
+			UpdateFunc(new AutoDisposingList<ActionBarSlotVM> { Abilities.OverdriveSlotVM });
+		}
+		CheckAnotherPlayerTurn();
+		void UpdateFunc(IList<ActionBarSlotVM> slots)
+		{
+			foreach (ActionBarSlotVM slot in slots)
+			{
+				slot.UpdateResources();
+				if (onTurnStart)
+				{
+					slot.CloseConvertsOnTurnStart();
+				}
+			}
+		}
+	}
+
+	private void OnUnitChanged()
+	{
+		UpdateVisibility();
+		if (m_IsVisible.Value)
+		{
+			CurrentUnit.UISettings.TryToInitialize();
+			if (!(SurfaceMomentumVM.Unit == CurrentUnit) || !(Consumables.Unit == CurrentUnit) || !(Weapons.Unit == CurrentUnit) || !(Abilities.Unit == CurrentUnit))
+			{
+				VeilThickness.Update();
+				SurfaceMomentumVM.SetUnit(CurrentUnit);
+				Consumables.SetUnit(CurrentUnit);
+				Weapons.SetUnit(CurrentUnit);
+				Abilities.SetUnit(CurrentUnit);
+				CheckAnotherPlayerTurn();
+			}
+		}
+	}
+
+	private void UpdateVisibility()
+	{
+		m_IsVisible.Value = CurrentUnit != null && CurrentUnit.Faction.IsPlayer && m_IsInGame && !m_IsInFullScreenUI && !Game.Instance.TurnController.IsPreparationTurn;
+	}
+
+	public void TriggerVisibility(bool trigger)
+	{
+		if (!(Game.Instance.CursorController.SelectedAbility != null))
+		{
+			m_ShouldShow.Value = trigger;
+		}
+	}
+
+	public void OnGameModeStart(GameModeType gameMode)
+	{
+		m_IsInGame = IsInGameMode(gameMode);
+		OnUnitChanged();
+	}
+
+	public void OnGameModeStop(GameModeType gameMode)
+	{
+		if (gameMode == GameModeType.Cutscene)
+		{
+			UpdateSlotsCommand.Execute();
+		}
+	}
+
+	private void CheckAnotherPlayerTurn()
+	{
+		MechanicEntity currentUnit = Game.Instance.TurnController.CurrentUnit;
+		if (!UINetUtility.InLobbyAndPlaying || currentUnit == null)
+		{
+			IsNotControllableCharacter.Value = false;
+			return;
+		}
+		bool isPlayerFaction = currentUnit.IsPlayerFaction;
+		bool flag = ((Game.Instance.CurrentMode == GameModeType.SpaceCombat) ? (!UINetUtility.IsControlMainCharacter()) : (!currentUnit.IsMyNetRole()));
+		ControllablePlayerNickname.Value = (PhotonManager.Player.GetNickName(currentUnit.GetPlayer(), out var nickName) ? nickName : string.Empty);
+		IsNotControllableCharacter.Value = isPlayerFaction & flag;
+	}
+
+	public void HandleUnitCommandDidStart(AbstractUnitCommand command)
+	{
+		UpdateSlotsCommand.Execute();
+	}
+
+	public void HandleAttack(RulePerformAttack withWeaponAttackHit)
+	{
+		UpdateSlotsCommand.Execute();
+	}
+
+	public void HandleUnitCommandDidAct(AbstractUnitCommand command)
+	{
+		UpdateSlotsCommand.Execute();
+	}
+
+	public void HandleUnitCommandDidEnd(AbstractUnitCommand command)
+	{
+		UpdateSlotsCommand.Execute();
+	}
+
+	public void HandleUnitChangeActiveEquipmentSet()
+	{
+		UpdateSlotsCommand.Execute();
+	}
+
+	public void OnDeliverAbilityEffect(AbilityExecutionContext context, TargetWrapper target)
+	{
+		UpdateSlotsCommand.Execute();
+	}
+
+	public void HandleLevelUpComplete(bool isChargen)
+	{
+		OnUnitChanged();
+	}
+
+	public void HandleCreateLevelUpManager(LevelUpManager manager)
+	{
+	}
+
+	public void HandleDestroyLevelUpManager()
+	{
+	}
+
+	public void HandleUISelectCareerPath()
+	{
+	}
+
+	public void HandleUICommitChanges()
+	{
+		OnUnitChanged();
+	}
+
+	public void HandleUISelectionChanged()
+	{
+	}
+
+	public void StartDialogInteraction(BlueprintDialog dialog)
+	{
+	}
+
+	public void StopDialogInteraction(BlueprintDialog dialog)
+	{
+		if (Game.Instance.CurrentlyLoadedArea.IsPartyArea && (dialog.Type == DialogType.Book || dialog.Type == DialogType.Epilog))
+		{
+			OnUnitChanged();
+		}
+	}
+
+	public void HandlePointerEnterActionBarSlot(MechanicActionBarSlot ability)
+	{
+		if (!m_TargetSelectionStarted && ability is MechanicActionBarSlotAbility mechanicActionBarSlotAbility)
+		{
+			EndTurnText.Value = GetEndTurn(mechanicActionBarSlotAbility.Ability.Blueprint);
+		}
+	}
+
+	public void HandlePointerExitActionBarSlot(MechanicActionBarSlot ability)
+	{
+		if (!m_TargetSelectionStarted)
+		{
+			EndTurnText.Value = null;
+		}
+	}
+
+	public void HandlePointerEnterAttackGroupAbilitySlot(MechanicActionBarSlot ability)
+	{
+		if (!m_TargetSelectionStarted && ability is MechanicActionBarSlotAbility mechanicActionBarSlotAbility)
+		{
+			IsAttackAbilityGroupCooldownAlertActive.Value = CheckAbilityHasAttackAbilityGroupCooldown(mechanicActionBarSlotAbility.Ability.Blueprint);
+		}
+	}
+
+	public void HandlePointerExitAttackGroupAbilitySlot(MechanicActionBarSlot ability)
+	{
+		if (!m_TargetSelectionStarted)
+		{
+			IsAttackAbilityGroupCooldownAlertActive.Value = false;
+		}
+	}
+
+	public void HandleAbilityTargetSelectionStart(AbilityData ability)
+	{
+		m_TargetSelectionStarted = true;
+		IsAttackAbilityGroupCooldownAlertActive.Value = CheckAbilityHasAttackAbilityGroupCooldown(ability.Blueprint);
+		EndTurnText.Value = GetEndTurn(ability.Blueprint);
+	}
+
+	public void HandleAbilityTargetSelectionEnd(AbilityData ability)
+	{
+		m_TargetSelectionStarted = false;
+		IsAttackAbilityGroupCooldownAlertActive.Value = false;
+		EndTurnText.Value = null;
+	}
+
+	private bool CheckAbilityHasAttackAbilityGroupCooldown(BlueprintAbility blueprintAbility)
+	{
+		return blueprintAbility.AbilityGroups.Any((BlueprintAbilityGroup group) => group.NameSafe() == "WeaponAttackAbilityGroup");
+	}
+
+	private string GetEndTurn(BlueprintAbility blueprintAbility)
+	{
+		WarhammerEndTurn component = blueprintAbility.GetComponent<WarhammerEndTurn>();
+		if (component != null)
+		{
+			return component.clearMPInsteadOfEndingTurn ? UIStrings.Instance.Tooltips.SpendAllMovementPoints : UIStrings.Instance.Tooltips.EndsTurn;
+		}
+		return string.Empty;
+	}
+
+	private bool IsInGameMode(GameModeType gameMode)
+	{
+		if (!(gameMode == GameModeType.None) && !(gameMode == GameModeType.Default) && !(gameMode == GameModeType.Pause))
+		{
+			return gameMode == GameModeType.BugReport;
+		}
+		return true;
+	}
+
+	public void OnAreaActivated()
+	{
+		if (Game.Instance.Player.IsInCombat)
+		{
+			OnUnitChanged();
+		}
+	}
+
+	public ActionBarSlotVM GetSuitableSlot(AbstractUnitEntityView unitEntityView)
+	{
+		if (unitEntityView.Data.IsPlayerFaction)
+		{
+			return null;
+		}
+		List<ActionBarSlotVM> allSlots = Weapons.CurrentSet.Value.AllSlots;
+		_ = Consumables.Slots;
+		return allSlots.FirstOrDefault();
+	}
+
+	public void HandleAbilityCooldownStarted(AbilityData ability)
+	{
+		UpdateSlotsCommand.Execute();
+	}
+
+	public void HandleGroupCooldownRemoved(BlueprintAbilityGroup group)
+	{
+		UpdateSlotsCommand.Execute();
+	}
+
+	public void HandleCooldownReset()
+	{
+		UpdateSlotsCommand.Execute();
+	}
+
+	public void HandleHoverChange(AbstractUnitEntityView unitEntityView, bool isHover)
+	{
+		HighlightedUnit.Value = (isHover ? unitEntityView : null);
+	}
+
+	public void HandleFullScreenUiChanged(bool state, FullScreenUIType fullScreenUIType)
+	{
+		bool isInFullScreenUI = m_IsInFullScreenUI;
+		m_IsInFullScreenUI = state && fullScreenUIType != FullScreenUIType.Unknown;
+		if (isInFullScreenUI != m_IsInFullScreenUI)
+		{
+			if (!m_IsInFullScreenUI)
+			{
+				DelayedInvoker.InvokeInFrames(OnUnitChanged, 1);
+			}
+			else
+			{
+				OnUnitChanged();
+			}
+			if (fullScreenUIType == FullScreenUIType.Augmentations || fullScreenUIType == FullScreenUIType.Unknown)
+			{
+				UpdateSlotsCommand.Execute();
+			}
+		}
+	}
+
+	public void HandleExecutionProcessStart(AbilityExecutionContext context)
+	{
+		UpdateSlotsCommand.Execute();
+	}
+
+	public void HandleExecutionProcessEnd(AbilityExecutionContext context)
+	{
+		UpdateSlotsCommand.Execute();
+	}
+
+	public void HandleExecutionProcessCleared(AbilityExecutionContext context)
+	{
+		UpdateSlotsCommand.Execute();
+	}
+
+	public void HandleBeginPreparationTurn(bool canDeploy)
+	{
+		OnUnitChanged();
+	}
+
+	public void HandleEndPreparationTurn()
+	{
+		OnUnitChanged();
+		UpdateSlotsCommand.Execute();
+	}
+
+	public void HandleRoleSet(string entityId)
+	{
+		CheckAnotherPlayerTurn();
+		if (!(CurrentUnit?.UniqueId != entityId))
+		{
+			UpdateSlotsCommand.Execute();
+		}
+	}
+
+	public void HandleUnitStartInterruptTurn(InterruptionData interruptionData)
+	{
+		if (!interruptionData.InterruptionWithoutInitiativeAndPanelUpdate)
+		{
+			UpdateSlotsCommand.Execute();
+		}
+	}
+
+	public void HandleUnitEndInterruptTurn()
+	{
+		UpdateSlotsCommand.Execute();
+	}
+
+	public void HandlePlayerEnteredRoom(Photon.Realtime.Player player)
+	{
+		CheckAnotherPlayerTurn();
+	}
+
+	public void HandlePlayerLeftRoom(Photon.Realtime.Player player)
+	{
+		CheckAnotherPlayerTurn();
+	}
+
+	public void HandlePlayerChanged()
+	{
+	}
+
+	public void HandleLastPlayerLeftLobby()
+	{
+	}
+
+	public void HandleRoomOwnerChanged()
+	{
+	}
+
+	public void HandleUnitStartTurn(bool isTurnBased)
+	{
+		UpdateSlotsCommand.Execute();
+	}
+
+	public void HandleUnitContinueTurn(bool isTurnBased)
+	{
+		UpdateSlotsCommand.Execute();
+	}
+
+	void IInterruptTurnContinueHandler.HandleUnitContinueInterruptTurn()
+	{
+		UpdateSlotsCommand.Execute();
+	}
+
+	public void HandleAugmentActivateOverdrive(BaseUnitEntity owner)
+	{
+		if (CurrentUnit == owner)
+		{
+			UpdateSlotsCommand.Execute();
+		}
+	}
+
+	public void HandleAugmentDeactivateOverdrive(BaseUnitEntity owner)
+	{
+		if (CurrentUnit == owner)
+		{
+			UpdateSlotsCommand.Execute();
+		}
+	}
+
+	public void HandlePlayerInputLocked()
+	{
+		UpdateSlotsCommand.Execute();
+	}
+
+	public void HandlePlayerInputUnlocked()
+	{
+		UpdateSlotsCommand.Execute();
+	}
+}

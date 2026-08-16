@@ -1,0 +1,71 @@
+using Kingmaker.Code.UI.MVVM.VM.Tooltip.Utils;
+using Kingmaker.Code.UI.MVVM.View.Dialog.Dialog;
+using Owlcat.Runtime.UI.Controls.Button;
+using Owlcat.Runtime.UI.Controls.Other;
+using Owlcat.Runtime.UniRx;
+using UniRx;
+using UniRx.Triggers;
+using UnityEngine;
+using UnityEngine.UI;
+
+namespace Kingmaker.Code.UI.MVVM.View.Dialog.SurfaceDialog;
+
+[RequireComponent(typeof(DialogColorsConfig))]
+public class SurfaceDialogPCView : SurfaceDialogBaseView<DialogAnswerPCView>
+{
+	[SerializeField]
+	private Image m_SpeakerHover;
+
+	[SerializeField]
+	private Image m_AnswererHover;
+
+	[SerializeField]
+	private OwlcatMultiButton m_ScrollToBottomButton;
+
+	protected override void BindViewImplementation()
+	{
+		base.BindViewImplementation();
+		if (m_ScrollToBottomButton != null)
+		{
+			AddDisposable(UniRxExtensionMethods.Subscribe(m_ScrollToBottomButton.OnLeftClickAsObservable(), delegate
+			{
+				m_SpeakerScrollRect.ScrollToBottom();
+			}));
+		}
+		AddDisposable(m_SpeakerHover.OnPointerEnterAsObservable().Subscribe(delegate
+		{
+			base.ViewModel.ShowHideBigScreenshotSpeaker(state: true);
+		}));
+		AddDisposable(m_SpeakerHover.OnPointerExitAsObservable().Subscribe(delegate
+		{
+			base.ViewModel.ShowHideBigScreenshotSpeaker(state: false);
+		}));
+		AddDisposable(m_AnswererHover.OnPointerEnterAsObservable().Subscribe(delegate
+		{
+			base.ViewModel.ShowHideBigScreenshotAnswerer(state: true);
+		}));
+		AddDisposable(m_AnswererHover.OnPointerExitAsObservable().Subscribe(delegate
+		{
+			base.ViewModel.ShowHideBigScreenshotAnswerer(state: false);
+		}));
+		AddDisposable(base.ViewModel.SpeakerHasPortrait.Subscribe(m_SpeakerHover.transform.parent.gameObject.SetActive));
+		AddDisposable(base.ViewModel.AnswererHasPortrait.Subscribe(m_AnswererHover.transform.parent.gameObject.SetActive));
+	}
+
+	protected override void OnPartsUpdating()
+	{
+		TooltipHelper.HideTooltip();
+	}
+
+	public void ToggleFade(bool value)
+	{
+		if (value)
+		{
+			m_FadeView.AppearAnimation();
+		}
+		else
+		{
+			m_FadeView.DisappearAnimation();
+		}
+	}
+}
