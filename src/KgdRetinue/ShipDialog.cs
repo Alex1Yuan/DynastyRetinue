@@ -60,8 +60,18 @@ namespace KgdRetinue
         public static int TotalFor(Size sz)
         {
             if (Main.Settings == null) return 0;
-            if (sz == Size.GrandCruiser_3x6) return Main.Settings.ShipPriceGrand;
-            if (sz == Size.Cruiser_2x4)      return Main.Settings.ShipPriceCruiser;
+            int cruiser = Main.Settings.ShipPriceCruiser;
+            // ★夹住：大巡总价不得低于巡洋总价★
+            // 收费是差价制（PriceTo = 目标总价 − 已投入总价）。大巡价低于巡洋价会让
+            // PriceTo(大巡) 变成负数 ⇒ 从巡洋"升级"到大巡反而**退钱**，
+            // 而降级回巡洋又要收钱 —— 玩家可以反复横跳刷废料。
+            // 夹在这里而不是 UI 里：PriceTo / RefundOnRevert / 两个窗口 / 面板
+            // 全都经过 TotalFor，这是唯一必经之路；拦在 UI 里只要漏一处就破功。
+            int grand = Main.Settings.ShipPriceGrand;
+            if (grand < cruiser) grand = cruiser;
+
+            if (sz == Size.GrandCruiser_3x6) return grand;
+            if (sz == Size.Cruiser_2x4)      return cruiser;
             return 0;   // 原生档（护卫舰等）不算投入
         }
 

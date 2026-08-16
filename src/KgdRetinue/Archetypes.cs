@@ -457,17 +457,10 @@ namespace KgdRetinue
         /// <summary>卫兵数量上限。</summary>
         public static int GuardCountCap(int tier)
         {
-            // 面板可覆盖：填 0 用内置默认（T1=2 / T2=4 / T3=6），填正数直接当上限。
-            // 这三个数是我定的，不是游戏限制。
-            try
-            {
-                if (Main.Settings != null)
-                {
-                    int n;
-                    if (int.TryParse(Main.Settings.GuardCapOverride, out n) && n > 0) return n;
-                }
-            }
-            catch { }
+            // 内置默认 T1=2 / T2=4 / T3=6，这三个数是我定的，不是游戏限制。
+            // ★曾经有个 GuardCapOverride 字符串字段可以覆盖它，v0.49.0 删了★
+            // 理由：它和 RecruitMaxGuards（有滑条、进 UI）职责重叠，
+            // 两个上限来源迟早会打架。现在上限只有一处：招募区那根滑条。
             if (tier >= 3) return 6;
             if (tier == 2) return 4;
             return 2;

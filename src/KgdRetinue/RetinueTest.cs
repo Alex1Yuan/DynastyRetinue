@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -256,10 +256,7 @@ namespace KgdRetinue
             //      CustomName 是 [JsonProperty] 的**裸 string**，进存档但不产生 AssetId ——
             //      卸载 mod 后它只是个陌生字段，不会让反序列化失败。原版自己也走这条路
             //      给宠物改名（SetPetCustomNameGameCommand.cs:55）。
-            if (Main.Settings.RenameGuards)
-            {
-                try { ApplyName(g); } catch (Exception e) { Main.LogError("改名: " + e.Message); }
-            }
+            try { ApplyName(g); } catch (Exception e) { Main.LogError("改名: " + e.Message); }
 
             // d) 按当前阶位补升级 —— 这是 v0.1.2 的核心改动。
             //    原版 Player.GainPartyExperience（Player.cs:1079-1084）会给 AllCharacters 里
@@ -443,6 +440,15 @@ namespace KgdRetinue
             Main.Log("  改名: " + (g.Blueprint != null ? g.Blueprint.CharacterName : "?") + " -> " + name);
         }
 
+        /// <summary>
+        /// 卫兵命名的兜底前缀。曾经是可配置项（Settings.GuardNamePrefix），
+        /// v0.49.0 删掉了 —— 命名早已成体系（军衔取 archetypes.json 的 guardNames、
+        /// 人名取 guardNamePool），这个前缀只在 json 缺 guardNames 时才用得到，
+        /// 露在面板上纯属误导。留成常量，是为了让**旧存档里那些老格式的名字**
+        /// 仍然能被 IsOurRank 认出来，从而正常晋升，而不是被当成"玩家手改的"不敢动。
+        /// </summary>
+        private const string LegacyPrefix = "卫兵";
+
         /// <summary>军衔和人名之间的分隔符。用「·」和精英名（如「铁壁 · 先锋队长」）保持一致观感。</summary>
         private const string SEP = "·";
 
@@ -516,8 +522,7 @@ namespace KgdRetinue
             }
             catch { }
 
-            string prefix = Main.Settings.GuardNamePrefix;
-            if (string.IsNullOrEmpty(prefix)) prefix = "卫兵";
+            string prefix = LegacyPrefix;
             string an = (arch != null && !string.IsNullOrEmpty(arch.Name)) ? arch.Name : "";
             return string.IsNullOrEmpty(an) ? prefix : prefix + SEP + an;
         }
@@ -539,9 +544,7 @@ namespace KgdRetinue
             catch { }
             try
             {
-                string prefix = Main.Settings.GuardNamePrefix;
-                if (!string.IsNullOrEmpty(prefix) && rank.StartsWith(prefix, StringComparison.Ordinal))
-                    return true;
+                if (rank.StartsWith(LegacyPrefix, StringComparison.Ordinal)) return true;
             }
             catch { }
             return false;

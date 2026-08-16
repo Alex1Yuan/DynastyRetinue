@@ -21,11 +21,6 @@ namespace KgdRetinue
             ModEntry = modEntry;
             Settings = UnityModManager.ModSettings.Load<Settings>(modEntry);
 
-            // 这两个曾经是开关，现在是唯一路径：新窗口早就是正式 UI，命名也早就成体系了。
-            // 面板上不再露出来，但字段留着 —— 老 Settings.xml 里可能存着 false，
-            // 不在这里强制拉回 true，升级上来的玩家会莫名其妙没窗口/没名字。
-            try { Settings.UseNewUI = true; Settings.RenameGuards = true; } catch { }
-
             modEntry.OnToggle  = OnToggle;
             modEntry.OnGUI     = OnGUI;
             modEntry.OnSaveGUI = OnSaveGUI;
@@ -141,11 +136,11 @@ namespace KgdRetinue
         /// </summary>
         public static void OpenRecruitUI(Kingmaker.EntitySystem.Entities.BaseUnitEntity npc)
         {
-            if (Settings != null && Settings.UseNewUI)
-            {
-                try { UI.RetinueUI.Open(); return; }
-                catch (Exception e) { LogError("[UI] 新窗口开启失败，回退到旧窗口: " + e); }
-            }
+            // uGUI 窗口是唯一正式入口。旧的 IMGUI 窗口只在它抛异常时兜底 ——
+            // 曾经有个 UseNewUI 开关，但载入时无条件被置 true、判据恒真，
+            // 等于死代码，v0.49.0 删了。
+            try { UI.RetinueUI.Open(); return; }
+            catch (Exception e) { LogError("[UI] 新窗口开启失败，回退到旧窗口: " + e); }
             RecruitWindow.Open(npc);
         }
 
@@ -273,7 +268,7 @@ namespace KgdRetinue
             int _cur = Settings.ArchetypeIndex;
             if (_cur < 0 || _cur >= _archs.Length) _cur = 0;
 
-            if (Fold(ref Settings.PanelShowRecruit, "招募", "分型 / 入口 / 名额上限 / 装备档位"))
+            if (Fold(ref Settings.PanelShowRecruit, "招募", "分型 / 入口 / 名额上限"))
             {
             // ---------- 分型 ----------
             GUILayout.Space(8);
@@ -312,17 +307,45 @@ namespace KgdRetinue
             GUILayout.EndHorizontal();
             GUILayout.Label("<color=#aaaaaa>名单打在 kgd_log.txt 里。本船的高阶顾问蓝图名是 HighFactotum，音阵大师是 VoxMaster。</color>");
 
-            // ---------- 装备档位覆盖 ----------
-            GUILayout.Space(8);
-            GUILayout.BeginHorizontal();
-            GUILayout.Label("<b>装备档位</b>（普通卫兵）", GUILayout.Width(150));
-            string[] tierNames = { "自动（跟玩家等级）", "强制 T1", "强制 T2", "强制 T3" };
-            for (int i = 0; i < 4; i++)
-                if (GUILayout.Toggle(Settings.GearTierOverride == i, tierNames[i], "Button", GUILayout.Width(i == 0 ? 150 : 80)))
-                    Settings.GearTierOverride = i;
-            GUILayout.EndHorizontal();
-            GUILayout.Label("<color=#aaaaaa>自动档由主角等级推出（≥36 = T3，≥16 = T2）。"
-                          + "55 级存档恒为 T3，要验 T1/T2 那两套就在这里强制。改完对已招募的卫兵无效，重新招一个才会按新档位发。</color>");
+            // ---------- 招募上限：利润因子 ----------
+            GUILayout.Space(6);
+            Settings.RecruitUsePfGate = GUILayout.Toggle(Settings.RecruitUsePfGate,
+                "<b>用利润因子解锁招募名额</b>（关掉则退回旧的阶位上限 T1=2 / T2=4 / T3=6）");
+            {
+                GUILayout.BeginHorizontal();
+                // ★闸门关掉时也要显示上限★ 原来这整块套在 if (RecruitUsePfGate) 里，
+                // 关掉闸门之后招募区一个上限控件都没有 —— 玩家只能去改 XML。
+                // 曾经有个 GuardCapOverride 字符串字段补这个缺口，v0.49.0 删了：
+                // 两个上限来源迟早打架。现在上限只有一处，就是下面这根滑条。
+                if (Settings.RecruitUsePfGate)
+                {
+                GUILayout.Label("每名所需利润因子", GUILayout.Width(130));
+                Settings.RecruitPfPerGuard = (int)GUILayout.HorizontalSlider(Settings.RecruitPfPerGuard, 1f, 60f, GUILayout.Width(140));
+                GUILayout.Label(Settings.RecruitPfPerGuard.ToString(), GUILayout.Width(40));
+                }
+                GUILayout.Label("最多几名", GUILayout.Width(60));
+                Settings.RecruitMaxGuards = (int)GUILayout.HorizontalSlider(Settings.RecruitMaxGuards, 0f, 12f, GUILayout.Width(120));
+                GUILayout.Label(Settings.RecruitMaxGuards.ToString(), GUILayout.Width(30));
+                GUILayout.EndHorizontal();
+                if (Settings.RecruitUsePfGate)
+                GUILayout.Label("<color=#c8a45c>" + ProfitFactorGate.Summary() + "</color>");
+                // 分级表：把每一档的门槛列出来，玩家一眼看到下一档还差多少
+                if (Settings.RecruitUsePfGate)
+                try
+                {
+                    var _th = ProfitFactorGate.Thresholds();
+                    int _pf = ProfitFactorGate.Current();
+                    var _sb = new System.Text.StringBuilder("<color=#aaaaaa>分级：");
+                    for (int _i = 0; _i < _th.Length; _i++)
+                    {
+                        bool _got = _pf >= _th[_i];
+                        _sb.Append(_got ? "<color=#7ec8ff>" : "").Append(_th[_i]).Append("→").Append(_i + 1).Append("名")
+                           .Append(_got ? "</color>" : "").Append(_i + 1 < _th.Length ? "　" : "");
+                    }
+                    GUILayout.Label(_sb.Append("</color>").ToString());
+                }
+                catch { }
+            }
 
             }
 
@@ -343,7 +366,7 @@ namespace KgdRetinue
                               + "　船模 = <color=#80ff80>" + _pf + "</color>"
                               + "　<color=#aaaaaa>两项都写进存档，但要**存过盘**才留得住：改完直接读档就没了。</color>");
             }
-            GUILayout.Label("<b>舰船</b>（只改开火次数，不动配置界面、不扩槽位、不改蓝图）");
+            GUILayout.Label("<b>舰船</b>　分档加成：护盾 / 装甲 / 撞角距离 / 开火次数 / 射程。<color=#aaaaaa>不动配置界面、不扩槽位、不改蓝图。</color>");
             Settings.ShipExtraShots = GUILayout.Toggle(Settings.ShipExtraShots,
                 "换大船后同一槽位可多次开火（当前舰船分档: " + StarshipChargesPatch.ShipSize() + "）");
             GUILayout.BeginHorizontal();
@@ -391,6 +414,40 @@ namespace KgdRetinue
             Settings.ShipGrandRamPct = (int)GUILayout.HorizontalSlider(Settings.ShipGrandRamPct, 0f, 400f, GUILayout.Width(140));
             GUILayout.Label(Settings.ShipGrandRamPct + "%", GUILayout.Width(46));
             GUILayout.EndHorizontal();
+            // ---------- 射程加成（原来只能改 XML）----------
+            // 六项加成里唯一没滑条的一族。护盾/装甲/撞角/多打都有，就它没有。
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("射程 +格　巡洋(非舷炮)", GUILayout.Width(160));
+            Settings.ShipCruiserRange = (int)GUILayout.HorizontalSlider(Settings.ShipCruiserRange, 0f, 8f, GUILayout.Width(110));
+            GUILayout.Label(Settings.ShipCruiserRange.ToString(), GUILayout.Width(26));
+            GUILayout.Label("大巡·舷炮", GUILayout.Width(70));
+            Settings.ShipGrandRangeBroadside = (int)GUILayout.HorizontalSlider(Settings.ShipGrandRangeBroadside, 0f, 8f, GUILayout.Width(110));
+            GUILayout.Label(Settings.ShipGrandRangeBroadside.ToString(), GUILayout.Width(26));
+            GUILayout.Label("大巡·船脊/舰首", GUILayout.Width(100));
+            Settings.ShipGrandRangeProw = (int)GUILayout.HorizontalSlider(Settings.ShipGrandRangeProw, 0f, 8f, GUILayout.Width(110));
+            GUILayout.Label(Settings.ShipGrandRangeProw.ToString(), GUILayout.Width(26));
+            GUILayout.EndHorizontal();
+
+            // ---------- 船坞（原来整块只能改 XML）----------
+            GUILayout.Space(8);
+            Settings.ShipDialogEntry = GUILayout.Toggle(Settings.ShipDialogEntry,
+                "<b>在 NPC 对话里加「船坞」选项</b>（用废料买改装，可还原退款）");
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("巡洋总价", GUILayout.Width(70));
+            Settings.ShipPriceCruiser = (int)GUILayout.HorizontalSlider(Settings.ShipPriceCruiser, 0f, 5000f, GUILayout.Width(150));
+            GUILayout.Label(Settings.ShipPriceCruiser.ToString(), GUILayout.Width(50));
+            GUILayout.Label("大巡总价", GUILayout.Width(70));
+            Settings.ShipPriceGrand = (int)GUILayout.HorizontalSlider(Settings.ShipPriceGrand, 0f, 5000f, GUILayout.Width(150));
+            GUILayout.Label(Settings.ShipPriceGrand.ToString(), GUILayout.Width(50));
+            GUILayout.EndHorizontal();
+            GUILayout.Label("<color=#aaaaaa>★这是<b>总价</b>不是差价★ 实际收费 = 目标总价 − 已投入总价，"
+                          + "所以巡洋→大巡只补差额，降级/还原按同一条规则退钱。</color>");
+            if (Settings.ShipPriceGrand < Settings.ShipPriceCruiser)
+                GUILayout.Label("<color=#ff8080>大巡总价低于巡洋总价 —— 会出现「升级反而退钱」。已自动拉平，"
+                              + "要更低的大巡价请先调低巡洋价。</color>");
+            Settings.ShipYardUnlockAll = GUILayout.Toggle(Settings.ShipYardUnlockAll,
+                "解除船体限制（连未校准的船体也允许更换）　<color=#aaaaaa>挂点位置和缩放只在 Gothic / Dictator 上验过</color>");
+
             GUILayout.Label("<color=#aaaaaa>撞角没有可乘的「基础距离」常量（行程来自寻路），"
                           + "所以按「速度 × 百分比」折算成额外格数。机动性不动。</color>");
             GUILayout.Label("<color=#ffaa66>注意：舰船分档是 [JsonProperty]，会写进存档。"
@@ -482,7 +539,7 @@ namespace KgdRetinue
 
             }
 
-            if (Fold(ref Settings.PanelShowRules, "规则", "士气池 / 镜头 / 成长 / 命名 / 解除限制"))
+            if (Fold(ref Settings.PanelShowRules, "规则", "士气池 / 镜头 / 成长 / 装备 / 解除限制"))
             {
             // ---------- 规则 ----------
             GUILayout.Space(8);
@@ -496,6 +553,8 @@ namespace KgdRetinue
             Settings.GuardKillFeedsOwnPool = GUILayout.Toggle(Settings.GuardKillFeedsOwnPool, "卫兵杀敌也给卫队池加分（不动你那份，否则卫队只出力不进账）");
             Settings.GuardPsykerNoVeil = GUILayout.Toggle(Settings.GuardPsykerNoVeil, "卫兵灵能不推高亚空间威胁（帷幕是区域唯一值、做不了独立池，只能选计不计入）");
             Settings.NoCameraFollowGuards = GUILayout.Toggle(Settings.NoCameraFollowGuards, "卫兵行动时镜头不跟随（含技能演出特写；你自己队伍不受影响）");
+            Settings.EquipGraduationGear = GUILayout.Toggle(Settings.EquipGraduationGear,
+                "招募时发放毕业装备（关掉则只给蓝图自带的）");
             Settings.EliteCanBeDowned = GUILayout.Toggle(Settings.EliteCanBeDowned,
                 "精英倒地可救（0 血进昏迷而非死亡）　<color=#aaaaaa>普通卫兵始终永久死亡 —— "
                 + "那是原版对 ExCompanion 的默认行为（UnitLifeController.CalculateLifeState），不需要我们做任何事</color>");
@@ -516,37 +575,6 @@ namespace KgdRetinue
                 + "解除<b>等级</b>：直接顶 55 级、职业链走满三段"
                 + "</color>");
 
-            // ---------- 招募上限：利润因子 ----------
-            GUILayout.Space(6);
-            Settings.RecruitUsePfGate = GUILayout.Toggle(Settings.RecruitUsePfGate,
-                "<b>用利润因子解锁招募名额</b>（关掉则退回旧的阶位上限 T1=2 / T2=4 / T3=6）");
-            if (Settings.RecruitUsePfGate)
-            {
-                GUILayout.BeginHorizontal();
-                GUILayout.Label("每名所需利润因子", GUILayout.Width(130));
-                Settings.RecruitPfPerGuard = (int)GUILayout.HorizontalSlider(Settings.RecruitPfPerGuard, 1f, 60f, GUILayout.Width(140));
-                GUILayout.Label(Settings.RecruitPfPerGuard.ToString(), GUILayout.Width(40));
-                GUILayout.Label("最多几名", GUILayout.Width(60));
-                Settings.RecruitMaxGuards = (int)GUILayout.HorizontalSlider(Settings.RecruitMaxGuards, 0f, 12f, GUILayout.Width(120));
-                GUILayout.Label(Settings.RecruitMaxGuards.ToString(), GUILayout.Width(30));
-                GUILayout.EndHorizontal();
-                GUILayout.Label("<color=#c8a45c>" + ProfitFactorGate.Summary() + "</color>");
-                // 分级表：把每一档的门槛列出来，玩家一眼看到下一档还差多少
-                try
-                {
-                    var _th = ProfitFactorGate.Thresholds();
-                    int _pf = ProfitFactorGate.Current();
-                    var _sb = new System.Text.StringBuilder("<color=#aaaaaa>分级：");
-                    for (int _i = 0; _i < _th.Length; _i++)
-                    {
-                        bool _got = _pf >= _th[_i];
-                        _sb.Append(_got ? "<color=#7ec8ff>" : "").Append(_th[_i]).Append("→").Append(_i + 1).Append("名")
-                           .Append(_got ? "</color>" : "").Append(_i + 1 < _th.Length ? "　" : "");
-                    }
-                    GUILayout.Label(_sb.Append("</color>").ToString());
-                }
-                catch { }
-            }
 
             GUILayout.BeginHorizontal();
             GUILayout.Label("<b>命名</b>　<color=#aaaaaa>「军衔·人名」，军衔随本人等级三档自动晋升，人名跟他一辈子</color>", GUILayout.Width(520));
@@ -565,8 +593,6 @@ namespace KgdRetinue
             }
             GUILayout.Label("    经验比例:", GUILayout.Width(80));
             Settings.XpRatio = GUILayout.TextField(Settings.XpRatio, GUILayout.Width(60));
-            GUILayout.Label("    默认单位 AssetId（分型未指定 unit 时用）:", GUILayout.Width(280));
-            Settings.UnitAssetId = GUILayout.TextField(Settings.UnitAssetId, GUILayout.Width(280));
             GUILayout.EndHorizontal();
             GUILayout.Label("<i>无创伤=不进创伤流水线；跟队恢复=队友被治时一起治；原版=每倒地一次永久掉最大生命，且重伤阈值写死 50% 不吃难度减免</i>");
 
@@ -587,7 +613,7 @@ namespace KgdRetinue
 
             }
 
-            if (Fold(ref Settings.PanelShowDev, "开发 · 测试", "★注意：好几个按钮会清空全部卫兵★"))
+            if (Fold(ref Settings.PanelShowDev, "开发 · 测试", "装备档位 / 诊断 / 热键　★注意：好几个按钮会清空全部卫兵★"))
             {
             // ---------- 工具 ----------
             GUILayout.Space(8);
@@ -670,7 +696,13 @@ namespace KgdRetinue
             }
 
             GUILayout.BeginHorizontal();
-            Settings.EquipGraduationGear = GUILayout.Toggle(Settings.EquipGraduationGear, "发放装备", GUILayout.Width(90));
+            GUILayout.Label("装备档位", GUILayout.Width(70));
+            for (int i = 0; i < 4; i++)
+                if (GUILayout.Toggle(Settings.GearTierOverride == i,
+                        new[] { "自动", "T1", "T2", "T3" }[i], "Button", GUILayout.Width(i == 0 ? 60 : 44)))
+                    Settings.GearTierOverride = i;
+            GUILayout.Label("默认单位 AssetId", GUILayout.Width(110));
+            Settings.UnitAssetId = GUILayout.TextField(Settings.UnitAssetId, GUILayout.Width(240));
             Settings.UnlockEliteLimit = GUILayout.Toggle(Settings.UnlockEliteLimit, "解除精英数量上限", GUILayout.Width(150));
             Settings.EliteIgnoreUnlock = GUILayout.Toggle(Settings.EliteIgnoreUnlock, "无视 T3 解锁条件", GUILayout.Width(150));
             if (GUILayout.Button("在游戏内面板打开选中卫兵", GUILayout.Width(200))) RetinueTest.OpenNativePanel();
@@ -796,9 +828,11 @@ namespace KgdRetinue
         /// 纯测试用途：55 级存档恒为 T3，不覆盖的话 T1/T2 两套装备一次都触发不到。</summary>
         public int GearTierOverride = 0;
 
-        /// <summary>用新的 uGUI 窗口（仿原版配色/字体）。关掉则回退到旧的 IMGUI 窗口。</summary>
-        public bool UseNewUI = true;
-
+        /// <summary>★状态，不是设置★ 下面这些是运行时状态或派生值，**永远不要给它们做 UI**：
+        /// LastAugmentTier / PanelShow* / Prow*（实测学到的挂点比值）/ ArchetypeIndex /
+        /// SpawnKey|DespawnKey（由对应的 *Name 字符串解析而来）。
+        /// 它们进 Settings.xml 只是为了跨会话记住，语义上不属于"玩家可调的选项"。
+        /// Prow 三项已经以「只读展示 + 【忘掉】按钮」的形态出现在面板上，那是对的形态。</summary>
         /// <summary>上次看到的植入物层级（AugmentTier）。-1 = 还没记录过。
         /// 用来判断"剧情解锁了"，从而给已有卫兵补发更好的植入物。存在 UMM 的设置文件里，不进游戏存档。</summary>
         public int LastAugmentTier = -1;
@@ -889,7 +923,8 @@ namespace KgdRetinue
         /// <summary>在 NPC 对话里加「船坞改装」两条选项（用废料换巡洋 / 大巡）。</summary>
         public bool ShipDialogEntry = true;
         public int ShipPriceCruiser = 500;
-        public int ShipPriceGrand   = 1000;
+        /// <summary>大巡**总价**。低于巡洋总价时由 ShipDialog.TotalFor 夹住，见那里的说明。</summary>
+        public int ShipPriceGrand = 1000;
 
         public bool  ProwLearned;
         /// <summary>舰首比舷炮低多少，以「舷炮→船脊」的高度差为 1 单位。
@@ -915,9 +950,6 @@ namespace KgdRetinue
         public bool AutoLevelUp = true;
         // 0=先锋 1=狙击 2=连射 3=灵能
         public int ArchetypeIndex = 0;
-        // 用自定义名压掉单位蓝图自带的显示名（灵能分型的 Inquisitor 蓝图顶着具名角色的名字）
-        public bool RenameGuards = true;
-        public string GuardNamePrefix = "卫兵";
         // 毕业装备：凭空生成（不动玩家仓库）。精英拿 gear，普通拿玩家自配的 playerGear
         public bool EquipGraduationGear = true;
         // 精英：每条路线限一个，且要先有卫兵练到 T3 才解锁
@@ -925,8 +957,6 @@ namespace KgdRetinue
         public bool UnlockEliteLimit = false;
         public bool EliteIgnoreUnlock = false;
         public string DebugXpAmount = "5000";
-        // 卫兵数量上限覆盖：0/空 = 用内置默认（T1=2 T2=4 T3=6）
-        public string GuardCapOverride = "0";
         public string ItemQuery = "";
         public string SpawnKeyName = "F7";
         public string DespawnKeyName = "None";
