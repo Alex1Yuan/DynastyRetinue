@@ -130,29 +130,94 @@ namespace KgdRetinue
             var list = Get(view, "ItemSlots") as IList;
             if (list == null) return;
 
-            // ---- 现有挂点类型普查，顺便找一个可借用的锚点 ----
+            // ★ 坐标系：StarshipView.transform 的局部空间 ★
+            // 这是全局唯一有实据的那个：
+            //   StarshipView.cs:315   Gizmos.DrawSphere(transform.TransformPoint(frontHitPosition))
+            //   StarshipFxHitMask.cs:47-53  item.z <= 0 → 船尾 / 否则船艏      ⇒ +Z = 船艏
+            //   StarshipFxHitMask.cs:37-46  dot(-right) ≥ 0.5 → 左舷          ⇒ -X = Port, +X = Starboard
+            // ★ 而挂点的 localPosition 相对的是**未知的父级**（美术随便挂在哪一层），
+            //   所以一律走 root.InverseTransformPoint(slot.position) 换算，别读 localPosition。
+            var root = view.transform;
+
+            // ---- 现有挂点普查 ----
             var have = new System.Collections.Generic.HashSet<string>();
-            Transform anchor = null, dorsal = null;
+            Transform dorsal = null, anyT = null;
+            float pxSum = 0f, pySum = 0f, sxSum = 0f, sySum = 0f;
+            int pN = 0, sN = 0;
+            float zMin = float.MaxValue, zMax = float.MinValue;
             foreach (var s in list)
             {
                 var c = s as Component;
                 if (c == null) continue;
-                string ty = null;
-                var v = Get(c, "Type"); if (v != null) ty = v.ToString();
-                if (ty == null) continue;
+                var v = Get(c, "Type"); if (v == null) continue;
+                string ty = v.ToString();
                 have.Add(ty);
-                if (anchor == null) anchor = c.transform;
+                if (anyT == null) anyT = c.transform;
                 if (ty == "Dorsal") dorsal = c.transform;
-            }
 
-            // 优先借船脊 —— 它在四个已测船模上**都有**，是唯一的通用锚点；
-            // 而且船脊在船体正上方中线，从那儿打出去比从任何舷侧点都自然。
-            var baseAnchor = dorsal ?? anchor;
-            if (baseAnchor == null)
+                Vector3 l = root.InverseTransformPoint(c.transform.position);
+                if (l.z < zMin) zMin = l.z;
+                if (l.z > zMax) zMax = l.z;
+                if (ty == "Port")           { pxSum += l.x; pySum += l.y; pN++; }
+                else if (ty == "Starboard") { sxSum += l.x; sySum += l.y; sN++; }
+            }
+            if (anyT == null)
             {
                 if (!_logged) { _logged = true;
-                    Main.LogError("[挂点] 这个船模一个挂点都没有，没法借位置，兜底放弃。"); }
+                    Main.LogError("[挂点] 这个船模一个挂点都没有，没法定位，兜底放弃。"); }
                 return;
+            }
+
+            // ---- L0 轴向闸门 ----
+            // 绕 Y 轴 180° 会**同时**翻转 X 和 Z，所以「Port 在 -x、Starboard 在 +x」
+            // 这一条同时验证了 +Z 是船艏 —— 正好挡住"从船尾开火"这个唯一的致命失效。
+            // 闸门不过就一层都不推，直接退到 L3（＝现状，位置不变）。
+            bool axisOk = false; string axisWhy;
+            if (pN == 0 || sN == 0) axisWhy = "没有成对的 Port/Starboard 挂点，无法验轴";
+            else
+            {
+                float px = pxSum / pN, sx = sxSum / sN;
+                if (px < 0f && sx > 0f && sx - px > 1e-3f) { axisOk = true; axisWhy = null; }
+                else axisWhy = "Port 均值 x=" + px.ToString("F2") + " / Starboard 均值 x=" + sx.ToString("F2")
+                             + "，与 StarshipFxHitMask 的约定不符";
+            }
+
+            // ---- 算船艏位置（L1 → L2 → L3）----
+            Vector3 prowLocal; string how;
+            float hullLenZ = 0f;
+            Bounds bb; bool hasBounds = HullBoundsLocal(view, root, out bb);
+            if (hasBounds) hullLenZ = bb.size.z;
+
+            // 船体中线：用左右舷挂点反推，而不是 b.center ——
+            // 高耸的舰桥/天线会把 center.y 拉高，炮口会顶到船体上方的空气里
+            float cx = (pN > 0 && sN > 0) ? (pxSum / pN + sxSum / sN) * 0.5f : (hasBounds ? bb.center.x : 0f);
+            float cy = (pN > 0 && sN > 0) ? (pySum / pN + sySum / sN) * 0.5f : (hasBounds ? bb.center.y : 0f);
+
+            if (axisOk && hasBounds)
+            {
+                prowLocal = new Vector3(cx, cy, bb.max.z - bb.size.z * 0.04f);
+                how = "L1 包围盒(" + bb.size.ToString("F1") + ") + 舷炮中线";
+            }
+            else if (axisOk && zMax > zMin)
+            {
+                float push = (zMax - zMin) * 0.25f;
+                prowLocal = new Vector3(cx, cy, zMax + push);
+                how = "L2 挂点跨度外推（zMax " + zMax.ToString("F1") + " +" + push.ToString("F1") + "）";
+            }
+            else
+            {
+                var src = dorsal ?? anyT;
+                prowLocal = root.InverseTransformPoint(src.position);
+                how = "L3 借" + (dorsal != null ? "船脊" : "第一个可用") + "挂点原位"
+                    + (axisOk ? "（拿不到船体包围盒）" : "（★轴向闸门未通过：" + axisWhy + "★）");
+            }
+
+            // 面板微调：沿 root 的 +Z，以船体 z 向长度为单位。默认 0。
+            int pct = Main.Settings.ShipProwOffsetPct;
+            if (pct != 0)
+            {
+                float unit = hullLenZ > 0f ? hullLenZ : (zMax > zMin ? zMax - zMin : 0f);
+                prowLocal.z += unit * pct / 100f;
             }
 
             int added = 0;
@@ -163,24 +228,23 @@ namespace KgdRetinue
 
                 object enumVal;
                 try { enumVal = Enum.Parse(_tSlotEnum, want); }
-                catch { continue; }                      // 这个游戏版本没有这个枚举值就跳过
+                catch { continue; }
 
                 var go = new GameObject(TAG + want);
-                go.transform.SetParent(baseAnchor, false);
-                go.transform.localPosition = Vector3.zero;
+                // ★ 父级必须是 StarshipView 自己，不能是船脊挂点 ★
+                //   一是坐标系：只有 root 的 +Z 有实据是船艏；
+                //   二是旋转：开火点 = slot.position + slot.rotation * (locator 在美术里的偏移)，
+                //     挂点转 90° 炮口就绕挂点甩 90°，所以 localRotation 必须显式归零。
+                //   安全性：Projectile.cs:262 里 vanilla 自己就是
+                //     starshipTarget.View.GetComponentInChildren<StarshipView>()，
+                //     说明 sv 必在 view 根子树内 ⇒ AbilityDeliverStarshipShot.cs:75 的
+                //     GetComponentsInChildren<StarshipFxLocator>() 照样收得到，不会退回虚空。
+                go.transform.SetParent(root, false);
+                go.transform.localPosition = (want == "Keel" && hasBounds)
+                    ? new Vector3(cx, bb.min.y + bb.size.y * 0.04f, prowLocal.z)   // 船底：同 z、贴底
+                    : prowLocal;
                 go.transform.localRotation = Quaternion.identity;
-
-                // Prow 往前推一点 —— 光矛从船脊正中打出去也能接受，
-                // 但推到船艏更像样。推多少由面板控制，默认 0（＝纯船脊，最保险）。
-                // 之所以默认 0：船体 prefab 的朝向轴我没有实据，猜错就会从船尾开火。
-                // 想要更好看就自己拉滑条，日志里有船体长度可参考。
-                if (want == "Prow" && Main.Settings.ShipProwOffsetPct != 0)
-                {
-                    float len = HullLength(view);
-                    if (len > 0f)
-                        go.transform.localPosition =
-                            new Vector3(0f, 0f, len * Main.Settings.ShipProwOffsetPct / 100f);
-                }
+                go.transform.localScale    = Vector3.one;
 
                 var comp = go.AddComponent(_tSlot);
                 Set(comp, "Type", enumVal);
@@ -191,30 +255,77 @@ namespace KgdRetinue
             if (added > 0 && !_logged)
             {
                 _logged = true;
-                Main.Log("[挂点] 已为换装后的船体补上 " + added + " 个合成挂点: "
-                         + string.Join(" ", names.ToArray())
-                         + "  （借用" + (dorsal != null ? "船脊" : "第一个可用") + "挂点的位置）\n"
-                         + "  原理：武器美术挂不上去时开火点会退回舰船原点（表现为在虚空开火）。"
-                         + "补上挂点后 vanilla 自己的 FindAll 就能命中；"
-                         + "locator 的 weaponSlotType 是按**武器要求的**槽位盖章的"
-                         + "（StarshipView:271），所以借船脊的位置不影响技能侧的匹配。\n"
-                         + "  ★纯场景对象，不进存档★  本次会话只报这一条。");
+                Main.Log("[挂点] 补上 " + added + " 个合成挂点: " + string.Join(" ", names.ToArray())
+                         + "\n  定位: " + how + "　局部坐标 " + prowLocal.ToString("F2")
+                         + "　父级=StarshipView　旋转已归零"
+                         + (pct != 0 ? "　面板微调 " + pct + "%" : "")
+                         + "\n  原理：武器美术挂不上去时开火点退回舰船原点（在虚空开火）。"
+                         + "补上挂点后 vanilla 的 FindAll 就能命中；locator 的 weaponSlotType 是按"
+                         + "**武器要求的**槽位盖章的（StarshipView:275），所以位置不影响技能侧匹配。"
+                         + "\n  ★纯场景对象，不进存档★  本次会话只报这一条。");
             }
         }
 
-        /// <summary>船体包围盒的最长边，给 Prow 前推量当基准。取不到返回 0。</summary>
-        private static float HullLength(Component view)
+        /// <summary>
+        /// 船体包围盒，换算到 root 的局部空间。拿不到返回 false。
+        ///
+        /// ★ 为什么不用 Renderer.bounds ★
+        /// 那是**世界轴对齐**盒，船一转就虚高 —— 转 45° 时最长边虚高约 41%。
+        /// 旧的 HullLength() 就是这个毛病。
+        /// ★ 为什么不收全部 Renderer ★
+        /// VFXRenderer 也是 Renderer，等离子尾焰会把盒子往船尾拉长，船艏就算歪了。
+        /// 只收 MeshFilter / SkinnedMeshRenderer 的 sharedMesh.bounds（模型空间，
+        /// 且不受 Read/Write 开关影响）。
+        /// ★ 跳过挂在 StarshipItemSlot 之下的网格 ★
+        /// 那是已实例化的武器美术，会把"船体前端"带跑。
+        /// （Prefix 时机上美术其实还没生成，这层是保险。）
+        /// </summary>
+        private static bool HullBoundsLocal(Component view, Transform root, out Bounds box)
+        {
+            box = new Bounds();
+            bool any = false;
+            try
+            {
+                var mfs = view.GetComponentsInChildren<MeshFilter>(true);
+                for (int i = 0; i < mfs.Length; i++)
+                    if (mfs[i] != null && mfs[i].sharedMesh != null && !UnderSlot(mfs[i].transform))
+                        Accumulate(root, mfs[i].transform, mfs[i].sharedMesh.bounds, ref box, ref any);
+
+                var sks = view.GetComponentsInChildren<SkinnedMeshRenderer>(true);
+                for (int i = 0; i < sks.Length; i++)
+                    if (sks[i] != null && sks[i].sharedMesh != null && !UnderSlot(sks[i].transform))
+                        Accumulate(root, sks[i].transform, sks[i].sharedMesh.bounds, ref box, ref any);
+            }
+            catch { }
+            return any;
+        }
+
+        /// <summary>这个 transform 是不是挂在某个 StarshipItemSlot 底下。</summary>
+        private static bool UnderSlot(Transform t)
         {
             try
             {
-                var rs = view.GetComponentsInChildren<Renderer>(true);
-                if (rs == null || rs.Length == 0) return 0f;
-                var b = rs[0].bounds;
-                for (int i = 1; i < rs.Length; i++) b.Encapsulate(rs[i].bounds);
-                var s = b.size;
-                return Mathf.Max(s.x, Mathf.Max(s.y, s.z));
+                for (var p = t; p != null; p = p.parent)
+                    if (p.GetComponent(_tSlot) != null) return true;
             }
-            catch { return 0f; }
+            catch { }
+            return false;
+        }
+
+        /// <summary>把一个模型空间包围盒的 8 个角换算到 root 局部空间后并入 box。</summary>
+        private static void Accumulate(Transform root, Transform owner, Bounds local, ref Bounds box, ref bool any)
+        {
+            Vector3 c = local.center, e = local.extents;
+            for (int i = 0; i < 8; i++)
+            {
+                var corner = new Vector3(
+                    c.x + ((i & 1) == 0 ? -e.x : e.x),
+                    c.y + ((i & 2) == 0 ? -e.y : e.y),
+                    c.z + ((i & 4) == 0 ? -e.z : e.z));
+                Vector3 p = root.InverseTransformPoint(owner.TransformPoint(corner));
+                if (!any) { box = new Bounds(p, Vector3.zero); any = true; }
+                else box.Encapsulate(p);
+            }
         }
 
         // ---------------------------------------------------------------- 反射小工具

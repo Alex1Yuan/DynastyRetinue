@@ -396,9 +396,11 @@ namespace KgdRetinue
             Settings.ShipProwOffsetPct = (int)GUILayout.HorizontalSlider(Settings.ShipProwOffsetPct, -50f, 50f, GUILayout.Width(140));
             GUILayout.Label(Settings.ShipProwOffsetPct + "%", GUILayout.Width(46));
             GUILayout.EndHorizontal();
-            GUILayout.Label("<color=#aaaaaa>0% = 合成的舰首挂点就放在船脊位置（最保险）。"
-                          + "船体 prefab 的朝向轴我没有实据，往前推有可能推成往后 —— "
-                          + "看到从船尾开火就把它调成负数或归零。</color>");
+            GUILayout.Label("<color=#aaaaaa>0% = 用算出来的船艏位置。合成挂点挂在 StarshipView 下、旋转归零，"
+                          + "坐标系的 +Z=船艏 有实据（StarshipFxHitMask 按 mesh.z 分前后舱室）。"
+                          + "定位分三层：包围盒+舷炮中线 → 挂点跨度外推 → 借船脊原位；"
+                          + "轴向闸门（Port 在 −x、Starboard 在 +x）不通过时直接退到最后一层，不会从船尾开火。"
+                          + "这个滑条是在算出来的位置上再沿 +Z 微调，单位是船体 z 向长度。</color>");
             GUILayout.Label("<color=#c8a45c>实测挂点（决定武器美术挂不挂得上，挂不上就会「在虚空里开火」）：</color>\n"
                           + "  <color=#7ec8ff>Dictator</color> 20 个：Prow ✓ Keel ✓ Dorsal ✓ Port×4 Starboard×4 —— <color=#7ec8ff>四个里唯一齐全的，大巡默认</color>\n"
                           + "  Gothic 9 个：Port×4 Starboard×4 Dorsal×1 —— <color=#ff8080>缺 Prow，光矛会在虚空开火</color>\n"
@@ -434,8 +436,22 @@ namespace KgdRetinue
             Settings.GuardKillFeedsOwnPool = GUILayout.Toggle(Settings.GuardKillFeedsOwnPool, "卫兵杀敌也给卫队池加分（不动你那份，否则卫队只出力不进账）");
             Settings.GuardPsykerNoVeil = GUILayout.Toggle(Settings.GuardPsykerNoVeil, "卫兵灵能不推高亚空间威胁（帷幕是区域唯一值、做不了独立池，只能选计不计入）");
             Settings.NoCameraFollowGuards = GUILayout.Toggle(Settings.NoCameraFollowGuards, "卫兵行动时镜头不跟随（含技能演出特写；你自己队伍不受影响）");
+            GUILayout.Label("<b>解除限制</b>　<color=#aaaaaa>三件互不相干的事，分开控制</color>");
+            GUILayout.BeginHorizontal();
+            Settings.UnlockPfGate   = GUILayout.Toggle(Settings.UnlockPfGate,
+                "解除利润因子限制", GUILayout.Width(160));
+            Settings.UnlockCountCap = GUILayout.Toggle(Settings.UnlockCountCap,
+                "解除数量上限", GUILayout.Width(140));
+            Settings.UnlockLevelCap = GUILayout.Toggle(Settings.UnlockLevelCap,
+                "解除等级上限", GUILayout.Width(140));
             Settings.UnlockTierLimits = GUILayout.Toggle(Settings.UnlockTierLimits,
-                "<b>解除全部招募限制</b>（无视职业阶位、无视利润因子、数量不限，直接顶 55 级）");
+                "<b>全部解除</b>", GUILayout.Width(110));
+            GUILayout.EndHorizontal();
+            GUILayout.Label("<color=#aaaaaa>"
+                + "解除<b>利润因子</b>：名额退回按职业阶位算（T1=2 / T2=4 / T3=6）　"
+                + "解除<b>数量</b>：招多少个都行（利润因子和阶位数量一起无视）　"
+                + "解除<b>等级</b>：直接顶 55 级、职业链走满三段"
+                + "</color>");
 
             // ---------- 招募上限：利润因子 ----------
             GUILayout.Space(6);
@@ -649,7 +665,26 @@ namespace KgdRetinue
         public bool AlignExperience = true;
         // 原版自带 MechanicsFeatureType.DeathAndTraumasDoesNotAffectMomentum，无需 Harmony
         public bool IsolateMomentum = true;
+        // ---------------- 解除限制：拆成三个独立开关 ----------------
+        // 原来只有 UnlockTierLimits 一个总开关，同时管着「等级上限 / 数量上限 / 利润因子」
+        // 三件互不相干的事，想只放开其中一个做不到。保留它当总开关（=三个全开），
+        // 另加三个细粒度的。下面三个方法是给代码用的判据，方法而非属性 ——
+        // XmlSerializer 只序列化字段和带 setter 的属性，方法它一定不碰。
+        /// <summary>总开关：等于下面三个全部打开。</summary>
         public bool UnlockTierLimits = false;
+        /// <summary>只解除**利润因子**限制 —— 名额退回按职业阶位算（T1=2/T2=4/T3=6）。</summary>
+        public bool UnlockPfGate   = false;
+        /// <summary>解除**数量**上限 —— 招多少个都行（利润因子和阶位数量一起无视）。</summary>
+        public bool UnlockCountCap = false;
+        /// <summary>解除**等级**上限 —— 卫兵直接顶 55 级、职业链走满三段。</summary>
+        public bool UnlockLevelCap = false;
+
+        /// <summary>名额是否完全不限。</summary>
+        public bool NoCountCap() { return UnlockTierLimits || UnlockCountCap; }
+        /// <summary>是否绕过利润因子（数量全解除时自然也绕过）。</summary>
+        public bool NoPfGate()   { return UnlockTierLimits || UnlockCountCap || UnlockPfGate; }
+        /// <summary>等级是否不受阶位限制。</summary>
+        public bool NoLevelCap() { return UnlockTierLimits || UnlockLevelCap; }
         public bool WatchMomentum = true;
         // 创伤三档：0=无创伤  1=跟队恢复（队友被治时卫兵一起治）  2=原版
         public int TraumaMode = 0;

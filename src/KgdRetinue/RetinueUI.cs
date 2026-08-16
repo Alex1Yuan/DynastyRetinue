@@ -258,9 +258,14 @@ namespace KgdRetinue.UI
             if (_pfLabel == null) return;
             try
             {
-                if (Main.Settings != null && Main.Settings.UnlockTierLimits)
+                if (Main.Settings != null && Main.Settings.NoCountCap())
                 {
-                    _pfLabel.text = "<color=#7ec8ff>已在面板解除全部限制 —— 招募名额不受利润因子约束</color>";
+                    _pfLabel.text = "<color=#7ec8ff>已在面板解除数量上限 —— 招募名额不受利润因子约束</color>";
+                    return;
+                }
+                if (Main.Settings != null && Main.Settings.NoPfGate())
+                {
+                    _pfLabel.text = "<color=#aaaaaa>已解除利润因子限制 —— 名额按职业阶位算（T1=2 / T2=4 / T3=6）</color>";
                     return;
                 }
                 if (Main.Settings != null && !Main.Settings.RecruitUsePfGate)

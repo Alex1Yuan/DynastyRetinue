@@ -50,14 +50,14 @@ namespace KgdRetinue
                 {
                     int tier = Archetypes.PlayerTier(leader);
                     // 上限三选一，优先级从高到低：
-                    //   面板解除限制（一键全测也走这条） > 利润因子闸 > 旧的阶位上限
+                    //   解除数量上限 > 利润因子闸（未被单独解除时）> 阶位数量上限
                     int cap;
                     string why;
-                    if (Main.Settings.UnlockTierLimits)
+                    if (Main.Settings.NoCountCap())
                     {
-                        cap = 99; why = "（已解除限制）";
+                        cap = 99; why = "（已解除数量上限）";
                     }
-                    else if (Main.Settings.RecruitUsePfGate)
+                    else if (Main.Settings.RecruitUsePfGate && !Main.Settings.NoPfGate())
                     {
                         cap = ProfitFactorGate.Unlocked();
                         why = "：" + ProfitFactorGate.Summary();
@@ -72,9 +72,9 @@ namespace KgdRetinue
                     if (have >= cap)
                     {
                         Main.Log("招募上限已满" + why + "（当前 " + have + " 名）。"
-                                 + (Main.Settings.RecruitUsePfGate
-                                    ? "提升利润因子即可解锁更多；也可在面板改「每名所需利润因子」或勾选「解除阶位限制」。"
-                                    : "可在面板勾选「解除阶位限制」。"));
+                                 + (Main.Settings.RecruitUsePfGate && !Main.Settings.NoPfGate()
+                                    ? "提升利润因子即可解锁更多；也可在面板改「每名所需利润因子」或勾选「解除利润因子限制 / 解除数量上限」。"
+                                    : "可在面板勾选「解除数量上限」。"));
                         return null;
                     }
                 }
@@ -260,7 +260,7 @@ namespace KgdRetinue
                 try
                 {
                     int tier      = Archetypes.PlayerTier(leader);
-                    bool unlocked = Main.Settings.UnlockTierLimits;
+                    bool unlocked = Main.Settings.NoLevelCap();
                     int lvCap     = unlocked ? 55 : Archetypes.GuardLevelCap(tier);
                     int depth     = unlocked ? 3  : Archetypes.ChainDepth(tier);
                     // ★ 用卫兵**自己**的分型，不是面板当前选中的那个。
