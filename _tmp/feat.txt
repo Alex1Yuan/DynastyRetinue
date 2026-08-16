@@ -1,0 +1,4 @@
+zh	guid	type	internal	desc
+	3af882215424458592fc0884ef0c82c4	BlueprintFeature	SolidProjectileWeapon_Feature	
+血腥礼赞	b7c0d4663e9c4c01b6a5622aeaf1079e	BlueprintFeature	ArgentaBolterUnique_Feature	此爆矢枪的射速提高点。
+	dda482cc9bcb4f978d191b992c3e8885	BlueprintFeature	AdvancedHeavyStubber_Feature	

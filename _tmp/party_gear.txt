@@ -1,0 +1,443 @@
+====================================================================================================
+UNIT StartGame_Player_Unit 3a849d3674644c0085d5099ccf6813df
+  descr:{"$id": "11480", "$type": "Kingmaker.UnitLogic.Parts.PartUnitDescription, Code", "CustomPetName": null, "CustomGender": "Male", "CustomName": "颜威", "ForceUseClassEquipment": false}
+  套组1 主手: 反载具左轮手枪<AntiVechicle_StubRevolver_Item>[Unique] 4127a489515c4b9b9181d9b61fd33ec7
+  套组1 副手: 血色契约<DeathCultKnifeUnique_Item>[Unique] 298bd4183b9048b296ae1367870be2bd
+  套组2 主手: 烈阳法杖<SolarStaff_Item>[Pattern] 7da9005aaf4d49969ff989cf0b1619cb
+  套组2 副手: (空)
+  Head        : 乔伊斯之眼<SanctifiedHelmet_Item>[Unique] 7f67bc4d7e1c4ef6b217b46e4f55bf0b
+  Neck        : 卡西娅的礼物<LoveAmulet_Item>[Unique] c36e22c76e7c4a3aabdc397ad319ba54
+  Gloves      : 行刑者臂铠<EnhancementGloves_Item>[Unique] f3c90d709b2b4bf58da8fc6704e08fdb
+  Feet        : 惯性之靴<InertiaBoots_Item>[Common] b5a23e5ce00248efb454d07871f5b3d4
+  Shoulders   : 马尔皮裹尸布<IronCape_Item>[Common] 819721a3da0740b6943b36f5d3d6dfd3
+  Ring1       : 灵能猛袭之手<HandOfOffense_Item>[Common] 354cbd5a61c440aaa2f23c392467a09b
+  Ring2       : 虚空魔典<GrimoireOfVoid_Item>[Unique] f9605255721848fdaa96c15fd30c54f2
+  Armor       : 灵能者胸甲<PsykerTempestusCarapace_Item>[Unique] 99d54e96fa724292890f41d29246159c
+  Belt        : (空)
+  Shirt       : (空)
+  Glasses     : (空)
+  Wrist       : (空)
+  PetProtocol : (空)
+====================================================================================================
+UNIT AbelardCompanion 51604d37ac0e499da70e2c4a4f086066
+  descr:{"$id": "12988", "$type": "Kingmaker.UnitLogic.Parts.PartUnitDescription, Code", "CustomPetName": null, "CustomGender": null, "CustomName": null, "ForceUseClassEquipment": false}
+  套组1 主手: 自主攻击能量剑<AutoStriking_PowerSword_Item>[Unique] 8c304b20633145f39577a392201d2047
+  套组1 副手: 【瑞扎型】敌者之锤<FoehammerT2CH3_Item>[Pattern] 1c7a3dcf6afa4b48a7028642e596ab61
+  套组2 主手: 崇高虔诚<ThunderHammerCognatius_Item>[Unique] a922a79edfc849ddba568bd152fa9f3e
+  套组2 副手: (空)
+  Head        : 决心头盔<CalmingHelmet_Item>[Unique] f6f3b301deb5474c92de0560e8ac2f22
+  Neck        : 遗忘恩典<ServoCollar_Item>[Common] 78d1a75785df4d638b813d5b8e32d817
+  Gloves      : 痛苦欢宴<ReinforcedGloves_Item>[Common] 8992baa7047e4736b43fa1b94b0407b6
+  Feet        : 惯性之靴<InertiaBoots_Item>[Common] b5a23e5ce00248efb454d07871f5b3d4
+  Shoulders   : 马尔皮裹尸布<IronCape_Item>[Common] 819721a3da0740b6943b36f5d3d6dfd3
+  Ring1       : 饮血戒指<Absorber_Item>[Unique] 5f77ec7d55304efc9c7eb92748d3ba17
+  Ring2       : 双重护套<PairHolster_Item>[Common] 6b85b79132e140a7a52d9fe32d8f5c36
+  Armor       : 【源自战争世界】暴风精锐坚甲<TempestusCarapaceOrigin2_Item>[Pattern] 56a01fd50087462e84654aebe473b995
+  Belt        : (空)
+  Shirt       : (空)
+  Glasses     : (空)
+  Wrist       : (空)
+  PetProtocol : (空)
+  Augment[8f71128f]: 总领的单筒望远镜<Augment_Eye_Abelard_Item>[Unique] d298fed4a4664d238fbb28e385ff3100
+====================================================================================================
+UNIT IdiraCompanion 948abdeffc744794589d6b3f59a1cd0f
+  descr:{"$id": "13834", "$type": "Kingmaker.UnitLogic.Parts.PartUnitDescription, Code", "CustomPetName": null, "CustomGender": null, "CustomName": null, "ForceUseClassEquipment": false}
+  套组1 主手: 死亡超然<AstropathsStaff_Item>[Unique] 65b71d29858f4543b4e4c4a6b82aee52
+  套组1 副手: (空)
+  套组2 主手: 神射手步枪<HuntingSharpshooterRifle_Item>[Pattern] 9f1781a8ab2b41c1be7c1689f4aab9b7
+  套组2 副手: (空)
+  Head        : 精确定位面甲<HealthStatusVisor_Item>[Unique] 2b0b6002e828482ebfbe60fbfce20e70
+  Neck        : 黑暗活力宝石<GemOfDarkVitalty_Item>[Unique] 0725047650984d45b0aa1afe1e370f30
+  Gloves      : 亚空间传导手套<WarpConductorGloves_Item>[Common] 2e82bb82d3e444feb5b5d6d52cdc1ddc
+  Feet        : 灵能者的鞋子<PsykerBoots_Item>[Unique] 6f43e63d9cb54ed3b782a9924f8975e9
+  Shoulders   : 焦痕披风<SingedCape_Item>[Unique] 49a0c35d9315459b8d0dd756049082cb
+  Ring1       : 实验型灵能增强器<ExperimentalPsyAmplifier_Item>[Unique] 46da1ebb6b21461cbff80b54e4bfdff1
+  Ring2       : 亚空间回声手环<WarpReflexRing_Item>[Common] 80db2f8f35b24e0091e553b246031e60
+  Armor       : 暴风坚甲<TempestusCarapace_Item>[Pattern] 2d262a9870604d3e88260a11c984d725
+  Belt        : (空)
+  Shirt       : (空)
+  Glasses     : (空)
+  Wrist       : (空)
+  PetProtocol : (空)
+  Augment[d27de970]: 灰兜帽<Augment_Systems_Idira_Item>[Pattern] 2eb45d79c74c4164aa8c5adf34865543
+====================================================================================================
+UNIT ArgentaCompanion ec7f34b2ef6d4624af3e5024f4fc8e6e
+  descr:{"$id": "14643", "$type": "Kingmaker.UnitLogic.Parts.PartUnitDescription, Code", "CustomPetName": null, "CustomGender": null, "CustomName": null, "ForceUseClassEquipment": false}
+  套组1 主手: 泪如泉涌<BolterCH05Unique_Item>[Pattern] 1ba5fc1726374b2a856b53ca172a3460
+  套组1 副手: (空)
+  套组2 主手: 高级重型伐木枪<AdvancedHeavyStubber_Item>[Unique] 594030b15093416c925dabc415eda101
+  套组2 副手: (空)
+  Head        : 呢喃低语<VulnerabilityVisor_Item>[Unique] 026fd90c104c49e6954f942301db03bc
+  Neck        : 受祝福的爆矢枪弹壳<BlessedBolterCasing_Item>[Unique] 50ebc5b251654468a58ab50499730f10
+  Gloves      : 补偿器手套<CompensatorGloves_Item>[Common] e97a0c7f8b9544c4a53b2ff78d57aa45
+  Feet        : 战斗修女之靴<SororitasBoots_Item>[Common] bf14d8f09fc2408195714bddd33951f1
+  Shoulders   : 防火斗篷<FireproofCape_Item>[Common] 5a72eae8e3cd4190b6f8ccce98444a25
+  Ring1       : 兴奋剂注射器<StimulantInjector_Item>[Unique] e9d624a784a24b7f9ff0a363481c285d
+  Ring2       : 战祷之书<TomeOfCombatPrayers_Item>[Unique] cd22628cc51f40dcb9383ceabee71453
+  Armor       : 命运之星<SororitasPowerArmourFire_Item>[Unique] 9dec89a18f9a4175852ffa669fc05f6d
+  Belt        : (空)
+  Shirt       : (空)
+  Glasses     : (空)
+  Wrist       : (空)
+  PetProtocol : (空)
+  Augment[8f71128f]: 聚焦发射器 (MK“士兵”)<Augment_Eye_01_Shoot_Soldier_Item>[Pattern] e807b19418564d1a8dedcc8b7def2d5b
+  Augment[2ee2f0d3]: 武器优化仪 (MK-II)<Augment_Torso_03_MK_2_Item>[Unique] 80a9a29d43f04f98a57525d5e2ea57ff
+  Augment[33a6f272]: 公义之手<Augment_Arm_Dogmatic_Item>[Pattern] 846a2ae351a34cfd921d5f15d9c2445c
+====================================================================================================
+UNIT CassiaCompanion df918c2d635446e8ba6cba0123d2cb6e
+  descr:{"$id": "15481", "$type": "Kingmaker.UnitLogic.Parts.PartUnitDescription, Code", "CustomPetName": null, "CustomGender": null, "CustomName": null, "ForceUseClassEquipment": false}
+  套组1 主手: 星炬明光<AstronomiconRegallia_Item>[Unique] 982065da7f1441239b1238bdd85b1cbe
+  套组1 副手: (空)
+  套组2 主手: 奥赛罗大族长之杖<StaffOfOrsellioNovator_Item>[Common] 3185925f1943490b8850159d8288b631
+  套组2 副手: (空)
+  Head        : 导航者单片眼镜<NavigatorsMonocle_Item>[Common] 19c9755559574a7ea34adb408f8c5c06
+  Neck        : 活力项饰<InvigoratingResolve_Item>[Common] 2c37192f73bf4b89abd89d12e4040d75
+  Gloves      : 三重先驱护腕<TheobaldsBracers_Item>[Unique] 338125478641436b97701a470e0316f0
+  Feet        : 远征者之靴<SoftLeatherBoots_Item>[Common] 318af825b43544878072523c0a579e07
+  Shoulders   : 仁慈斗篷<CloakofMercy_Item>[Unique] 9361c66b4371414d9bb36738bf0bcc67
+  Ring1       : 审判庭的黑色图章<InquisitorGreaterRing_Item>[Common] bc66c47af73e48b4b28c090808213182
+  Ring2       : 指挥官笔记<CommandersNotes_Item>[Unique] d9c2e54b06e542919c56e1ea9e4bc959
+  Armor       : 高阶织网者护甲<EliteDeathCultArmour_Item>[Unique] 669b3e6ee72340e69f4a7320b34b9a2d
+  Belt        : (空)
+  Shirt       : (空)
+  Glasses     : (空)
+  Wrist       : (空)
+  PetProtocol : (空)
+====================================================================================================
+UNIT KibellahCompanion 88d4190122cd4b6c9c91d7fef4066651
+  descr:{"$id": "16263", "$type": "Kingmaker.UnitLogic.Parts.PartUnitDescription, Code", "CustomPetName": null, "CustomGender": null, "CustomName": null, "ForceUseClassEquipment": false}
+  套组1 主手: 悯慈低语<DeathCultSwordCH4Unique2_Item>[Unique] 78be3462bd7e4e78a75d5085d7d4aeef
+  套组1 副手: 报复颂唱<DeathCultSwordCH4Unique1_Item>[Unique] 956ef24150df470b9724ab9334f65be0
+  套组2 主手: 速射自动枪<AutogunRapid_Item>[Pattern] 25ae34851bc544728146abb51a976ee6
+  套组2 副手: (空)
+  Head        : 呢喃低语<VulnerabilityVisor_Item>[Unique] 026fd90c104c49e6954f942301db03bc
+  Neck        : 殉道者骨符<BloodTransfusor_Item>[Unique] cd08476d43d049e986b04a1584c3d1e4
+  Gloves      : 深红湮灭<BloodGloves_Item>[Unique] bf136a3367e64f138bb07fe6f990af57
+  Feet        : 战争狂人之靴<WarmongerBoots_Item>[Common] 0f2b5ec7a0064b5183cd208d464d0d04
+  Shoulders   : 刀锋舞者斗篷<CapeOfDeath_Item>[Unique] 4b2b5f6ab84a40d4a807d57bf3c9916c
+  Ring1       : 坚硬指虎<KnuckleGuard_Item>[Unique] 9f512940203c4d15b243b7a20d289415
+  Ring2       : 解剖指南<AnatomyBook_Item>[Unique] 40d7240079af4473baa1f1183b7d3bc7
+  Armor       : 过往哀恸<ReapersDeathCultArmour_Item>[Unique] 4f7d77686a6747cb9bfac2e35a98dff3
+  Belt        : (空)
+  Shirt       : (空)
+  Glasses     : (空)
+  Wrist       : (空)
+  PetProtocol : (空)
+  Augment[d27de970]: 大脑逆变器 (MK“战术家”)<Augment_Systems_05_Logic_Tactic_Item>[Pattern] 372c3403a9a34805847fa3ab038e4c3e
+====================================================================================================
+UNIT PascalCompanion e1cfcddc1dc447278762a0725753c394
+  descr:{"$id": "17154", "$type": "Kingmaker.UnitLogic.Parts.PartUnitDescription, Code", "CustomPetName": null, "CustomGender": null, "CustomName": null, "ForceUseClassEquipment": false}
+  套组1 主手: 欧姆尼塞亚之斧<OmnissiahAxe_Item>[Common] 87104954d3a6498ca6c4e2985b345b76
+  套组1 副手: 中子星云<PlasmaRifleUniqueCh3_Item>[Unique] aece88fa20f24d7cbe4fa1fd74e0283f
+  套组2 主手: (空)
+  套组2 副手: (空)
+  Head        : 自动校准目镜<PreciseGoggles_Item>[Unique] 25ca5def438d4507a20777568b4e4f3d
+  Neck        : 活力项饰<InvigoratingResolve_Item>[Common] 2c37192f73bf4b89abd89d12e4040d75
+  Gloves      : 等离子塑能者手套<PlasmashaperGloves_Item>[Common] 7a1737f48b1645108b328f0a9e20835e
+  Feet        : 散兵战靴<SkirmisherBoots_Item>[Common] 9dea103b7d9d41238a318142cf057273
+  Shoulders   : 幻影斗篷<PhantomCloak_Item>[Unique] 5cb87d3dc97b465a8aebe0797b894aa0
+  Ring1       : 坚甲碎片<CarapaceFragment_Item>[Unique] 2701c7846075433292ef5cb95a47237f
+  Ring2       : 欧姆尼赛亚之触<ManipulusRingCh2P1_Item>[Common] c4fb1ef0fbd7422a906e212f4d69855d
+  Armor       : 【源自战争世界】暴风精锐坚甲<TempestusCarapaceOrigin2_Item>[Pattern] 56a01fd50087462e84654aebe473b995
+  Belt        : (空)
+  Shirt       : (空)
+  Glasses     : (空)
+  Wrist       : (空)
+  PetProtocol : (空)
+  Augment[2ee2f0d3]: 武器优化仪 (MK-II)<Augment_Torso_03_MK_2_Item>[Unique] 80a9a29d43f04f98a57525d5e2ea57ff
+  Augment[33a6f272]: 源力受祝仿生件<Augment_Arm_03_MK_2_Item>[Unique] c1eb664220d2495382a252b330303d92
+  Augment[1ec46a65]: 分析系统<Augment_ForgeWorld_AnalyticsSystem_Item>[Common] 9574a2028a5640b181202068c88759f8
+  Augment[980d4df4]: 生物力学骨骼链接<Augment_Admech_Pasqal_PriestCore_Item>[Unique] f6dd66c8534a4bb89dd1a086a7de55f5
+  Augment[71670988]: 蓄能节点<Augment_Admech_Pasqal_CapacitoralMinoris_Item>[Unique] 2a9570c7d6af4eaf8bc395438e30cfd2
+  Augment[6c785fc7]: 轴向加固<Augment_Admech_Pasqal_Intensificator_Item>[Unique] 2ae3fda28f264db681817408c6353c3f
+====================================================================================================
+UNIT HeinrixCompanion 70e4973d9cef400da93e0b5672dcd014
+  descr:{"$id": "18060", "$type": "Kingmaker.UnitLogic.Parts.PartUnitDescription, Code", "CustomPetName": null, "CustomGender": null, "CustomName": null, "ForceUseClassEquipment": false}
+  套组1 主手: 烈阳法杖<SolarStaff_Item>[Pattern] 7da9005aaf4d49969ff989cf0b1619cb
+  套组1 副手: (空)
+  套组2 主手: 致命信使<Repeater_Longlas_Item>[Unique] 2059b9aeefb24b1fb1072c08b9859439
+  套组2 副手: (空)
+  Head        : 战术护目镜<TacticalGoggles_Item>[Unique] 07dea798ee0f49e78efe25a7213e3717
+  Neck        : 活力项饰<InvigoratingResolve_Item>[Common] 2c37192f73bf4b89abd89d12e4040d75
+  Gloves      : 行刑者臂铠<EnhancementGloves_Item>[Unique] f3c90d709b2b4bf58da8fc6704e08fdb
+  Feet        : 惯性之靴<InertiaBoots_Item>[Common] b5a23e5ce00248efb454d07871f5b3d4
+  Shoulders   : 马尔皮裹尸布<IronCape_Item>[Common] 819721a3da0740b6943b36f5d3d6dfd3
+  Ring1       : 灵能猛袭之手<HandOfOffense_Item>[Common] 354cbd5a61c440aaa2f23c392467a09b
+  Ring2       : 弱点笔记<NotesOnWeaknesses_Item>[Unique] 3103e1561110474d89a4b7ce1c13824e
+  Armor       : 高阶织网者护甲<EliteDeathCultArmour_Item>[Unique] 669b3e6ee72340e69f4a7320b34b9a2d
+  Belt        : (空)
+  Shirt       : (空)
+  Glasses     : (空)
+  Wrist       : (空)
+  PetProtocol : (空)
+====================================================================================================
+UNIT JaeCompanion 768a816a8b734882af399f8258ffcada
+  descr:{"$id": "18822", "$type": "Kingmaker.UnitLogic.Parts.PartUnitDescription, Code", "CustomPetName": null, "CustomGender": null, "CustomName": null, "ForceUseClassEquipment": false}
+  套组1 主手: 星镖手枪<ShurikenPistol_Item>[Common] 74a91d0251d447c798efab2f72c604dc
+  套组1 副手: 毒晶手枪<SplinterPistol_Item>[Common] 94c2ccbdace84264840452921c33462b
+  套组2 主手: 艾达灵族链锯剑<EldarChainSword_Item>[Pattern] a9320f6175c9449f8edefc7f0e4baaea
+  套组2 副手: (空)
+  Head        : (空)
+  Neck        : (空)
+  Gloves      : (空)
+  Feet        : (空)
+  Shoulders   : 折光斗篷<CameleolineCloak_Item>[Common] de2f5ce2589b4952a9b036ab7e2ccc02
+  Ring1       : (空)
+  Ring2       : (空)
+  Armor       : 硬化护甲外衣<ArmoredBodyglove_Item>[Common] 18922ff0beee40fe95c7b9be3872be5a
+  Belt        : (空)
+  Shirt       : (空)
+  Glasses     : (空)
+  Wrist       : (空)
+  PetProtocol : (空)
+  Augment[13ef3637]: 供养之手<Augment_LeftArm_Jae_Item>[Pattern] 88ad53e2e54b46ef834571294b07aeee
+====================================================================================================
+UNIT EogannCompanion 2e5e746cc6d043ab8d395c67d07ac56b
+  descr:{"$id": "19630", "$type": "Kingmaker.UnitLogic.Parts.PartUnitDescription, Code", "CustomPetName": null, "CustomGender": null, "CustomName": null, "ForceUseClassEquipment": false}
+  套组1 主手: 阿尔法电弧步枪<ArcRifleT2_Item>[Unique] bf9d592fc8444f29a99e27486182afb6
+  套组1 副手: 残酷命运<GovernorsSniperRifle_Item>[Unique] 34612ed374a74558815bc594244eb1b2
+  套组2 主手: (空)
+  套组2 副手: (空)
+  Head        : 弹道计算单筒镜<ManipulusHeadCh2_Item>[Common] e202201c375a45b697d7bba5ac68c6ee
+  Neck        : 源力电容器<ManipulusNeckCh4_Item>[Common] 50d87c8dba1d4d71a7474685639584ee
+  Gloves      : 偏转手套<DeflectionGloves_Item>[Unique] d470a8f5a3bc4f6292735ca2931607b7
+  Feet        : (空)
+  Shoulders   : (空)
+  Ring1       : 欧姆尼赛亚之触<ManipulusRingCh2P1_Item>[Common] c4fb1ef0fbd7422a906e212f4d69855d
+  Ring2       : “EF终极十八重悖论”认知仿真模拟器<Cogni-Simulacrum_Item>[Unique] 7f65081576c749ada80ab498002b987b
+  Armor       : (空)
+  Belt        : (空)
+  Shirt       : (空)
+  Glasses     : (空)
+  Wrist       : (空)
+  PetProtocol : (空)
+  Augment[8f71128f]: 阵线支援俄歇矩阵<Augment_Eye_Eogann_T1_Item>[Pattern] 1556658994b140309895c706929d40f6
+  Augment[d27de970]: 大脑逆变器 (MK“战术家”)<Augment_Systems_05_Logic_Tactic_Item>[Pattern] 372c3403a9a34805847fa3ab038e4c3e
+  Augment[2ee2f0d3]: 电激集成网格<Augment_Torso_Eogann_T2_Item>[Unique] 582399431cdf4f18a7370d4569917399
+  Augment[33a6f272]: 改装磁轨长矛<Augment_Arm_Manipulus_MagnaRailLance_T2_Item>[Unique] 7d9af936e7ca4f229f8a381e28032a04
+  Augment[1ec46a65]: 分析系统<Augment_ForgeWorld_AnalyticsSystem_Item>[Common] 9574a2028a5640b181202068c88759f8
+  Augment[4b7e730e]: 神圣动能导管<Augment_Admech_Eogann_ManipulusCore_T2_Item>[Unique] eeeb639d5ccb450cb038aba28fdc05e3
+  Augment[29f808d9]: 神圣瘴气净化导管<Augment_Admech_Eogann_AirPurificationSystem_T2_Item>[Unique] 5ab98bb0ac3c4c3388f6eddad4bf6c36
+  Augment[31a7db2a]: 高级电激囚笼<Augment_Admech_Eogann_AbsorbatorMinoris_T2_Item>[Unique] 2727a81b0a404ceb9f699e36c9a899bb
+====================================================================================================
+UNIT YrlietCompanion 20c5ce9f1e2bcf9448a7a0fd0850f5d2
+  descr:{"$id": "20407", "$type": "Kingmaker.UnitLogic.Parts.PartUnitDescription, Code", "CustomPetName": null, "CustomGender": null, "CustomName": null, "ForceUseClassEquipment": false}
+  套组1 主手: 纱芮尔摇篮曲<LongRifleUniqueCh3V1_Item>[Unique] f0a4e0192871429f9dadc0eb779c6294
+  套组1 副手: (空)
+  套组2 主手: 赫卡顿之眼<AeldariScout_LongRifle_Item>[Unique] d043a2289a1f45f784a415057c725cb5
+  套组2 副手: (空)
+  Head        : 审讯目镜<InterrogationGoggles_Item>[Unique] 70bcc270b4ce449c8806a466f687d7e2
+  Neck        : 伊莉耶特的护身符<YrlietCharm_Item>[Unique] 0013f823fa3741c59d2617484888b89b
+  Gloves      : 灾亡手套<BulletHellGloves_Item>[Common] 96bcb56f3f1f4930b2eda5cfbb269042
+  Feet        : 追踪靴<TrackingBoots_Item>[Unique] 1d43c1f399e945a785423a2a800b2499
+  Shoulders   : 穿甲弹药背包<BackpackWithTraumaticBullets_Item>[Unique] 8106576e497f4b6ea99da4de1b964ef9
+  Ring1       : 衰竭圣典<WeaknessExpertsLitany_Item>[Common] 8a74cb37c4d44537a0921c3ff1f03cc6
+  Ring2       : 艾达灵族游侠之视<EldarRangerSights_Item>[Common] 3830a4dc0fc4453cb4392e6500b20098
+  Armor       : 巫灵绝叫<DrukhariArmourUniqueCh4V1_Item>[Unique] 51fad212bca146f889ae8d6e2be4d2fd
+  Belt        : (空)
+  Shirt       : (空)
+  Glasses     : (空)
+  Wrist       : (空)
+  PetProtocol : (空)
+====================================================================================================
+UNIT Glaito_Cybermastiff_PetUnit c3128c02ae674a8cabe2dfff081449ad
+  descr:{"$id": "20684", "$type": "Kingmaker.UnitLogic.Parts.PartUnitDescription, Code", "CustomPetName": null, "CustomGender": null, "CustomName": null, "ForceUseClassEquipment": false}
+  套组1 主手: 生化獒犬利爪<Master_ArbitesCyberMastiff_Claws_Weapon>[Common] b53705a9aac643deb704e4e3f9f96cc7
+  套组1 副手: (空)
+  套组2 主手: (空)
+  套组2 副手: (空)
+  Head        : (空)
+  Neck        : (空)
+  Gloves      : (空)
+  Feet        : (空)
+  Shoulders   : (空)
+  Ring1       : (空)
+  Ring2       : (空)
+  Armor       : (空)
+  Belt        : (空)
+  Shirt       : (空)
+  Glasses     : (空)
+  Wrist       : (空)
+  PetProtocol : 嗜血难当<OutForBloodCyberMastiffStatProtocol_Item>[Unique] e1eb387713b442b7a92a37ca2d9f51da
+====================================================================================================
+UNIT SolomorneCompanion a699795d21f74159abb00f9a217fa97d
+  descr:{"$id": "21477", "$type": "Kingmaker.UnitLogic.Parts.PartUnitDescription, Code", "CustomPetName": null, "CustomGender": null, "CustomName": null, "ForceUseClassEquipment": false}
+  套组1 主手: 法务部敌者之锤<Solomorne_Foehammer_Item>[Common] 975d778db625472ca9e9fdcf3bcc378a
+  套组1 副手: 梅拉贡盾牌<FaithIsMyShield_Item>[Unique] 454f30f7edb84d229bade81be01fe108
+  套组2 主手: 致命毒晶步枪<DeadshotSplinterRifle_Item>[Unique] a178412567e347379ab99bf3c994038d
+  套组2 副手: (空)
+  Head        : 梅拉贡头盔<MeragonHelmet_Item>[Common] 45ffbd765f0e43b3b5adc1411a3ca226
+  Neck        : 法尔斯托之泪<AmuletOfEmperorBlessing_Item>[Unique] 61e5945a44fb4d0a8dad059052ed024c
+  Gloves      : 神射手护腕<StabilizerBracers_Item>[Common] 1b447777d38f43baa643fc2e915d6ef3
+  Feet        : 梅拉贡之靴<MeragonBoots_Item>[Common] 4bd3c4db39094677bdf81b9cd0daca22
+  Shoulders   : 暴风坚甲精英背包<TempestusCarapaceEliteBackPack_Item>[Common] 3475135047dc4717b8860b8f611ccd39
+  Ring1       : 监察官的双头鹰<OverseersAquila_Item>[Unique] 6a60e5f7630741539d63f7c5acb94445
+  Ring2       : 审判庭的白色图章<InquisitorLesserRing_Item>[Common] 76424a17a7504ddfb9b312d681d6e47b
+  Armor       : 【源自巢都世界】虚空士兵护甲<VoidsmenArmour_Item>[Pattern] 7b77b09f4d144086901fdf81236aea9a
+  Belt        : (空)
+  Shirt       : (空)
+  Glasses     : (空)
+  Wrist       : (空)
+  PetProtocol : (空)
+  Augment[8f71128f]: 主控链接目镜<Augment_Eye_Solomorne_Item>[Unique] d0876b1bcdf14c559fd38ccfa53e498b
+  Augment[13ef3637]: 忏悔之手<Augment_LeftArm_Solomorne_Item>[Pattern] 39b7f180bb524f1bae8216fc221b46d9
+====================================================================================================
+UNIT BoardedShip_Arbites_Stein_Pregen 9f1b785d6baa4189a54f3596024a91f2
+  descr:{"$id": "21923", "$type": "Kingmaker.UnitLogic.Parts.PartUnitDescription, Code", "CustomPetName": null, "CustomGender": null, "CustomName": null, "ForceUseClassEquipment": false}
+  套组1 主手: 沉重大锤<Arbites_DominatorMaul_BoardedShip_Unlootable_Item>[Common] 2c2bc9fbe371424180565c702d46e8bc
+  套组1 副手: 盾牌<Shield_BoardedShip_Unlootable_Item>[Common] b39ed6e1c8154fb19c510d2ff3d29dae
+  套组2 主手: 高级法务部敌者之锤<Arbites_ShotPistol_BoardedShip_Unlootable_Item>[Common] 475d8060701b48558057ca29fa89887c
+  套组2 副手: (空)
+  Head        : (空)
+  Neck        : (空)
+  Gloves      : (空)
+  Feet        : (空)
+  Shoulders   : (空)
+  Ring1       : (空)
+  Ring2       : (空)
+  Armor       : ?<Arbites_StandartArmour_BoardedShip_Unlootable_Item>[Common] 711e9b3f3738440fb5b7337cdce7d553
+  Belt        : (空)
+  Shirt       : (空)
+  Glasses     : (空)
+  Wrist       : (空)
+  PetProtocol : (空)
+====================================================================================================
+UNIT BoardedShip_Arbites_Clayton_Pregen 8f7692f2e46d4959b8501115905c2a34
+  descr:{"$id": "22372", "$type": "Kingmaker.UnitLogic.Parts.PartUnitDescription, Code", "CustomPetName": null, "CustomGender": null, "CustomName": null, "ForceUseClassEquipment": false}
+  套组1 主手: 正义怒火<Arbites_HeavyStubber_BoardedShip_Unlootable_Item>[Common] 9cd9988725974ec6b82e9d587ee35c88
+  套组1 副手: (空)
+  套组2 主手: 法务部霰弹枪<Arbites_Shotgun_BoardedShip_Unlootable_Item>[Pattern] cc1577c4d4e14eb9a17be7576294935b
+  套组2 副手: (空)
+  Head        : (空)
+  Neck        : (空)
+  Gloves      : (空)
+  Feet        : (空)
+  Shoulders   : (空)
+  Ring1       : (空)
+  Ring2       : (空)
+  Armor       : ?<Arbites_StandartArmour_BoardedShip_Unlootable_Item>[Common] 711e9b3f3738440fb5b7337cdce7d553
+  Belt        : (空)
+  Shirt       : (空)
+  Glasses     : (空)
+  Wrist       : (空)
+  PetProtocol : (空)
+====================================================================================================
+UNIT BoardedShip_Arbites_Bryce_Pregen 91cfd33f7d6144028d7211ef746f54cd
+  descr:{"$id": "22795", "$type": "Kingmaker.UnitLogic.Parts.PartUnitDescription, Code", "CustomPetName": null, "CustomGender": null, "CustomName": null, "ForceUseClassEquipment": false}
+  套组1 主手: 刑讯巨槌<Arbites_ExcruciatorMaul_BoardedShip_Unlootable_Item>[Pattern] 41e590c49401442d9457f91417a16757
+  套组1 副手: 盾牌<Shield_BoardedShip_Unlootable_Item>[Common] b39ed6e1c8154fb19c510d2ff3d29dae
+  套组2 主手: 高级法务部敌者之锤<Arbites_ShotPistol_BoardedShip_Unlootable_Item>[Common] 475d8060701b48558057ca29fa89887c
+  套组2 副手: (空)
+  Head        : (空)
+  Neck        : (空)
+  Gloves      : (空)
+  Feet        : (空)
+  Shoulders   : (空)
+  Ring1       : (空)
+  Ring2       : (空)
+  Armor       : ?<Arbites_BryceArmour_BoardedShip_Unlootable_Item>[Common] 81fd891df31f456494e4209a48a1ea04
+  Belt        : (空)
+  Shirt       : (空)
+  Glasses     : (空)
+  Wrist       : (空)
+  PetProtocol : (空)
+====================================================================================================
+UNIT FW_Lizzy_Companion 17134d4540dd445c95b995a00fef52e3
+  descr:{"$id": "23044", "$type": "Kingmaker.UnitLogic.Parts.PartUnitDescription, Code", "CustomPetName": null, "CustomGender": null, "CustomName": null, "ForceUseClassEquipment": false}
+  套组1 主手: (空)
+  套组1 副手: (空)
+  套组2 主手: (空)
+  套组2 副手: (空)
+  Head        : (空)
+  Neck        : (空)
+  Gloves      : (空)
+  Feet        : (空)
+  Shoulders   : (空)
+  Ring1       : (空)
+  Ring2       : (空)
+  Armor       : (空)
+  Belt        : (空)
+  Shirt       : (空)
+  Glasses     : (空)
+  Wrist       : (空)
+  PetProtocol : (空)
+====================================================================================================
+UNIT Master_ArbitesCyberMastiff_PetUnit fffed8b281aa45fc9926d62d7aaf94c9
+  descr:{"$id": "23240", "$type": "Kingmaker.UnitLogic.Parts.PartUnitDescription, Code", "CustomPetName": null, "CustomGender": null, "CustomName": null, "ForceUseClassEquipment": false}
+  套组1 主手: 生化獒犬利爪<Master_ArbitesCyberMastiff_Claws_Weapon>[Common] b53705a9aac643deb704e4e3f9f96cc7
+  套组1 副手: (空)
+  套组2 主手: (空)
+  套组2 副手: (空)
+  Head        : (空)
+  Neck        : (空)
+  Gloves      : (空)
+  Feet        : (空)
+  Shoulders   : (空)
+  Ring1       : (空)
+  Ring2       : (空)
+  Armor       : (空)
+  Belt        : (空)
+  Shirt       : (空)
+  Glasses     : (空)
+  Wrist       : (空)
+  PetProtocol : (空)
+====================================================================================================
+UNIT UlfarCompanion daaf3d6bae644af8a9128ea09044bb99
+  descr:{"$id": "24079", "$type": "Kingmaker.UnitLogic.Parts.PartUnitDescription, Code", "CustomPetName": null, "CustomGender": null, "CustomName": null, "ForceUseClassEquipment": false}
+  套组1 主手: 【梅佐阿型】阿斯塔特爆矢手枪<AstartesBoltPistolT2_Item>[Common] 1b4c97da14ca466987603b2e8587fb9f
+  套组1 副手: 阿斯塔特战刀<AstartesCombatKnife_Item>[Common] 88de523b22324c0b84373ac545f344cb
+  套组2 主手: 阿斯塔特台风爆矢枪<OneAndDoneAstartesBolter_Item>[Unique] a17e98b7e2c643a6bdcc7f4c8440f82c
+  套组2 副手: (空)
+  Head        : 赤狼头骨<TankUlfarHelmet_Item>[Common] f1ca99d25509440ea4eca1fcce38c1dc
+  Neck        : 血光飞溅<RubySplash_Item>[Common] 553d02360e5640bcad28d88b745c974a
+  Gloves      : 血冰臂铠<CompensatorAstartesGloves_Item>[Unique] 93dd7ab998aa4676b78281792ea619e8
+  Feet        : 破冰者战靴<HeavyAstarterBoots_Item>[Unique] 2ba0a14cd7e642f49b782dcf0d5d0568
+  Shoulders   : 狼皮斗篷<WolfPeltCloak_Item>[Common] 34abddeecf7a4024974d364e15ee7637
+  Ring1       : 轻型机械手<PortativeManipulator_Item>[Unique] abb1cff0af5748898bad93a355817e4c
+  Ring2       : 利刃之翼<SomeLoreWings_Item>[Common] adc85a241d064fb7aca5153919532fd4
+  Armor       : 芬里斯之力战甲<ThroatseekerAstartesPowerArmour_Item>[Unique] 566129961c994323b2c96c84323c9637
+  Belt        : (空)
+  Shirt       : (空)
+  Glasses     : (空)
+  Wrist       : (空)
+  PetProtocol : (空)
+====================================================================================================
+UNIT Hope_Chorda_Companion cabf247f1fb3494289f48a48512132f3
+  descr:{"$id": "24731", "$type": "Kingmaker.UnitLogic.Parts.PartUnitDescription, Code", "CustomPetName": null, "CustomGender": null, "CustomName": null, "ForceUseClassEquipment": false}
+  套组1 主手: 【梅佐阿型】狱火手枪<InfernoPistolT2CH04_Item>[Pattern] 7db1e12a9ddd4eaf8c0ca0e5642f27cd
+  套组1 副手: 【太阳型】等离子手枪<PlasmaPistolT2CH04_Item>[Pattern] 6eb0e0e680884528a14629dc8b94002b
+  套组2 主手: (空)
+  套组2 副手: (空)
+  Head        : (空)
+  Neck        : 士兵的双头鹰吊坠<SoldiersAquilaPendant_Item>[Unique] 4561a873cdb542f79ec6c120e4bccab5
+  Gloves      : 指挥官手套<TacticalGloves_Item>[Unique] b9caca20bbc349f2bf37ef5f5d542d53
+  Feet        : (空)
+  Shoulders   : (空)
+  Ring1       : (空)
+  Ring2       : (空)
+  Armor       : 决斗者制服<FancyUniform_Item>[Unique] 8d3d5170c8fb4f4387fd2f50d6341953
+  Belt        : (空)
+  Shirt       : (空)
+  Glasses     : (空)
+  Wrist       : (空)
+  PetProtocol : (空)
+====================================================================================================
+UNIT ExhibitionCollapsing_LemanRussTank_Player a9a23f980ca64fb496f8387d4566fb40
+  descr:{"$id": "24905", "$type": "Kingmaker.UnitLogic.Parts.PartUnitDescription, Code", "CustomPetName": null, "CustomGender": null, "CustomName": null, "ForceUseClassEquipment": false}
+  套组1 主手: 主炮<ExhibitionCollapsing_LemanRuss_UnlimitedMainCannon>[Common] ce3dc9874a55444ebea744a3e71c34c2
+  套组1 副手: (空)
+  套组2 主手: (空)
+  套组2 副手: (空)
+  Head        : (空)
+  Neck        : (空)
+  Gloves      : (空)
+  Feet        : (空)
+  Shoulders   : (空)
+  Ring1       : (空)
+  Ring2       : (空)
+  Armor       : (空)
+  Belt        : (空)
+  Shirt       : (空)
+  Glasses     : (空)
+  Wrist       : (空)
+  PetProtocol : (空)

@@ -1,0 +1,146 @@
+
+=== ARCH 近战 Melee ===
+  grantFeatures: ['5069a24051354e50a663da0125e19b02', '684c766dc9c24fcf856dc1d6f01d9290', 'e19301be9dc14d89b656c60a6c4f8e04', '1dbbd844e25b447e99f247c3a88aa5d4']
+  preGrant: None
+
+  ELITE 铁壁 · 先锋队长 | unit=4a02a1bee6f84892b3cb7a3f8c818c69 | slots=10 | preGrant=None
+    s0  chain x3 : ['8ca60374722b4eeea27d99c3b17fb09e', 'eaa742e43d8e48a3a450c4d59431b03e', '8c304b20633145f39577a392201d2047']
+    s1  SINGLE   : e0e76a258d844385a16c9dc602caa316
+    s2  chain x4 : ['c1c07d80309c47de99b055ba9eb43a07', 'e84349dae8bb4a818fa4473ce32dcd9a', '8b13aef5103a4719980774c0d4a12506', '1fede9d9621f437c92832e239426bbcf']
+    s3  SINGLE   : 8992baa7047e4736b43fa1b94b0407b6
+    s4  SINGLE   : abb1cff0af5748898bad93a355817e4c
+    s5  SINGLE   : 819721a3da0740b6943b36f5d3d6dfd3
+    s6  chain x2 : ['b5a23e5ce00248efb454d07871f5b3d4', '4b06abc0736449eb8adecad43a2b37df']
+    s7  chain x3 : ['18b727b71c794b558d229a7831ef7bee', '8d598bfec7e042029ab0c2a2ec8c478b', '587c9d09efc4481282271ee0db9df7c1']
+    s8  chain x3 : ['13757f3863ec47929fd914b7f306fa31', '3abc1cf2a493471b938dc1b7106dc481', '7656626a2e23485eb8c2fe1017e4ae46']
+    s9  chain x3 : ['7e2b91b8cc944f4c951fb2058fcb2f22', 'fa121ed0f18c4017a53c7adb6036a552', 'fe6060602c6d4b71be16808f05368242']
+
+  ELITE 磐石 · 首席战士 | unit=30e6364a1d7a425b93d877122c6eed40 | slots=12 | preGrant=None
+    s0  SINGLE   : 9c190bd2019742db8697ac91da1d985e
+    s1  SINGLE   : 1c7a3dcf6afa4b48a7028642e596ab61
+    s2  SINGLE   : bb427b937c304ece913793a020aea87f
+    s3  chain x4 : ['c1c07d80309c47de99b055ba9eb43a07', 'e84349dae8bb4a818fa4473ce32dcd9a', '8b13aef5103a4719980774c0d4a12506', '1fede9d9621f437c92832e239426bbcf']
+    s4  SINGLE   : f6f3b301deb5474c92de0560e8ac2f22
+    s5  SINGLE   : 78d1a75785df4d638b813d5b8e32d817
+    s6  SINGLE   : db9cd531f9914828915fa4158d07f6d0
+    s7  SINGLE   : 470ac5563173442c858b767d68e27836
+    s8  SINGLE   : e16a1788d69040328ac3b706cd873e06
+    s9  SINGLE   : 5f77ec7d55304efc9c7eb92748d3ba17
+    s10 SINGLE   : 6b85b79132e140a7a52d9fe32d8f5c36
+    s11 chain x2 : ['8d598bfec7e042029ab0c2a2ec8c478b', '587c9d09efc4481282271ee0db9df7c1']
+
+=== ARCH 狙击 Sniper ===
+  grantFeatures: ['5069a24051354e50a663da0125e19b02', '684c766dc9c24fcf856dc1d6f01d9290', 'e19301be9dc14d89b656c60a6c4f8e04', '365ad1a4ef1b4a47be74509c33b2be3b', '5de2d70b4ac9468ca723e84c57524eae', 'c7a53b43ac5f4f11a1aef612dd3f4f71']
+  preGrant: None
+
+  ELITE 寂静之眼 | unit=aca1e823dbf64d6999d2132e3198dd5a | slots=11 | preGrant=['a8a919250f28499199e5f0d1122aa4e8', '39e0d1de97e44e67bd15e2dddd3352a3', '07be5f794f6b4f54b91b0904e0c50e4b', 'c332d4c355ea40a6b8bb0bd454a2fdac']
+    s0  chain x5 : ['9fbd2aaded9948e483295466830fab1f', 'f0a4e0192871429f9dadc0eb779c6294', '34612ed374a74558815bc594244eb1b2', 'a223f91296d24d65a3390651c247ed83', 'd043a2289a1f45f784a415057c725cb5']
+    s1  SINGLE   : e202201c375a45b697d7bba5ac68c6ee
+    s2  SINGLE   : c1c07d80309c47de99b055ba9eb43a07
+    s3  SINGLE   : 1b447777d38f43baa643fc2e915d6ef3
+    s4  SINGLE   : 2c37192f73bf4b89abd89d12e4040d75
+    s5  SINGLE   : 50c5be09ff9942969db57298b1beb4cb
+    s6  SINGLE   : 47b52da77a194da2837e6d6ebfb9e918
+    s7  SINGLE   : 774361e6945849889568fae24be57450
+    s8  SINGLE   : 9dea103b7d9d41238a318142cf057273
+    s9  SINGLE   : fd1da14cd1f54ef0a280ce1160dde3e6
+    s10 chain x3 : ['d16dbc47d0fc46c0833b3549f9be82f0', 'fa121ed0f18c4017a53c7adb6036a552', 'fe6060602c6d4b71be16808f05368242']
+
+  ELITE 赏金 · 猎首 | unit=53281ae602a34756a47c3e23f66c06cd | slots=10 | preGrant=None
+    s0  chain x5 : ['d043a2289a1f45f784a415057c725cb5', '9fbd2aaded9948e483295466830fab1f', 'f0a4e0192871429f9dadc0eb779c6294', '34612ed374a74558815bc594244eb1b2', 'a223f91296d24d65a3390651c247ed83']
+    s1  SINGLE   : e202201c375a45b697d7bba5ac68c6ee
+    s2  chain x4 : ['c1c07d80309c47de99b055ba9eb43a07', '25bdbe6c879b4795b76dd5e2c13dddc9', '0a50d9c3a4e84f29a0f78894a1150e49', 'daffadd94a844e919a34d08e54bf5ff1']
+    s3  SINGLE   : 1b447777d38f43baa643fc2e915d6ef3
+    s4  SINGLE   : 2c37192f73bf4b89abd89d12e4040d75
+    s5  SINGLE   : 50c5be09ff9942969db57298b1beb4cb
+    s6  SINGLE   : 47b52da77a194da2837e6d6ebfb9e918
+    s7  SINGLE   : 774361e6945849889568fae24be57450
+    s8  SINGLE   : 9dea103b7d9d41238a318142cf057273
+    s9  SINGLE   : fd1da14cd1f54ef0a280ce1160dde3e6
+
+=== ARCH 连射 Suppress ===
+  grantFeatures: ['5069a24051354e50a663da0125e19b02', '684c766dc9c24fcf856dc1d6f01d9290', 'e19301be9dc14d89b656c60a6c4f8e04', '26376b596c474d67849613617ced7b04', '19673fbc918241c6add6710025f67058']
+  preGrant: None
+
+  ELITE 怒火 · 首席连射 | unit=9bc515c1b1b84c3ab0f65544807e22ee | slots=12 | preGrant=None
+    s0  SINGLE   : a9cb0b71c88043a886992fe55f1d9d77
+    s1  SINGLE   : 3803098850504a7ebf80d6fbb70c37c6
+    s2  chain x5 : ['0adaa28e654e4fd6a74830eed3f63390', '1ba5fc1726374b2a856b53ca172a3460', '0f1194cdb530486f83be00c653ccab49', 'dec66b3861c64c088c5f38fd49024d44', 'b11dc12ae9e943c29cce0aa7d52bf980']
+    s3  SINGLE   : 95c17d495720443fa840ea8886643e69
+    s4  SINGLE   : 9050161424de439392bd6710898e0e4b
+    s5  SINGLE   : d39b28ade6844440833698efa3d8e2a7
+    s6  SINGLE   : e97a0c7f8b9544c4a53b2ff78d57aa45
+    s7  SINGLE   : 8f1e2d1deb234d2688c2a3e7f9a4106e
+    s8  SINGLE   : 9dea103b7d9d41238a318142cf057273
+    s9  SINGLE   : e807b19418564d1a8dedcc8b7def2d5b
+    s10 chain x3 : ['80a9a29d43f04f98a57525d5e2ea57ff', 'abb367ffd0f944a1819d719e8eff8142', '068cc4c34bcd483ebd018b206ba9a7a8']
+    s11 SINGLE   : 846a2ae351a34cfd921d5f15d9c2445c
+
+  ELITE 圣焰 · 净罪修女 | unit=2cf75c27e6d34681ab623101b0be1135 | slots=12 | preGrant=None
+    s0  SINGLE   : 1ba5fc1726374b2a856b53ca172a3460
+    s1  SINGLE   : 594030b15093416c925dabc415eda101
+    s2  SINGLE   : eb8c58901bb049ec9ad3775c31eeabfe
+    s3  SINGLE   : 026fd90c104c49e6954f942301db03bc
+    s4  SINGLE   : 50ebc5b251654468a58ab50499730f10
+    s5  SINGLE   : e97a0c7f8b9544c4a53b2ff78d57aa45
+    s6  SINGLE   : bf14d8f09fc2408195714bddd33951f1
+    s7  SINGLE   : 5a72eae8e3cd4190b6f8ccce98444a25
+    s8  SINGLE   : e9d624a784a24b7f9ff0a363481c285d
+    s9  SINGLE   : cd22628cc51f40dcb9383ceabee71453
+    s10 SINGLE   : e807b19418564d1a8dedcc8b7def2d5b
+    s11 SINGLE   : 846a2ae351a34cfd921d5f15d9c2445c
+
+=== ARCH 灵能 Psy/Exec ===
+  grantFeatures: ['5069a24051354e50a663da0125e19b02', '684c766dc9c24fcf856dc1d6f01d9290', 'e19301be9dc14d89b656c60a6c4f8e04']
+  preGrant: ['a6a38016b90148878593d977d96b8264']
+
+  ELITE 亚空间审判者 | unit=d1287134a3e64a4dbdae16b58d21bd8b | slots=10 | preGrant=['a6a38016b90148878593d977d96b8264']
+    s0  SINGLE   : 7da9005aaf4d49969ff989cf0b1619cb
+    s1  SINGLE   : 2059b9aeefb24b1fb1072c08b9859439
+    s2  SINGLE   : ea60e97cfbe14231b8fdb8e1702b5f70
+    s3  SINGLE   : 07dea798ee0f49e78efe25a7213e3717
+    s4  SINGLE   : 2c37192f73bf4b89abd89d12e4040d75
+    s5  SINGLE   : f3c90d709b2b4bf58da8fc6704e08fdb
+    s6  SINGLE   : b5a23e5ce00248efb454d07871f5b3d4
+    s7  SINGLE   : 819721a3da0740b6943b36f5d3d6dfd3
+    s8  SINGLE   : 354cbd5a61c440aaa2f23c392467a09b
+    s9  SINGLE   : 3103e1561110474d89a4b7ce1c13824e
+
+  ELITE 火杖行刑者 | unit=638ab19bfae74bb99dacc93e7d6fe7f3 | slots=11 | preGrant=['b4d60f6a91b94d02840a58fd9df863cd']
+    s0  SINGLE   : 7da9005aaf4d49969ff989cf0b1619cb
+    s1  SINGLE   : 298bd4183b9048b296ae1367870be2bd
+    s2  SINGLE   : 4127a489515c4b9b9181d9b61fd33ec7
+    s3  SINGLE   : ea60e97cfbe14231b8fdb8e1702b5f70
+    s4  SINGLE   : 7f67bc4d7e1c4ef6b217b46e4f55bf0b
+    s5  SINGLE   : c36e22c76e7c4a3aabdc397ad319ba54
+    s6  SINGLE   : f3c90d709b2b4bf58da8fc6704e08fdb
+    s7  SINGLE   : b5a23e5ce00248efb454d07871f5b3d4
+    s8  SINGLE   : 819721a3da0740b6943b36f5d3d6dfd3
+    s9  SINGLE   : 354cbd5a61c440aaa2f23c392467a09b
+    s10 SINGLE   : f9605255721848fdaa96c15fd30c54f2
+
+=== ARCH 军官 Officer ===
+  grantFeatures: ['5069a24051354e50a663da0125e19b02', '684c766dc9c24fcf856dc1d6f01d9290', 'e19301be9dc14d89b656c60a6c4f8e04']
+  preGrant: ['5fa599e5cffc4bab93d6b07f68e0e6ba']
+
+  ELITE 谕令 · 灵能军官 | unit=bc5ca9badb2042b48afb13c1829619b3 | slots=8 | preGrant=['5fa599e5cffc4bab93d6b07f68e0e6ba']
+    s0  SINGLE   : 24a156a6132d46a982f2f3a7c794ecbd
+    s1  SINGLE   : 5f4091e7ebae4cfea6831d72db37ba33
+    s2  SINGLE   : f44d8c44d5044cbda7539cac89410670
+    s3  SINGLE   : bc66c47af73e48b4b28c090808213182
+    s4  SINGLE   : d9c2e54b06e542919c56e1ea9e4bc959
+    s5  SINGLE   : 4cef7e667b50432299e32f1db5e0878a
+    s6  SINGLE   : a6d0c20d7be04f4a969aa567c7bb7c7b
+    s7  SINGLE   : 549d7fa415204658859486c29b2d6dbe
+
+  ELITE 铁律 · 政委军官 | unit=5990a9129d6648a68aa7b62ebe2cdc05 | slots=8 | preGrant=None
+    s0  SINGLE   : c22406ff733b403ea8b4b4b78c47cda9
+    s1  SINGLE   : 3f677383da874ab1ba5c8e106cfa9c72
+    s2  SINGLE   : 4127a489515c4b9b9181d9b61fd33ec7
+    s3  SINGLE   : ccc03cf23d0e4681a7bedf3d2c14f22c
+    s4  SINGLE   : 50c5be09ff9942969db57298b1beb4cb
+    s5  SINGLE   : 47b52da77a194da2837e6d6ebfb9e918
+    s6  SINGLE   : 1b447777d38f43baa643fc2e915d6ef3
+    s7  SINGLE   : 2c652a9bf6d94ee189ad13e7330fbe1a
+
+TOTAL SLOTS=104

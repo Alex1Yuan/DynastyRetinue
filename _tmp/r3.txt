@@ -1,0 +1,51 @@
+#### 51fad212bca146f889ae8d6e2be4d2fd 巫灵绝叫 <DrukhariArmourUniqueCh4V1_Item> [Unique]
+    REQUIRE ANY (inh)
+        - c7a53b43ac5f4f11a1aef612dd3f4f71 黑暗灵族装备 <DrukhariArmourProficiency_Feature>
+#### 8b7a450f05fe46bc99b776625291b14d 黎明之影护甲 <AeldariArmourUniqueCh4V2_Item> [Unique]
+    REQUIRE ANY (inh)
+        - 590cb5c394ee4b5eb213121c96063dec 艾达灵族装备 <AeldariArmourProficiency_Feature>
+#### 2170e052928e4ab79a3548c34582f201 艾达灵族游侠护甲 <EldarRangerArmour_Item> [Pattern]
+    REQUIRE ANY
+        - 590cb5c394ee4b5eb213121c96063dec 艾达灵族装备 <AeldariArmourProficiency_Feature>
+#### 65b71d29858f4543b4e4c4a6b82aee52 死亡超然 <AstropathsStaff_Item> [Unique]
+    REQUIRE ANY
+        - c074bd8a210743f48cbb536e3c7c677f 心灵感应 <Telepathy_Base_Feature>
+#### 9dec89a18f9a4175852ffa669fc05f6d 命运之星 <SororitasPowerArmourFire_Item> [Unique]
+    REQUIRE ALL
+        - 5069a24051354e50a663da0125e19b02 动力装甲专精 <PowerArmourProficiency>
+        - b6962fcc54054af98961dd9a6c0f9e18 战斗修女 <AdeptaSororitas_Occupation__NoKEE>
+#### 99d54e96fa724292890f41d29246159c 灵能者胸甲 <PsykerTempestusCarapace_Item> [Unique]
+    EXCLUDE-if ANY
+        - affa5fdded7e404b910b990f5d344a8c 星际战士装备 <SpaceMarineEquipment_Feature>
+        - 590cb5c394ee4b5eb213121c96063dec 艾达灵族装备 <AeldariArmourProficiency_Feature>
+        - c7a53b43ac5f4f11a1aef612dd3f4f71 黑暗灵族装备 <DrukhariArmourProficiency_Feature>
+    REQUIRE ANY
+        - 684c766dc9c24fcf856dc1d6f01d9290 重甲专精 <HeavyArmourProficiency_Feature>
+#### 669b3e6ee72340e69f4a7320b34b9a2d 高阶织网者护甲 <EliteDeathCultArmour_Item> [Unique]
+    EXCLUDE-if ANY
+        - affa5fdded7e404b910b990f5d344a8c 星际战士装备 <SpaceMarineEquipment_Feature>
+        - c7a53b43ac5f4f11a1aef612dd3f4f71 黑暗灵族装备 <DrukhariArmourProficiency_Feature>
+        - 590cb5c394ee4b5eb213121c96063dec 艾达灵族装备 <AeldariArmourProficiency_Feature>
+#### 56a01fd50087462e84654aebe473b995 【源自战争世界】暴风精锐坚甲 <TempestusCarapaceOrigin2_Item> [Pattern]
+    EXCLUDE-if ANY
+        - affa5fdded7e404b910b990f5d344a8c 星际战士装备 <SpaceMarineEquipment_Feature>
+        - c7a53b43ac5f4f11a1aef612dd3f4f71 黑暗灵族装备 <DrukhariArmourProficiency_Feature>
+        - 590cb5c394ee4b5eb213121c96063dec 艾达灵族装备 <AeldariArmourProficiency_Feature>
+    REQUIRE ANY
+        - 684c766dc9c24fcf856dc1d6f01d9290 重甲专精 <HeavyArmourProficiency_Feature>
+#### 8d56cefe83d2494c886fa86b1c3f7201 幽灵头盔 <GhostHelm_Item> [Common]
+    EXCLUDE-if ANY
+        - 590cb5c394ee4b5eb213121c96063dec 艾达灵族装备 <AeldariArmourProficiency_Feature>
+        - affa5fdded7e404b910b990f5d344a8c 星际战士装备 <SpaceMarineEquipment_Feature>
+        - c7a53b43ac5f4f11a1aef612dd3f4f71 黑暗灵族装备 <DrukhariArmourProficiency_Feature>
+#### 2b0b6002e828482ebfbe60fbfce20e70 精确定位面甲 <HealthStatusVisor_Item> [Unique]
+    EXCLUDE-if ANY
+        - affa5fdded7e404b910b990f5d344a8c 星际战士装备 <SpaceMarineEquipment_Feature>
+#### 49a0c35d9315459b8d0dd756049082cb 焦痕披风 <SingedCape_Item> [Unique]
+    EXCLUDE-if ANY
+        - affa5fdded7e404b910b990f5d344a8c 星际战士装备 <SpaceMarineEquipment_Feature>
+#### 6f43e63d9cb54ed3b782a9924f8975e9 灵能者的鞋子 <PsykerBoots_Item> [Unique]
+    EXCLUDE-if ANY
+        - 590cb5c394ee4b5eb213121c96063dec 艾达灵族装备 <AeldariArmourProficiency_Feature>
+        - affa5fdded7e404b910b990f5d344a8c 星际战士装备 <SpaceMarineEquipment_Feature>
+        - c7a53b43ac5f4f11a1aef612dd3f4f71 黑暗灵族装备 <DrukhariArmourProficiency_Feature>

@@ -1,0 +1,98 @@
+### 谕令 · 灵能军官 | BlueprintItemArmor | owned-only=True
+   669b3e6ee72340e69f4a7320b34b9a2d Unique   refs14  高阶织网者护甲                  <EliteDeathCultArmour_Item                   > save=CassiaCompanion,HeinrixCompanion          
+   99d54e96fa724292890f41d29246159c Unique   refs11  灵能者胸甲                    <PsykerTempestusCarapace_Item                > save=StartGame_Player_Unit                     
+   69f8e020943342c98f78ef0e67cef96a Unique   refs8   灵能护甲外衣                   <PsychicBodyglove_Item                       > save=                                          
+   ac22d3954a0047f08170b35ba1743c85 Unique   refs5   光滑护甲外衣                   <SlickBodyglove_Item                         > save=                                          
+   8c54878463e04fdf9d69a87c021f19bc Unique   refs5   刺客盛装                     <PanoplyOfAssassin_Item                      > save=                                          
+   14f6925bcef146b2b0f706cab0f6418c Unique   refs5   剑客护甲外衣                   <SwordsmanBodyglove_Item                     > save=                                          
+   7fbaaf4381e8453b9a4cd189ff3d086d Unique   refs5   压缩坚甲                     <Assault_EnforcerLightCarapace_Item          > save=                                          
+   c5c706f63c374dcbbf7a89c7d5d33e3f Unique   refs5   寂静死亡                     <SanctifiedDeathCultArmour_Item              > save=                                          
+   298f55c84fec489f820e4358b8c6d21e Unique   refs5   改良辟路者护甲                  <BreachersSergeantsArmour_Item               > save=                                          
+   3803098850504a7ebf80d6fbb70c37c6 Unique   refs5   改装工匠护甲                   <ModifiedArtificerArmour_Item                > save=                                          BL
+
+### 铁律 · 政委军官 | BlueprintItemArmor | owned-only=True
+   669b3e6ee72340e69f4a7320b34b9a2d Unique   refs14  高阶织网者护甲                  <EliteDeathCultArmour_Item                   > save=CassiaCompanion,HeinrixCompanion          
+   99d54e96fa724292890f41d29246159c Unique   refs11  灵能者胸甲                    <PsykerTempestusCarapace_Item                > save=StartGame_Player_Unit                     
+   69f8e020943342c98f78ef0e67cef96a Unique   refs8   灵能护甲外衣                   <PsychicBodyglove_Item                       > save=                                          
+   ac22d3954a0047f08170b35ba1743c85 Unique   refs5   光滑护甲外衣                   <SlickBodyglove_Item                         > save=                                          
+   8c54878463e04fdf9d69a87c021f19bc Unique   refs5   刺客盛装                     <PanoplyOfAssassin_Item                      > save=                                          
+   14f6925bcef146b2b0f706cab0f6418c Unique   refs5   剑客护甲外衣                   <SwordsmanBodyglove_Item                     > save=                                          
+   7fbaaf4381e8453b9a4cd189ff3d086d Unique   refs5   压缩坚甲                     <Assault_EnforcerLightCarapace_Item          > save=                                          
+   c5c706f63c374dcbbf7a89c7d5d33e3f Unique   refs5   寂静死亡                     <SanctifiedDeathCultArmour_Item              > save=                                          
+   298f55c84fec489f820e4358b8c6d21e Unique   refs5   改良辟路者护甲                  <BreachersSergeantsArmour_Item               > save=                                          
+   3803098850504a7ebf80d6fbb70c37c6 Unique   refs5   改装工匠护甲                   <ModifiedArtificerArmour_Item                > save=                                          BL
+
+### 磐石 · 首席战士 | BlueprintItemArmor | owned-only=True
+   669b3e6ee72340e69f4a7320b34b9a2d Unique   refs14  高阶织网者护甲                  <EliteDeathCultArmour_Item                   > save=CassiaCompanion,HeinrixCompanion          
+   99d54e96fa724292890f41d29246159c Unique   refs11  灵能者胸甲                    <PsykerTempestusCarapace_Item                > save=StartGame_Player_Unit                     
+   69f8e020943342c98f78ef0e67cef96a Unique   refs8   灵能护甲外衣                   <PsychicBodyglove_Item                       > save=                                          
+   ac22d3954a0047f08170b35ba1743c85 Unique   refs5   光滑护甲外衣                   <SlickBodyglove_Item                         > save=                                          
+   8c54878463e04fdf9d69a87c021f19bc Unique   refs5   刺客盛装                     <PanoplyOfAssassin_Item                      > save=                                          
+   14f6925bcef146b2b0f706cab0f6418c Unique   refs5   剑客护甲外衣                   <SwordsmanBodyglove_Item                     > save=                                          
+   7fbaaf4381e8453b9a4cd189ff3d086d Unique   refs5   压缩坚甲                     <Assault_EnforcerLightCarapace_Item          > save=                                          
+   c5c706f63c374dcbbf7a89c7d5d33e3f Unique   refs5   寂静死亡                     <SanctifiedDeathCultArmour_Item              > save=                                          
+   298f55c84fec489f820e4358b8c6d21e Unique   refs5   改良辟路者护甲                  <BreachersSergeantsArmour_Item               > save=                                          
+   3803098850504a7ebf80d6fbb70c37c6 Unique   refs5   改装工匠护甲                   <ModifiedArtificerArmour_Item                > save=                                          BL
+
+### 铁壁 · 先锋队长 | BlueprintItemArmor | owned-only=True
+   669b3e6ee72340e69f4a7320b34b9a2d Unique   refs14  高阶织网者护甲                  <EliteDeathCultArmour_Item                   > save=CassiaCompanion,HeinrixCompanion          
+   99d54e96fa724292890f41d29246159c Unique   refs11  灵能者胸甲                    <PsykerTempestusCarapace_Item                > save=StartGame_Player_Unit                     
+   69f8e020943342c98f78ef0e67cef96a Unique   refs8   灵能护甲外衣                   <PsychicBodyglove_Item                       > save=                                          
+   ac22d3954a0047f08170b35ba1743c85 Unique   refs5   光滑护甲外衣                   <SlickBodyglove_Item                         > save=                                          
+   8c54878463e04fdf9d69a87c021f19bc Unique   refs5   刺客盛装                     <PanoplyOfAssassin_Item                      > save=                                          
+   14f6925bcef146b2b0f706cab0f6418c Unique   refs5   剑客护甲外衣                   <SwordsmanBodyglove_Item                     > save=                                          
+   7fbaaf4381e8453b9a4cd189ff3d086d Unique   refs5   压缩坚甲                     <Assault_EnforcerLightCarapace_Item          > save=                                          
+   c5c706f63c374dcbbf7a89c7d5d33e3f Unique   refs5   寂静死亡                     <SanctifiedDeathCultArmour_Item              > save=                                          
+   298f55c84fec489f820e4358b8c6d21e Unique   refs5   改良辟路者护甲                  <BreachersSergeantsArmour_Item               > save=                                          
+   3803098850504a7ebf80d6fbb70c37c6 Unique   refs5   改装工匠护甲                   <ModifiedArtificerArmour_Item                > save=                                          BL
+
+### 谕令 · 灵能军官 | BlueprintItemShield | owned-only=True
+   ebd94bc4798a46e0b08ec63742eb6a7a Unique   refs9   三重钢盾                     <ScalesOfTheGreatSerpentShield_Item          > save=                                          
+   4a11c573494e449fb79cc9b273edf7b3 Unique   refs5   防御者                      <PublicDefenderShield_Item                   > save=                                          
+   1730cea08976423c92f2080847b78741 Unique   refs3   光辐盾牌                     <GlareShield_Item                            > save=                                          
+   a2404ffa845f4541bc40d6926378908e Unique   refs3   复仇烈焰                     <MartyrdomShield_Item                        > save=                                          
+   181743950e4f489698e78ff835d29710 Unique   refs3   尊贵特权                     <KeyFigureShield_Item                        > save=                                          
+   5dd12973cef243a9b7e5f6645ba400f1 Unique   refs3   绝缘盾牌                     <EnergyCapacitorShield_Item                  > save=                                          
+   98b9d50803e64d13abdf8f0619421874 Pattern  refs10  枪手盾牌                     <ShieldCH04T2V2_Item                         > save=                                          
+   b0f87c9e2edf411bbc5f5e264b457d2d Pattern  refs10  硬化盾牌                     <ShieldCH02T1_Item                           > save=                                          
+
+### 磐石 · 首席战士 | BlueprintItemShield | owned-only=True
+   ebd94bc4798a46e0b08ec63742eb6a7a Unique   refs9   三重钢盾                     <ScalesOfTheGreatSerpentShield_Item          > save=                                          
+   4a11c573494e449fb79cc9b273edf7b3 Unique   refs5   防御者                      <PublicDefenderShield_Item                   > save=                                          
+   1730cea08976423c92f2080847b78741 Unique   refs3   光辐盾牌                     <GlareShield_Item                            > save=                                          
+   a2404ffa845f4541bc40d6926378908e Unique   refs3   复仇烈焰                     <MartyrdomShield_Item                        > save=                                          
+   181743950e4f489698e78ff835d29710 Unique   refs3   尊贵特权                     <KeyFigureShield_Item                        > save=                                          
+   5dd12973cef243a9b7e5f6645ba400f1 Unique   refs3   绝缘盾牌                     <EnergyCapacitorShield_Item                  > save=                                          
+   98b9d50803e64d13abdf8f0619421874 Pattern  refs10  枪手盾牌                     <ShieldCH04T2V2_Item                         > save=                                          
+   b0f87c9e2edf411bbc5f5e264b457d2d Pattern  refs10  硬化盾牌                     <ShieldCH02T1_Item                           > save=                                          
+
+### 铁壁 · 先锋队长 | BlueprintItemShield | owned-only=True
+   ebd94bc4798a46e0b08ec63742eb6a7a Unique   refs9   三重钢盾                     <ScalesOfTheGreatSerpentShield_Item          > save=                                          
+   4a11c573494e449fb79cc9b273edf7b3 Unique   refs5   防御者                      <PublicDefenderShield_Item                   > save=                                          
+   1730cea08976423c92f2080847b78741 Unique   refs3   光辐盾牌                     <GlareShield_Item                            > save=                                          
+   a2404ffa845f4541bc40d6926378908e Unique   refs3   复仇烈焰                     <MartyrdomShield_Item                        > save=                                          
+   181743950e4f489698e78ff835d29710 Unique   refs3   尊贵特权                     <KeyFigureShield_Item                        > save=                                          
+   5dd12973cef243a9b7e5f6645ba400f1 Unique   refs3   绝缘盾牌                     <EnergyCapacitorShield_Item                  > save=                                          
+   98b9d50803e64d13abdf8f0619421874 Pattern  refs10  枪手盾牌                     <ShieldCH04T2V2_Item                         > save=                                          
+   b0f87c9e2edf411bbc5f5e264b457d2d Pattern  refs10  硬化盾牌                     <ShieldCH02T1_Item                           > save=                                          
+
+### 怒火 · 首席连射 | BlueprintItemShield | owned-only=True
+   ebd94bc4798a46e0b08ec63742eb6a7a Unique   refs9   三重钢盾                     <ScalesOfTheGreatSerpentShield_Item          > save=                                          
+   4a11c573494e449fb79cc9b273edf7b3 Unique   refs5   防御者                      <PublicDefenderShield_Item                   > save=                                          
+   1730cea08976423c92f2080847b78741 Unique   refs3   光辐盾牌                     <GlareShield_Item                            > save=                                          
+   a2404ffa845f4541bc40d6926378908e Unique   refs3   复仇烈焰                     <MartyrdomShield_Item                        > save=                                          
+   181743950e4f489698e78ff835d29710 Unique   refs3   尊贵特权                     <KeyFigureShield_Item                        > save=                                          
+   5dd12973cef243a9b7e5f6645ba400f1 Unique   refs3   绝缘盾牌                     <EnergyCapacitorShield_Item                  > save=                                          
+   98b9d50803e64d13abdf8f0619421874 Pattern  refs10  枪手盾牌                     <ShieldCH04T2V2_Item                         > save=                                          
+   b0f87c9e2edf411bbc5f5e264b457d2d Pattern  refs10  硬化盾牌                     <ShieldCH02T1_Item                           > save=                                          
+
+### 圣焰 · 净罪修女 | BlueprintItemShield | owned-only=True
+   ebd94bc4798a46e0b08ec63742eb6a7a Unique   refs9   三重钢盾                     <ScalesOfTheGreatSerpentShield_Item          > save=                                          
+   4a11c573494e449fb79cc9b273edf7b3 Unique   refs5   防御者                      <PublicDefenderShield_Item                   > save=                                          
+   1730cea08976423c92f2080847b78741 Unique   refs3   光辐盾牌                     <GlareShield_Item                            > save=                                          
+   a2404ffa845f4541bc40d6926378908e Unique   refs3   复仇烈焰                     <MartyrdomShield_Item                        > save=                                          
+   181743950e4f489698e78ff835d29710 Unique   refs3   尊贵特权                     <KeyFigureShield_Item                        > save=                                          
+   5dd12973cef243a9b7e5f6645ba400f1 Unique   refs3   绝缘盾牌                     <EnergyCapacitorShield_Item                  > save=                                          
+   98b9d50803e64d13abdf8f0619421874 Pattern  refs10  枪手盾牌                     <ShieldCH04T2V2_Item                         > save=                                          
+   b0f87c9e2edf411bbc5f5e264b457d2d Pattern  refs10  硬化盾牌                     <ShieldCH02T1_Item                           > save=                                          
+

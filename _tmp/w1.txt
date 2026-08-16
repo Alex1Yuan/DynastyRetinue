@@ -1,0 +1,15 @@
+##########################################################################################
+0adaa28e654e4fd6a74830eed3f63390 血腥礼赞 <ArgentaBolterUnique_Item> [Unique]
+  blobLen 1932
+   - EquipmentRestrictionHasFacts                       inst=a28a350e proto=2e6f4680 @622
+   - AddFactToEquipmentWielder                          inst=ef3306b1 proto= @747
+   - EquipmentRestrictionHasFacts                       inst=3d1fa9ef proto=2e6f4680 @967
+   - ReapplyFactsFromItem                               inst=369dea8d proto= @1153
+##########################################################################################
+594030b15093416c925dabc415eda101 高级重型伐木枪 <AdvancedHeavyStubber_Item> [Unique]
+  blobLen 2208
+   - AddFactToEquipmentWielder                          inst=fe173d5d proto= @503
+   - EquipmentRestrictionStat                           inst=a229337d proto=053074ca @715
+   - EquipmentRestrictionHasFacts                       inst=17d1ad3e proto=053074ca @948
+   - AdditionalDescriptionComponent                     inst=67bf926e proto=053074ca @1211
+   - AddFactToEquipmentWielder                          inst=3284ff75 proto=053074ca @1397

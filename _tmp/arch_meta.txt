@@ -1,0 +1,35 @@
+== 近战 Melee | keys: ['name', 'unit', 'brain', 'plan', 'chain', '_注', '_gear注', 'grantFeatures', 'elites', 'gearT1', 'gearT2', 'gearT3']
+  grantFeatures: ['5069a24051354e50a663da0125e19b02', '684c766dc9c24fcf856dc1d6f01d9290', 'e19301be9dc14d89b656c60a6c4f8e04', '1dbbd844e25b447e99f247c3a88aa5d4']
+  preGrant: None
+   ELITE 铁壁 · 先锋队长 keys ['unit', 'name', 'plan', 'chain', 'gear', '_unit注', '_armor注']
+     preGrant None
+   ELITE 磐石 · 首席战士 keys ['unit', 'name', 'plan', 'chain', 'gear', '_unit注', '_plan注', '_aug注', '_armor注']
+     preGrant None
+== 狙击 Sniper | keys: ['name', 'unit', 'brain', 'plan', 'chain', '_注', '_gear注', 'grantFeatures', 'elites', 'gearT1', 'gearT2', 'gearT3']
+  grantFeatures: ['5069a24051354e50a663da0125e19b02', '684c766dc9c24fcf856dc1d6f01d9290', 'e19301be9dc14d89b656c60a6c4f8e04', '365ad1a4ef1b4a47be74509c33b2be3b', '5de2d70b4ac9468ca723e84c57524eae', 'c7a53b43ac5f4f11a1aef612dd3f4f71']
+  preGrant: None
+   ELITE 寂静之眼 keys ['unit', 'name', 'plan', '_注preGrant', 'preGrant', 'chain', 'gear', '_unit注', '_aug注', '_armor注', 'race', '_race注']
+     preGrant ['a8a919250f28499199e5f0d1122aa4e8', '39e0d1de97e44e67bd15e2dddd3352a3', '07be5f794f6b4f54b91b0904e0c50e4b', 'c332d4c355ea40a6b8bb0bd454a2fdac']
+   ELITE 赏金 · 猎首 keys ['unit', 'name', 'chain', '_planSegments注', 'planSegments', '_excludeFeatures注', 'excludeFeatures', 'keyTalents', 'attrPriority', 'gear', '_unit注', '_注', '_keyTalents注']
+     preGrant None
+== 连射 Suppress | keys: ['name', 'unit', 'brain', 'plan', 'chain', '_注', '_gear注', 'grantFeatures', 'elites', 'gearT1', 'gearT2', 'gearT3']
+  grantFeatures: ['5069a24051354e50a663da0125e19b02', '684c766dc9c24fcf856dc1d6f01d9290', 'e19301be9dc14d89b656c60a6c4f8e04', '26376b596c474d67849613617ced7b04', '19673fbc918241c6add6710025f67058']
+  preGrant: None
+   ELITE 怒火 · 首席连射 keys ['unit', 'name', 'plan', 'chain', 'gear', '_unit注']
+     preGrant None
+   ELITE 圣焰 · 净罪修女 keys ['unit', 'name', 'plan', 'chain', 'gear', '_unit注', '_gear注', '_aug注', '_armor注']
+     preGrant None
+== 灵能 Psy/Exec | keys: ['name', 'unit', 'brain', 'plan', '_注preGrant', 'preGrant', 'chain', '_注', '_gear注', 'grantFeatures', 'elites', 'gearT1', 'gearT2', 'gearT3']
+  grantFeatures: ['5069a24051354e50a663da0125e19b02', '684c766dc9c24fcf856dc1d6f01d9290', 'e19301be9dc14d89b656c60a6c4f8e04']
+  preGrant: ['a6a38016b90148878593d977d96b8264']
+   ELITE 亚空间审判者 keys ['unit', 'name', 'plan', '_注preGrant', 'preGrant', 'chain', 'gear', '_unit注', '_aug注', '_armor注']
+     preGrant ['a6a38016b90148878593d977d96b8264']
+   ELITE 火杖行刑者 keys ['unit', 'name', 'plan', '_注preGrant', 'preGrant', 'chain', 'gear', '_unit注', '_aug注', '_armor注']
+     preGrant ['b4d60f6a91b94d02840a58fd9df863cd']
+== 军官 Officer | keys: ['name', 'unit', 'brain', 'chain', 'grantFeatures', 'elites', '_注', '_注preGrant', 'preGrant', 'plan', 'gearT1', 'gearT2', 'gearT3']
+  grantFeatures: ['5069a24051354e50a663da0125e19b02', '684c766dc9c24fcf856dc1d6f01d9290', 'e19301be9dc14d89b656c60a6c4f8e04']
+  preGrant: ['5fa599e5cffc4bab93d6b07f68e0e6ba']
+   ELITE 谕令 · 灵能军官 keys ['unit', 'name', 'plan', '_注preGrant', 'preGrant', 'chain', 'gear', '_unit注', '_gear注']
+     preGrant ['5fa599e5cffc4bab93d6b07f68e0e6ba']
+   ELITE 铁律 · 政委军官 keys ['unit', 'name', 'plan', 'chain', 'gear', '_unit注', '_gear注']
+     preGrant None

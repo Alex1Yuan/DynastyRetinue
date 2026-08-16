@@ -1,0 +1,34 @@
+#### 594030b15093416c925dabc415eda101 高级重型伐木枪 <AdvancedHeavyStubber_Item> [Unique]
+    EquipmentRestrictionStat: {'stat': 152, 'min': 55, 'fact': '26376b596c474d67849613617ced7b04', 'sub': 25} (inh)
+    EXCLUDE-if ANY (inh)
+        - c7a53b43ac5f4f11a1aef612dd3f4f71 黑暗灵族装备 <DrukhariArmourProficiency_Feature>
+        - 590cb5c394ee4b5eb213121c96063dec 艾达灵族装备 <AeldariArmourProficiency_Feature>
+#### 0adaa28e654e4fd6a74830eed3f63390 血腥礼赞 <ArgentaBolterUnique_Item> [Unique]
+    REQUIRE ANY (inh)
+        - 19673fbc918241c6add6710025f67058 爆矢武器专精 <BolterWeaponProficiency>
+    EXCLUDE-if ANY (inh)
+        - 950565a69d144391897cdc0024747755 星际战士装备 <SpaceMarineEquipment_Proficiency>
+        - c7a53b43ac5f4f11a1aef612dd3f4f71 黑暗灵族装备 <DrukhariArmourProficiency_Feature>
+        - 590cb5c394ee4b5eb213121c96063dec 艾达灵族装备 <AeldariArmourProficiency_Feature>
+#### 24a156a6132d46a982f2f3a7c794ecbd 政委帽 <CommissarCap_Item> [Unique]
+    EXCLUDE-if ANY
+        - 590cb5c394ee4b5eb213121c96063dec 艾达灵族装备 <AeldariArmourProficiency_Feature>
+        - affa5fdded7e404b910b990f5d344a8c 星际战士装备 <SpaceMarineEquipment_Feature>
+        - c7a53b43ac5f4f11a1aef612dd3f4f71 黑暗灵族装备 <DrukhariArmourProficiency_Feature>
+#### c22406ff733b403ea8b4b4b78c47cda9 外围面甲 <PeripheralVisor_Item> [Unique]
+    EXCLUDE-if ANY
+        - affa5fdded7e404b910b990f5d344a8c 星际战士装备 <SpaceMarineEquipment_Feature>
+#### 76f9b98e76854b459b50a73462429e2b 坚固盾牌 <ShieldCH04T2_Item> [Pattern]
+    EXCLUDE-if ANY (inh)
+        - 590cb5c394ee4b5eb213121c96063dec 艾达灵族装备 <AeldariArmourProficiency_Feature>
+        - c7a53b43ac5f4f11a1aef612dd3f4f71 黑暗灵族装备 <DrukhariArmourProficiency_Feature>
+        - affa5fdded7e404b910b990f5d344a8c 星际战士装备 <SpaceMarineEquipment_Feature>
+        - 777d9f9c570443b59120e78f2d9dd515 技术神甫 <Pasqual_Background_Feature>
+        - b901e045ca514d53bae43f4a9ecdf0b4 操纵者 <ManipulusOccupation_Feature>
+#### 98b9d50803e64d13abdf8f0619421874 枪手盾牌 <ShieldCH04T2V2_Item> [Pattern]
+    EXCLUDE-if ANY (inh)
+        - 590cb5c394ee4b5eb213121c96063dec 艾达灵族装备 <AeldariArmourProficiency_Feature>
+        - c7a53b43ac5f4f11a1aef612dd3f4f71 黑暗灵族装备 <DrukhariArmourProficiency_Feature>
+        - affa5fdded7e404b910b990f5d344a8c 星际战士装备 <SpaceMarineEquipment_Feature>
+        - 777d9f9c570443b59120e78f2d9dd515 技术神甫 <Pasqual_Background_Feature>
+        - b901e045ca514d53bae43f4a9ecdf0b4 操纵者 <ManipulusOccupation_Feature>

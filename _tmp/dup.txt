@@ -1,0 +1,73 @@
+=== 链首撞车 (实际会同时装上) ===
+  c1c07d80309c47de99b055ba9eb43a07 雕血师<AetherRuneArmour_Item>[Unique] BlueprintItemArmor
+      -> 铁壁 · 先锋队长, 磐石 · 首席战士, 寂静之眼, 赏金 · 猎首
+  819721a3da0740b6943b36f5d3d6dfd3 马尔皮裹尸布<IronCape_Item>[Common] BlueprintItemEquipmentShoulders
+      -> 铁壁 · 先锋队长, 亚空间审判者, 火杖行刑者
+  b5a23e5ce00248efb454d07871f5b3d4 惯性之靴<InertiaBoots_Item>[Common] BlueprintItemEquipmentFeet
+      -> 铁壁 · 先锋队长, 亚空间审判者, 火杖行刑者
+  1b447777d38f43baa643fc2e915d6ef3 神射手护腕<StabilizerBracers_Item>[Common] BlueprintItemEquipmentGloves
+      -> 寂静之眼, 赏金 · 猎首, 铁律 · 政委军官
+  2c37192f73bf4b89abd89d12e4040d75 活力项饰<InvigoratingResolve_Item>[Common] BlueprintItemEquipmentNeck
+      -> 寂静之眼, 赏金 · 猎首, 亚空间审判者
+  50c5be09ff9942969db57298b1beb4cb 作战计划<BattlePlan_Item>[Unique] BlueprintItemEquipmentRing
+      -> 寂静之眼, 赏金 · 猎首, 铁律 · 政委军官
+  47b52da77a194da2837e6d6ebfb9e918 指挥官计时器<CommandersChrono_Item>[Common] BlueprintItemEquipmentRing
+      -> 寂静之眼, 赏金 · 猎首, 铁律 · 政委军官
+  9dea103b7d9d41238a318142cf057273 散兵战靴<SkirmisherBoots_Item>[Common] BlueprintItemEquipmentFeet
+      -> 寂静之眼, 赏金 · 猎首, 怒火 · 首席连射
+  e202201c375a45b697d7bba5ac68c6ee 弹道计算单筒镜<ManipulusHeadCh2_Item>[Common] BlueprintItemEquipmentHead
+      -> 寂静之眼, 赏金 · 猎首
+  774361e6945849889568fae24be57450 暗影潜伏斗篷<ShadowguideCloak_Item>[Common] BlueprintItemEquipmentShoulders
+      -> 寂静之眼, 赏金 · 猎首
+  fd1da14cd1f54ef0a280ce1160dde3e6 弹道计算器<Augment_Eye_04_Ricochet_Item>[Pattern] BlueprintItemAugment
+      -> 寂静之眼, 赏金 · 猎首
+  e97a0c7f8b9544c4a53b2ff78d57aa45 补偿器手套<CompensatorGloves_Item>[Common] BlueprintItemEquipmentGloves
+      -> 怒火 · 首席连射, 圣焰 · 净罪修女
+  e807b19418564d1a8dedcc8b7def2d5b 聚焦发射器 (MK“士兵”)<Augment_Eye_01_Shoot_Soldier_Item>[Pattern] BlueprintItemAugment
+      -> 怒火 · 首席连射, 圣焰 · 净罪修女
+  846a2ae351a34cfd921d5f15d9c2445c 公义之手<Augment_Arm_Dogmatic_Item>[Pattern] BlueprintItemAugment
+      -> 怒火 · 首席连射, 圣焰 · 净罪修女
+  7da9005aaf4d49969ff989cf0b1619cb 烈阳法杖<SolarStaff_Item>[Pattern] BlueprintItemWeapon
+      -> 亚空间审判者, 火杖行刑者
+  ea60e97cfbe14231b8fdb8e1702b5f70 雷霆主宰<Coil_Reactive_PowerArmor_Item>[Unique] BlueprintItemArmor
+      -> 亚空间审判者, 火杖行刑者
+  f3c90d709b2b4bf58da8fc6704e08fdb 行刑者臂铠<EnhancementGloves_Item>[Unique] BlueprintItemEquipmentGloves
+      -> 亚空间审判者, 火杖行刑者
+  354cbd5a61c440aaa2f23c392467a09b 灵能猛袭之手<HandOfOffense_Item>[Common] BlueprintItemEquipmentRing
+      -> 亚空间审判者, 火杖行刑者
+  4127a489515c4b9b9181d9b61fd33ec7 反载具左轮手枪<AntiVechicle_StubRevolver_Item>[Unique] BlueprintItemWeapon
+      -> 火杖行刑者, 铁律 · 政委军官
+
+=== 出现在多个精英链中(含候补) ===
+  c1c07d80309c47de99b055ba9eb43a07 雕血师<AetherRuneArmour_Item>[Unique] BlueprintItemArmor  x4  -> 寂静之眼, 磐石 · 首席战士, 赏金 · 猎首, 铁壁 · 先锋队长
+  819721a3da0740b6943b36f5d3d6dfd3 马尔皮裹尸布<IronCape_Item>[Common] BlueprintItemEquipmentShoulders  x3  -> 亚空间审判者, 火杖行刑者, 铁壁 · 先锋队长
+  b5a23e5ce00248efb454d07871f5b3d4 惯性之靴<InertiaBoots_Item>[Common] BlueprintItemEquipmentFeet  x3  -> 亚空间审判者, 火杖行刑者, 铁壁 · 先锋队长
+  1b447777d38f43baa643fc2e915d6ef3 神射手护腕<StabilizerBracers_Item>[Common] BlueprintItemEquipmentGloves  x3  -> 寂静之眼, 赏金 · 猎首, 铁律 · 政委军官
+  2c37192f73bf4b89abd89d12e4040d75 活力项饰<InvigoratingResolve_Item>[Common] BlueprintItemEquipmentNeck  x3  -> 亚空间审判者, 寂静之眼, 赏金 · 猎首
+  50c5be09ff9942969db57298b1beb4cb 作战计划<BattlePlan_Item>[Unique] BlueprintItemEquipmentRing  x3  -> 寂静之眼, 赏金 · 猎首, 铁律 · 政委军官
+  47b52da77a194da2837e6d6ebfb9e918 指挥官计时器<CommandersChrono_Item>[Common] BlueprintItemEquipmentRing  x3  -> 寂静之眼, 赏金 · 猎首, 铁律 · 政委军官
+  9dea103b7d9d41238a318142cf057273 散兵战靴<SkirmisherBoots_Item>[Common] BlueprintItemEquipmentFeet  x3  -> 寂静之眼, 怒火 · 首席连射, 赏金 · 猎首
+  e84349dae8bb4a818fa4473ce32dcd9a 血腥报复<HolyPowerArmour_Item_Uralon>[Unique] BlueprintItemArmor  x2  -> 磐石 · 首席战士, 铁壁 · 先锋队长
+  8b13aef5103a4719980774c0d4a12506 元帅的科罗努斯扩区护甲<MarshallsArmouroftheKoronusExpanse_Item_Unlootable>[Unique] BlueprintItemArmor  x2  -> 磐石 · 首席战士, 铁壁 · 先锋队长
+  1fede9d9621f437c92832e239426bbcf 血色审判<Fleshbreaker_PowerArmor_Item>[Unique] BlueprintItemArmor  x2  -> 磐石 · 首席战士, 铁壁 · 先锋队长
+  8d598bfec7e042029ab0c2a2ec8c478b 聚焦发射器 (MK-II)<Augment_Eye_01_Shoot_MK_2_Item>[Unique] BlueprintItemAugment  x2  -> 磐石 · 首席战士, 铁壁 · 先锋队长
+  587c9d09efc4481282271ee0db9df7c1 聚焦发射器 (MK-I)<Augment_Eye_01_Shoot_MK_1_Item>[Pattern] BlueprintItemAugment  x2  -> 磐石 · 首席战士, 铁壁 · 先锋队长
+  fa121ed0f18c4017a53c7adb6036a552 大脑逆变器 (MK-II)<Augment_Systems_05_Logic_MK_2_Item>[Unique] BlueprintItemAugment  x2  -> 寂静之眼, 铁壁 · 先锋队长
+  fe6060602c6d4b71be16808f05368242 大脑逆变器 (MK-I)<Augment_Systems_05_Logic_MK_1_Item>[Pattern] BlueprintItemAugment  x2  -> 寂静之眼, 铁壁 · 先锋队长
+  9fbd2aaded9948e483295466830fab1f 库诺斯之礼<LongRifleUniqueCh4V2_Item>[Unique] BlueprintItemWeapon  x2  -> 寂静之眼, 赏金 · 猎首
+  f0a4e0192871429f9dadc0eb779c6294 纱芮尔摇篮曲<LongRifleUniqueCh3V1_Item>[Unique] BlueprintItemWeapon  x2  -> 寂静之眼, 赏金 · 猎首
+  34612ed374a74558815bc594244eb1b2 残酷命运<GovernorsSniperRifle_Item>[Unique] BlueprintItemWeapon  x2  -> 寂静之眼, 赏金 · 猎首
+  a223f91296d24d65a3390651c247ed83 流浪者之兆<JaeQuest_LongRifle_Item>[Common] BlueprintItemWeapon  x2  -> 寂静之眼, 赏金 · 猎首
+  d043a2289a1f45f784a415057c725cb5 赫卡顿之眼<AeldariScout_LongRifle_Item>[Unique] BlueprintItemWeapon  x2  -> 寂静之眼, 赏金 · 猎首
+  e202201c375a45b697d7bba5ac68c6ee 弹道计算单筒镜<ManipulusHeadCh2_Item>[Common] BlueprintItemEquipmentHead  x2  -> 寂静之眼, 赏金 · 猎首
+  774361e6945849889568fae24be57450 暗影潜伏斗篷<ShadowguideCloak_Item>[Common] BlueprintItemEquipmentShoulders  x2  -> 寂静之眼, 赏金 · 猎首
+  fd1da14cd1f54ef0a280ce1160dde3e6 弹道计算器<Augment_Eye_04_Ricochet_Item>[Pattern] BlueprintItemAugment  x2  -> 寂静之眼, 赏金 · 猎首
+  1ba5fc1726374b2a856b53ca172a3460 泪如泉涌<BolterCH05Unique_Item>[Pattern] BlueprintItemWeapon  x2  -> 圣焰 · 净罪修女, 怒火 · 首席连射
+  e97a0c7f8b9544c4a53b2ff78d57aa45 补偿器手套<CompensatorGloves_Item>[Common] BlueprintItemEquipmentGloves  x2  -> 圣焰 · 净罪修女, 怒火 · 首席连射
+  e807b19418564d1a8dedcc8b7def2d5b 聚焦发射器 (MK“士兵”)<Augment_Eye_01_Shoot_Soldier_Item>[Pattern] BlueprintItemAugment  x2  -> 圣焰 · 净罪修女, 怒火 · 首席连射
+  846a2ae351a34cfd921d5f15d9c2445c 公义之手<Augment_Arm_Dogmatic_Item>[Pattern] BlueprintItemAugment  x2  -> 圣焰 · 净罪修女, 怒火 · 首席连射
+  7da9005aaf4d49969ff989cf0b1619cb 烈阳法杖<SolarStaff_Item>[Pattern] BlueprintItemWeapon  x2  -> 亚空间审判者, 火杖行刑者
+  ea60e97cfbe14231b8fdb8e1702b5f70 雷霆主宰<Coil_Reactive_PowerArmor_Item>[Unique] BlueprintItemArmor  x2  -> 亚空间审判者, 火杖行刑者
+  f3c90d709b2b4bf58da8fc6704e08fdb 行刑者臂铠<EnhancementGloves_Item>[Unique] BlueprintItemEquipmentGloves  x2  -> 亚空间审判者, 火杖行刑者
+  354cbd5a61c440aaa2f23c392467a09b 灵能猛袭之手<HandOfOffense_Item>[Common] BlueprintItemEquipmentRing  x2  -> 亚空间审判者, 火杖行刑者
+  4127a489515c4b9b9181d9b61fd33ec7 反载具左轮手枪<AntiVechicle_StubRevolver_Item>[Unique] BlueprintItemWeapon  x2  -> 火杖行刑者, 铁律 · 政委军官

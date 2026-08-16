@@ -1,0 +1,26 @@
+#### c1c07d80309c47de99b055ba9eb43a07 雕血师 <AetherRuneArmour_Item> [Unique]
+    REQUIRE ANY
+        - 5069a24051354e50a663da0125e19b02 动力装甲专精 <PowerArmourProficiency>
+    REQUIRE ANY
+        - affa5fdded7e404b910b990f5d344a8c 星际战士装备 <SpaceMarineEquipment_Feature>
+#### e84349dae8bb4a818fa4473ce32dcd9a 血腥报复 <HolyPowerArmour_Item_Uralon> [Unique]
+    REQUIRE ANY
+        - affa5fdded7e404b910b990f5d344a8c 星际战士装备 <SpaceMarineEquipment_Feature>
+    REQUIRE ANY
+        - 5069a24051354e50a663da0125e19b02 动力装甲专精 <PowerArmourProficiency>
+#### 8b13aef5103a4719980774c0d4a12506 元帅的科罗努斯扩区护甲 <MarshallsArmouroftheKoronusExpanse_Item_Unlootable> [Unique]
+    EXCLUDE-if ANY
+        - affa5fdded7e404b910b990f5d344a8c 星际战士装备 <SpaceMarineEquipment_Feature>
+        - 590cb5c394ee4b5eb213121c96063dec 艾达灵族装备 <AeldariArmourProficiency_Feature>
+        - c7a53b43ac5f4f11a1aef612dd3f4f71 黑暗灵族装备 <DrukhariArmourProficiency_Feature>
+    REQUIRE ANY
+        - 684c766dc9c24fcf856dc1d6f01d9290 重甲专精 <HeavyArmourProficiency_Feature>
+#### 1fede9d9621f437c92832e239426bbcf 血色审判 <Fleshbreaker_PowerArmor_Item> [Unique]
+    REQUIRE ANY
+        - 5069a24051354e50a663da0125e19b02 动力装甲专精 <PowerArmourProficiency>
+    EXCLUDE-if ANY (inh)
+        - affa5fdded7e404b910b990f5d344a8c 星际战士装备 <SpaceMarineEquipment_Feature>
+        - c7a53b43ac5f4f11a1aef612dd3f4f71 黑暗灵族装备 <DrukhariArmourProficiency_Feature>
+        - 590cb5c394ee4b5eb213121c96063dec 艾达灵族装备 <AeldariArmourProficiency_Feature>
+    EXCLUDE-if ANY
+        - b6962fcc54054af98961dd9a6c0f9e18 战斗修女 <AdeptaSororitas_Occupation__NoKEE>

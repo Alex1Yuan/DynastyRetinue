@@ -259,6 +259,35 @@ namespace KgdRetinue
             GUILayout.Label("<color=#aaaaaa>自动档由主角等级推出（≥36 = T3，≥16 = T2）。"
                           + "55 级存档恒为 T3，要验 T1/T2 那两套就在这里强制。改完对已招募的卫兵无效，重新招一个才会按新档位发。</color>");
 
+            // ---------- 舰船 ----------
+            GUILayout.Space(8);
+            GUILayout.Label("<b>舰船</b>（只改开火次数，不动配置界面、不扩槽位、不改蓝图）");
+            Settings.ShipExtraShots = GUILayout.Toggle(Settings.ShipExtraShots,
+                "换大船后同一槽位可多次开火（当前舰船分档: " + StarshipChargesPatch.ShipSize() + "）");
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("巡洋舰 舷炮 +", GUILayout.Width(110));
+            Settings.ShipCruiserBroadside = (int)GUILayout.HorizontalSlider(Settings.ShipCruiserBroadside, 0f, 4f, GUILayout.Width(120));
+            GUILayout.Label(Settings.ShipCruiserBroadside.ToString(), GUILayout.Width(24));
+            GUILayout.Label("大巡洋 舷炮 +", GUILayout.Width(110));
+            Settings.ShipGrandBroadside = (int)GUILayout.HorizontalSlider(Settings.ShipGrandBroadside, 0f, 4f, GUILayout.Width(120));
+            GUILayout.Label(Settings.ShipGrandBroadside.ToString(), GUILayout.Width(24));
+            GUILayout.Label("大巡洋 船首/背炮 +", GUILayout.Width(140));
+            Settings.ShipGrandProw = (int)GUILayout.HorizontalSlider(Settings.ShipGrandProw, 0f, 4f, GUILayout.Width(120));
+            GUILayout.Label(Settings.ShipGrandProw.ToString(), GUILayout.Width(24));
+            GUILayout.EndHorizontal();
+            GUILayout.Label("<color=#aaaaaa>护卫舰/袭击舰无加成，保持原版手感。数值是「额外」次数：+1 = 两打。</color>");
+
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("换船（测试用，立即生效）", GUILayout.Width(160));
+            if (GUILayout.Button("护卫舰", GUILayout.Width(80)))   StarshipTool.SetSize(Kingmaker.Enums.Size.Frigate_1x2);
+            if (GUILayout.Button("巡洋舰", GUILayout.Width(80)))   StarshipTool.SetSize(Kingmaker.Enums.Size.Cruiser_2x4);
+            if (GUILayout.Button("大巡洋舰", GUILayout.Width(90)))  StarshipTool.SetSize(Kingmaker.Enums.Size.GrandCruiser_3x6);
+            GUILayout.EndHorizontal();
+            Settings.ShipSwitchInCombat = GUILayout.Toggle(Settings.ShipSwitchInCombat, "允许战斗中换船（有风险：格子占位会变，寻路网格未必跟着重算）");
+            GUILayout.Label("<color=#ffaa66>注意：舰船分档是 [JsonProperty]，会写进存档。"
+                          + "它是 vanilla 枚举、不碰存档红线，卸载 mod 后存档照样能开，"
+                          + "但船会保持在你切过去的那一档 —— 要还原就切回护卫舰再存一次。</color>");
+
             // ---------- 规则 ----------
             GUILayout.Space(8);
             GUILayout.Label("<b>规则</b>");
@@ -481,6 +510,25 @@ namespace KgdRetinue
         /// <summary>上次看到的植入物层级（AugmentTier）。-1 = 还没记录过。
         /// 用来判断"剧情解锁了"，从而给已有卫兵补发更好的植入物。存在 UMM 的设置文件里，不进游戏存档。</summary>
         public int LastAugmentTier = -1;
+
+        /// <summary>舰船「多打」：按舰船分档给武器槽加每回合开火次数。不改蓝图、不改配置界面。</summary>
+        public bool ShipExtraShots = true;
+        /// <summary>巡洋舰：左右舷炮额外开火次数（默认 +1 = 两打）。</summary>
+        public int ShipCruiserBroadside = 1;
+        /// <summary>大巡洋舰：左右舷炮额外开火次数（默认 +2 = 三打）。</summary>
+        public int ShipGrandBroadside = 2;
+        /// <summary>大巡洋舰：船首/背炮额外开火次数（默认 +1 = 两打）。</summary>
+        public int ShipGrandProw = 1;
+
+        /// <summary>巡洋舰：船脊/船首/光矛的射程加成。</summary>
+        public int ShipCruiserRange = 3;
+        /// <summary>大巡洋舰：舷炮射程加成。</summary>
+        public int ShipGrandRangeBroadside = 3;
+        /// <summary>大巡洋舰：船脊/船首/光矛射程加成。</summary>
+        public int ShipGrandRangeProw = 5;
+
+        /// <summary>允许在太空战**战斗中**切换舰船分档。默认关 —— 格子占位会变，寻路网格未必跟着重算。</summary>
+        public bool ShipSwitchInCombat = false;
         // 卫兵杀敌同时也给卫队池加一份（不动玩家那份）
         public bool GuardKillFeedsOwnPool = true;
         // 每次区域加载按当前阶位补升级 —— 卫兵"跟久了自己成长"

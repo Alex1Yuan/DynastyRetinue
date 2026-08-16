@@ -1,0 +1,150 @@
+?                                                                      76f9b98e76854b459b50a73462429e2b 坚固盾牌 <ShieldCH04T2_Item> [Pattern]
+?                                                                      98b9d50803e64d13abdf8f0619421874 枪手盾牌 <ShieldCH04T2V2_Item> [Pattern]
+?                                                                      454f30f7edb84d229bade81be01fe108 梅拉贡盾牌 <FaithIsMyShield_Item> [Unique]
+?                                                                      ebd94bc4798a46e0b08ec63742eb6a7a 三重钢盾 <ScalesOfTheGreatSerpentShield_Item> [Unique]
+?                                                                      a2404ffa845f4541bc40d6926378908e 复仇烈焰 <MartyrdomShield_Item> [Unique]
+?                                                                      181743950e4f489698e78ff835d29710 尊贵特权 <KeyFigureShield_Item> [Unique]
+?                                                                      4a11c573494e449fb79cc9b273edf7b3 防御者 <PublicDefenderShield_Item> [Unique]
+?                                                                      1730cea08976423c92f2080847b78741 光辐盾牌 <GlareShield_Item> [Unique]
+?                                                                      5dd12973cef243a9b7e5f6645ba400f1 绝缘盾牌 <EnergyCapacitorShield_Item> [Unique]
+?                                                                      667427778eb743f2883b0e8915541ab6 高级盾牌 <ShieldCH05_Item> [Pattern]
+====================================================================================================
+76f9b98e76854b459b50a73462429e2b 坚固盾牌 <ShieldCH04T2_Item> [Pattern]
+   type=Shields.BlueprintItemShield rar=Pattern
+   EXCL ANY: AeldariArmourProficiency_Feature, DrukhariArmourProficiency_Feature, SpaceMarineEquipment_Feature, Pasqual_Background_Feature, ManipulusOccupation_Feature
+   FACT [艾达灵族装备] <AeldariArmourProficiency_Feature> :: 
+   FACT [黑暗灵族装备] <DrukhariArmourProficiency_Feature> :: 角色可以使用黑暗灵族武器。
+   FACT [星际战士装备] <SpaceMarineEquipment_Feature> :: 
+   FACT [技术神甫] <Pasqual_Background_Feature> :: 机械修会的成员，崇尚万机之神欧姆尼赛亚。技术神甫的使命是维护整个帝国最神圣、最先进的科技造物。正因如此，他们对人类的生存做出了不可替代的贡献。
+   FACT [操纵者] <ManipulusOccupation_Feature> :: 这名技术神甫腹部装有电激电池，蕴藏着赋予机械生命的源力。操纵者的机械触须能传导这种神圣能量，强化盟友，惩戒敌人。
+   FACT [坚固盾牌] <ShieldCH04T2_Feature> :: 装备者获得+2偏转与+%招架。
+   FACT [盾牌猛击] <ShieldAttack_Feature> :: 对单个目标造成点伤害。
+   FACT [盾牌猛击] <ShieldAttackAbility> :: 对单个目标造成点伤害。
+   FACT [坚定防御] <ShieldStalwartDefenseAbility> :: 装备者标记效果范围内的所有敌人，同时立刻结束回合。装备者的下个回合开始之前，当被标记的敌人首次攻击装备者时，针对此次攻击的格挡率提高15%。如果装备者通过这种方式格挡了攻击，则会立刻进行反击。
+   FACT [站住！] <ShieldAOO_Ability> :: 装备者攻击的目标需要进行敏捷抗性检定，若未能通过检定，则会陷入定身状态，效果持续至装备者的下个回合开始。此能力会替代借机攻击。
+====================================================================================================
+98b9d50803e64d13abdf8f0619421874 枪手盾牌 <ShieldCH04T2V2_Item> [Pattern]
+   type=Shields.BlueprintItemShield rar=Pattern
+   EXCL ANY: AeldariArmourProficiency_Feature, DrukhariArmourProficiency_Feature, SpaceMarineEquipment_Feature, Pasqual_Background_Feature, ManipulusOccupation_Feature
+   FACT [艾达灵族装备] <AeldariArmourProficiency_Feature> :: 
+   FACT [黑暗灵族装备] <DrukhariArmourProficiency_Feature> :: 角色可以使用黑暗灵族武器。
+   FACT [星际战士装备] <SpaceMarineEquipment_Feature> :: 
+   FACT [技术神甫] <Pasqual_Background_Feature> :: 机械修会的成员，崇尚万机之神欧姆尼赛亚。技术神甫的使命是维护整个帝国最神圣、最先进的科技造物。正因如此，他们对人类的生存做出了不可替代的贡献。
+   FACT [操纵者] <ManipulusOccupation_Feature> :: 这名技术神甫腹部装有电激电池，蕴藏着赋予机械生命的源力。操纵者的机械触须能传导这种神圣能量，强化盟友，惩戒敌人。
+   FACT [枪手盾牌] <ShieldCH04T2V2_Feature> :: 装备者获得+1偏转，重新装填霰弹枪不消耗行动点数。
+   FACT [盾牌猛击] <ShieldAttack_Feature> :: 对单个目标造成点伤害。
+   FACT [盾牌猛击] <ShieldAttackAbility> :: 对单个目标造成点伤害。
+   FACT [坚定防御] <ShieldStalwartDefenseAbility> :: 装备者标记效果范围内的所有敌人，同时立刻结束回合。装备者的下个回合开始之前，当被标记的敌人首次攻击装备者时，针对此次攻击的格挡率提高15%。如果装备者通过这种方式格挡了攻击，则会立刻进行反击。
+   FACT [站住！] <ShieldAOO_Ability> :: 装备者攻击的目标需要进行敏捷抗性检定，若未能通过检定，则会陷入定身状态，效果持续至装备者的下个回合开始。此能力会替代借机攻击。
+====================================================================================================
+454f30f7edb84d229bade81be01fe108 梅拉贡盾牌 <FaithIsMyShield_Item> [Unique]
+   type=Shields.BlueprintItemShield rar=Unique
+   EXCL ANY: AeldariArmourProficiency_Feature, DrukhariArmourProficiency_Feature, SpaceMarineEquipment_Feature, Pasqual_Background_Feature, ManipulusOccupation_Feature
+   FACT [艾达灵族装备] <AeldariArmourProficiency_Feature> :: 
+   FACT [黑暗灵族装备] <DrukhariArmourProficiency_Feature> :: 角色可以使用黑暗灵族武器。
+   FACT [星际战士装备] <SpaceMarineEquipment_Feature> :: 
+   FACT [技术神甫] <Pasqual_Background_Feature> :: 机械修会的成员，崇尚万机之神欧姆尼赛亚。技术神甫的使命是维护整个帝国最神圣、最先进的科技造物。正因如此，他们对人类的生存做出了不可替代的贡献。
+   FACT [操纵者] <ManipulusOccupation_Feature> :: 这名技术神甫腹部装有电激电池，蕴藏着赋予机械生命的源力。操纵者的机械触须能传导这种神圣能量，强化盟友，惩戒敌人。
+   FACT [梅拉贡盾牌] <FaithIsMyShield_Feature> :: 装备者受到的伤害降低%，对异形与恶魔造成的伤害提高%。
+   FACT [盾牌猛击] <ShieldAttack_Feature> :: 对单个目标造成点伤害。
+   FACT [盾牌猛击] <ShieldAttackAbility> :: 对单个目标造成点伤害。
+   FACT [坚定防御] <ShieldStalwartDefenseAbility> :: 装备者标记效果范围内的所有敌人，同时立刻结束回合。装备者的下个回合开始之前，当被标记的敌人首次攻击装备者时，针对此次攻击的格挡率提高15%。如果装备者通过这种方式格挡了攻击，则会立刻进行反击。
+   FACT [站住！] <ShieldAOO_Ability> :: 装备者攻击的目标需要进行敏捷抗性检定，若未能通过检定，则会陷入定身状态，效果持续至装备者的下个回合开始。此能力会替代借机攻击。
+====================================================================================================
+ebd94bc4798a46e0b08ec63742eb6a7a 三重钢盾 <ScalesOfTheGreatSerpentShield_Item> [Unique]
+   type=Shields.BlueprintItemShield rar=Unique
+   EXCL ANY: AeldariArmourProficiency_Feature, DrukhariArmourProficiency_Feature, SpaceMarineEquipment_Feature, Pasqual_Background_Feature, ManipulusOccupation_Feature
+   FACT [艾达灵族装备] <AeldariArmourProficiency_Feature> :: 
+   FACT [黑暗灵族装备] <DrukhariArmourProficiency_Feature> :: 角色可以使用黑暗灵族武器。
+   FACT [星际战士装备] <SpaceMarineEquipment_Feature> :: 
+   FACT [技术神甫] <Pasqual_Background_Feature> :: 机械修会的成员，崇尚万机之神欧姆尼赛亚。技术神甫的使命是维护整个帝国最神圣、最先进的科技造物。正因如此，他们对人类的生存做出了不可替代的贡献。
+   FACT [操纵者] <ManipulusOccupation_Feature> :: 这名技术神甫腹部装有电激电池，蕴藏着赋予机械生命的源力。操纵者的机械触须能传导这种神圣能量，强化盟友，惩戒敌人。
+   FACT [三重钢盾] <ScalesOfTheGreatSerpentShield_Feature> :: 这种盾牌共有三面。 装备者会根据所有使用三重钢盾的邻近盟友数量获得加成效果： - 1名盟友：+2偏转，+10%格挡 - 2名盟友：获得战斗大师天赋，+10%格挡，承受的范围攻击伤害降低30%
+   FACT [盾牌猛击] <ShieldAttack_Feature> :: 对单个目标造成点伤害。
+   FACT [盾牌猛击] <ShieldAttackAbility> :: 对单个目标造成点伤害。
+   FACT [坚定防御] <ShieldStalwartDefenseAbility> :: 装备者标记效果范围内的所有敌人，同时立刻结束回合。装备者的下个回合开始之前，当被标记的敌人首次攻击装备者时，针对此次攻击的格挡率提高15%。如果装备者通过这种方式格挡了攻击，则会立刻进行反击。
+   FACT [站住！] <ShieldAOO_Ability> :: 装备者攻击的目标需要进行敏捷抗性检定，若未能通过检定，则会陷入定身状态，效果持续至装备者的下个回合开始。此能力会替代借机攻击。
+====================================================================================================
+a2404ffa845f4541bc40d6926378908e 复仇烈焰 <MartyrdomShield_Item> [Unique]
+   type=Shields.BlueprintItemShield rar=Unique
+   EXCL ANY: AeldariArmourProficiency_Feature, DrukhariArmourProficiency_Feature, SpaceMarineEquipment_Feature, Pasqual_Background_Feature, ManipulusOccupation_Feature
+   FACT [艾达灵族装备] <AeldariArmourProficiency_Feature> :: 
+   FACT [黑暗灵族装备] <DrukhariArmourProficiency_Feature> :: 角色可以使用黑暗灵族武器。
+   FACT [星际战士装备] <SpaceMarineEquipment_Feature> :: 
+   FACT [技术神甫] <Pasqual_Background_Feature> :: 机械修会的成员，崇尚万机之神欧姆尼赛亚。技术神甫的使命是维护整个帝国最神圣、最先进的科技造物。正因如此，他们对人类的生存做出了不可替代的贡献。
+   FACT [操纵者] <ManipulusOccupation_Feature> :: 这名技术神甫腹部装有电激电池，蕴藏着赋予机械生命的源力。操纵者的机械触须能传导这种神圣能量，强化盟友，惩戒敌人。
+   FACT [复仇烈焰] <MartyrdomShield_Feature> :: 战斗开始时，装备者承受1级燃烧效果，此燃烧效果即便在通过抗性检定后也无法移除。 装备者的回合结束时，对周围所有邻近生物造成燃烧等级的伤害。如果目标生物是异形或恶魔，还会额外造成点火焰伤害，此次火焰伤害拥有5%护甲穿透。
+   FACT [盾牌猛击] <ShieldAttack_Feature> :: 对单个目标造成点伤害。
+   FACT [盾牌猛击] <ShieldAttackAbility> :: 对单个目标造成点伤害。
+   FACT [坚定防御] <ShieldStalwartDefenseAbility> :: 装备者标记效果范围内的所有敌人，同时立刻结束回合。装备者的下个回合开始之前，当被标记的敌人首次攻击装备者时，针对此次攻击的格挡率提高15%。如果装备者通过这种方式格挡了攻击，则会立刻进行反击。
+   FACT [站住！] <ShieldAOO_Ability> :: 装备者攻击的目标需要进行敏捷抗性检定，若未能通过检定，则会陷入定身状态，效果持续至装备者的下个回合开始。此能力会替代借机攻击。
+====================================================================================================
+181743950e4f489698e78ff835d29710 尊贵特权 <KeyFigureShield_Item> [Unique]
+   type=Shields.BlueprintItemShield rar=Unique
+   EXCL ANY: AeldariArmourProficiency_Feature, DrukhariArmourProficiency_Feature, SpaceMarineEquipment_Feature, Pasqual_Background_Feature, ManipulusOccupation_Feature
+   FACT [艾达灵族装备] <AeldariArmourProficiency_Feature> :: 
+   FACT [黑暗灵族装备] <DrukhariArmourProficiency_Feature> :: 角色可以使用黑暗灵族武器。
+   FACT [星际战士装备] <SpaceMarineEquipment_Feature> :: 
+   FACT [技术神甫] <Pasqual_Background_Feature> :: 机械修会的成员，崇尚万机之神欧姆尼赛亚。技术神甫的使命是维护整个帝国最神圣、最先进的科技造物。正因如此，他们对人类的生存做出了不可替代的贡献。
+   FACT [操纵者] <ManipulusOccupation_Feature> :: 这名技术神甫腹部装有电激电池，蕴藏着赋予机械生命的源力。操纵者的机械触须能传导这种神圣能量，强化盟友，惩戒敌人。
+   FACT [尊贵特权] <KeyFigureShield_Feature> :: 当装备者离开战斗策略区域后，会继续保留该片区域的效果，直到装备者进入另一片战斗策略区域为止。
+   FACT [盾牌猛击] <ShieldAttack_Feature> :: 对单个目标造成点伤害。
+   FACT [盾牌猛击] <ShieldAttackAbility> :: 对单个目标造成点伤害。
+   FACT [坚定防御] <ShieldStalwartDefenseAbility> :: 装备者标记效果范围内的所有敌人，同时立刻结束回合。装备者的下个回合开始之前，当被标记的敌人首次攻击装备者时，针对此次攻击的格挡率提高15%。如果装备者通过这种方式格挡了攻击，则会立刻进行反击。
+   FACT [站住！] <ShieldAOO_Ability> :: 装备者攻击的目标需要进行敏捷抗性检定，若未能通过检定，则会陷入定身状态，效果持续至装备者的下个回合开始。此能力会替代借机攻击。
+====================================================================================================
+4a11c573494e449fb79cc9b273edf7b3 防御者 <PublicDefenderShield_Item> [Unique]
+   type=Shields.BlueprintItemShield rar=Unique
+   EXCL ANY: AeldariArmourProficiency_Feature, DrukhariArmourProficiency_Feature, SpaceMarineEquipment_Feature, Pasqual_Background_Feature, ManipulusOccupation_Feature
+   FACT [艾达灵族装备] <AeldariArmourProficiency_Feature> :: 
+   FACT [黑暗灵族装备] <DrukhariArmourProficiency_Feature> :: 角色可以使用黑暗灵族武器。
+   FACT [星际战士装备] <SpaceMarineEquipment_Feature> :: 
+   FACT [技术神甫] <Pasqual_Background_Feature> :: 机械修会的成员，崇尚万机之神欧姆尼赛亚。技术神甫的使命是维护整个帝国最神圣、最先进的科技造物。正因如此，他们对人类的生存做出了不可替代的贡献。
+   FACT [操纵者] <ManipulusOccupation_Feature> :: 这名技术神甫腹部装有电激电池，蕴藏着赋予机械生命的源力。操纵者的机械触须能传导这种神圣能量，强化盟友，惩戒敌人。
+   FACT [防御者] <PublicDefenderShield_Feature> :: 装备者的回合结束时，为每位邻近盟友提供点临时生命值。 每当邻近盟友受到伤害时，此次伤害的%改为由装备者承担。
+   FACT [盾牌猛击] <ShieldAttack_Feature> :: 对单个目标造成点伤害。
+   FACT [盾牌猛击] <ShieldAttackAbility> :: 对单个目标造成点伤害。
+   FACT [坚定防御] <ShieldStalwartDefenseAbility> :: 装备者标记效果范围内的所有敌人，同时立刻结束回合。装备者的下个回合开始之前，当被标记的敌人首次攻击装备者时，针对此次攻击的格挡率提高15%。如果装备者通过这种方式格挡了攻击，则会立刻进行反击。
+   FACT [站住！] <ShieldAOO_Ability> :: 装备者攻击的目标需要进行敏捷抗性检定，若未能通过检定，则会陷入定身状态，效果持续至装备者的下个回合开始。此能力会替代借机攻击。
+====================================================================================================
+1730cea08976423c92f2080847b78741 光辐盾牌 <GlareShield_Item> [Unique]
+   type=Shields.BlueprintItemShield rar=Unique
+   EXCL ANY: AeldariArmourProficiency_Feature, DrukhariArmourProficiency_Feature, SpaceMarineEquipment_Feature, Pasqual_Background_Feature, ManipulusOccupation_Feature
+   FACT [艾达灵族装备] <AeldariArmourProficiency_Feature> :: 
+   FACT [黑暗灵族装备] <DrukhariArmourProficiency_Feature> :: 角色可以使用黑暗灵族武器。
+   FACT [星际战士装备] <SpaceMarineEquipment_Feature> :: 
+   FACT [技术神甫] <Pasqual_Background_Feature> :: 机械修会的成员，崇尚万机之神欧姆尼赛亚。技术神甫的使命是维护整个帝国最神圣、最先进的科技造物。正因如此，他们对人类的生存做出了不可替代的贡献。
+   FACT [操纵者] <ManipulusOccupation_Feature> :: 这名技术神甫腹部装有电激电池，蕴藏着赋予机械生命的源力。操纵者的机械触须能传导这种神圣能量，强化盟友，惩戒敌人。
+   FACT [光辐盾牌] <GlareShield_Feature> :: 每当装备者格挡攻击时，攻击者都需要进行敏捷抗性检定，若未能通过检定，则会陷入致盲状态，持续一轮。
+   FACT [盾牌猛击] <ShieldAttack_Feature> :: 对单个目标造成点伤害。
+   FACT [盾牌猛击] <ShieldAttackAbility> :: 对单个目标造成点伤害。
+   FACT [坚定防御] <ShieldStalwartDefenseAbility> :: 装备者标记效果范围内的所有敌人，同时立刻结束回合。装备者的下个回合开始之前，当被标记的敌人首次攻击装备者时，针对此次攻击的格挡率提高15%。如果装备者通过这种方式格挡了攻击，则会立刻进行反击。
+   FACT [站住！] <ShieldAOO_Ability> :: 装备者攻击的目标需要进行敏捷抗性检定，若未能通过检定，则会陷入定身状态，效果持续至装备者的下个回合开始。此能力会替代借机攻击。
+====================================================================================================
+5dd12973cef243a9b7e5f6645ba400f1 绝缘盾牌 <EnergyCapacitorShield_Item> [Unique]
+   type=Shields.BlueprintItemShield rar=Unique
+   EXCL ANY: AeldariArmourProficiency_Feature, DrukhariArmourProficiency_Feature, SpaceMarineEquipment_Feature, Pasqual_Background_Feature, ManipulusOccupation_Feature
+   FACT [艾达灵族装备] <AeldariArmourProficiency_Feature> :: 
+   FACT [黑暗灵族装备] <DrukhariArmourProficiency_Feature> :: 角色可以使用黑暗灵族武器。
+   FACT [星际战士装备] <SpaceMarineEquipment_Feature> :: 
+   FACT [技术神甫] <Pasqual_Background_Feature> :: 机械修会的成员，崇尚万机之神欧姆尼赛亚。技术神甫的使命是维护整个帝国最神圣、最先进的科技造物。正因如此，他们对人类的生存做出了不可替代的贡献。
+   FACT [操纵者] <ManipulusOccupation_Feature> :: 这名技术神甫腹部装有电激电池，蕴藏着赋予机械生命的源力。操纵者的机械触须能传导这种神圣能量，强化盟友，惩戒敌人。
+   FACT [绝缘盾牌] <EnergyCapacitorShield_Feature> :: 装备者获得+1偏转与+%招架，承受的能量、火焰、电击伤害降低35%。
+   FACT [盾牌猛击] <ShieldAttack_Feature> :: 对单个目标造成点伤害。
+   FACT [盾牌猛击] <ShieldAttackAbility> :: 对单个目标造成点伤害。
+   FACT [坚定防御] <ShieldStalwartDefenseAbility> :: 装备者标记效果范围内的所有敌人，同时立刻结束回合。装备者的下个回合开始之前，当被标记的敌人首次攻击装备者时，针对此次攻击的格挡率提高15%。如果装备者通过这种方式格挡了攻击，则会立刻进行反击。
+   FACT [站住！] <ShieldAOO_Ability> :: 装备者攻击的目标需要进行敏捷抗性检定，若未能通过检定，则会陷入定身状态，效果持续至装备者的下个回合开始。此能力会替代借机攻击。
+====================================================================================================
+667427778eb743f2883b0e8915541ab6 高级盾牌 <ShieldCH05_Item> [Pattern]
+   type=Shields.BlueprintItemShield rar=Pattern
+   EXCL ANY: AeldariArmourProficiency_Feature, DrukhariArmourProficiency_Feature, SpaceMarineEquipment_Feature, Pasqual_Background_Feature, ManipulusOccupation_Feature
+   FACT [艾达灵族装备] <AeldariArmourProficiency_Feature> :: 
+   FACT [黑暗灵族装备] <DrukhariArmourProficiency_Feature> :: 角色可以使用黑暗灵族武器。
+   FACT [星际战士装备] <SpaceMarineEquipment_Feature> :: 
+   FACT [技术神甫] <Pasqual_Background_Feature> :: 机械修会的成员，崇尚万机之神欧姆尼赛亚。技术神甫的使命是维护整个帝国最神圣、最先进的科技造物。正因如此，他们对人类的生存做出了不可替代的贡献。
+   FACT [操纵者] <ManipulusOccupation_Feature> :: 这名技术神甫腹部装有电激电池，蕴藏着赋予机械生命的源力。操纵者的机械触须能传导这种神圣能量，强化盟友，惩戒敌人。
+   FACT [盾牌猛击] <ShieldAttack_Feature> :: 对单个目标造成点伤害。
+   FACT [] <ShieldCH05_Feature> :: 装备者获得+2偏转与+%招架。
+   FACT [盾牌猛击] <ShieldAttackAbility> :: 对单个目标造成点伤害。
+   FACT [坚定防御] <ShieldStalwartDefenseAbility> :: 装备者标记效果范围内的所有敌人，同时立刻结束回合。装备者的下个回合开始之前，当被标记的敌人首次攻击装备者时，针对此次攻击的格挡率提高15%。如果装备者通过这种方式格挡了攻击，则会立刻进行反击。
+   FACT [站住！] <ShieldAOO_Ability> :: 装备者攻击的目标需要进行敏捷抗性检定，若未能通过检定，则会陷入定身状态，效果持续至装备者的下个回合开始。此能力会替代借机攻击。

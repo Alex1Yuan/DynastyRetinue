@@ -1,0 +1,61 @@
+#### ddd6d0a5bdfc4fefaed5f247cf46e852 厚重虚空护甲 <HeavyVoidSuit_Item> [Unique]
+    EXCLUDE-if ANY
+        - affa5fdded7e404b910b990f5d344a8c 星际战士装备 <SpaceMarineEquipment_Feature>
+        - 590cb5c394ee4b5eb213121c96063dec 艾达灵族装备 <AeldariArmourProficiency_Feature>
+        - c7a53b43ac5f4f11a1aef612dd3f4f71 黑暗灵族装备 <DrukhariArmourProficiency_Feature>
+    REQUIRE ANY
+        - 684c766dc9c24fcf856dc1d6f01d9290 重甲专精 <HeavyArmourProficiency_Feature>
+#### 25bdbe6c879b4795b76dd5e2c13dddc9 附魔走私者护甲 <ModifiedRibSuit_Item> [Unique]
+    EXCLUDE-if ANY
+        - affa5fdded7e404b910b990f5d344a8c 星际战士装备 <SpaceMarineEquipment_Feature>
+        - c7a53b43ac5f4f11a1aef612dd3f4f71 黑暗灵族装备 <DrukhariArmourProficiency_Feature>
+        - 590cb5c394ee4b5eb213121c96063dec 艾达灵族装备 <AeldariArmourProficiency_Feature>
+    REQUIRE ANY
+        - 684c766dc9c24fcf856dc1d6f01d9290 重甲专精 <HeavyArmourProficiency_Feature>
+#### 0a50d9c3a4e84f29a0f78894a1150e49 肋骨套装 <HeavyRibSuit_Item> [Unique]
+    EXCLUDE-if ANY
+        - affa5fdded7e404b910b990f5d344a8c 星际战士装备 <SpaceMarineEquipment_Feature>
+        - c7a53b43ac5f4f11a1aef612dd3f4f71 黑暗灵族装备 <DrukhariArmourProficiency_Feature>
+        - 590cb5c394ee4b5eb213121c96063dec 艾达灵族装备 <AeldariArmourProficiency_Feature>
+    REQUIRE ANY
+        - 684c766dc9c24fcf856dc1d6f01d9290 重甲专精 <HeavyArmourProficiency_Feature>
+#### daffadd94a844e919a34d08e54bf5ff1 【源自战争世界】远征板甲 <CrusadePlateArmour_Item> [Pattern]
+    EXCLUDE-if ANY
+        - affa5fdded7e404b910b990f5d344a8c 星际战士装备 <SpaceMarineEquipment_Feature>
+        - 590cb5c394ee4b5eb213121c96063dec 艾达灵族装备 <AeldariArmourProficiency_Feature>
+        - c7a53b43ac5f4f11a1aef612dd3f4f71 黑暗灵族装备 <DrukhariArmourProficiency_Feature>
+    REQUIRE ANY
+        - 684c766dc9c24fcf856dc1d6f01d9290 重甲专精 <HeavyArmourProficiency_Feature>
+#### fda161d189d74905a58ce2c9560c0226 游侠护甲 <DrukhariRangerArmour_Item> [Pattern]
+    REQUIRE ANY
+        - 590cb5c394ee4b5eb213121c96063dec 艾达灵族装备 <AeldariArmourProficiency_Feature>
+#### 3830a4dc0fc4453cb4392e6500b20098 艾达灵族游侠之视 <EldarRangerSights_Item> [Common]
+    (none)
+#### 8a74cb37c4d44537a0921c3ff1f03cc6 衰竭圣典 <WeaknessExpertsLitany_Item> [Common]
+    (none)
+#### 70bcc270b4ce449c8806a466f687d7e2 审讯目镜 <InterrogationGoggles_Item> [Unique]
+    EXCLUDE-if ANY
+        - affa5fdded7e404b910b990f5d344a8c 星际战士装备 <SpaceMarineEquipment_Feature>
+#### 1d43c1f399e945a785423a2a800b2499 追踪靴 <TrackingBoots_Item> [Unique]
+    EXCLUDE-if ANY
+        - affa5fdded7e404b910b990f5d344a8c 星际战士装备 <SpaceMarineEquipment_Feature>
+#### 8106576e497f4b6ea99da4de1b964ef9 穿甲弹药背包 <BackpackWithTraumaticBullets_Item> [Unique]
+    EXCLUDE-if ANY
+        - affa5fdded7e404b910b990f5d344a8c 星际战士装备 <SpaceMarineEquipment_Feature>
+#### 9361c66b4371414d9bb36738bf0bcc67 仁慈斗篷 <CloakofMercy_Item> [Unique]
+    EXCLUDE-if ANY
+        - affa5fdded7e404b910b990f5d344a8c 星际战士装备 <SpaceMarineEquipment_Feature>
+#### 5cb87d3dc97b465a8aebe0797b894aa0 幻影斗篷 <PhantomCloak_Item> [Unique]
+    EXCLUDE-if ANY
+        - affa5fdded7e404b910b990f5d344a8c 星际战士装备 <SpaceMarineEquipment_Feature>
+#### 3185925f1943490b8850159d8288b631 奥赛罗大族长之杖 <StaffOfOrsellioNovator_Item> [Common]
+    REQUIRE ANY
+        - 8e0cfa654ec24dbbba9e80c27433cc8e 导航者 <Navigator_Occupation_Feature>
+#### 982065da7f1441239b1238bdd85b1cbe 星炬明光 <AstronomiconRegallia_Item> [Unique]
+    REQUIRE ANY
+        - 8e0cfa654ec24dbbba9e80c27433cc8e 导航者 <Navigator_Occupation_Feature>
+#### 34612ed374a74558815bc594244eb1b2 残酷命运 <GovernorsSniperRifle_Item> [Unique]
+    EXCLUDE-if ANY (inh)
+        - 950565a69d144391897cdc0024747755 星际战士装备 <SpaceMarineEquipment_Proficiency>
+        - c7a53b43ac5f4f11a1aef612dd3f4f71 黑暗灵族装备 <DrukhariArmourProficiency_Feature>
+        - 590cb5c394ee4b5eb213121c96063dec 艾达灵族装备 <AeldariArmourProficiency_Feature>

@@ -35,8 +35,8 @@
           "gear": [
             [
               "8ca60374722b4eeea27d99c3b17fb09e",
-              "8c304b20633145f39577a392201d2047",
-              "eaa742e43d8e48a3a450c4d59431b03e"
+              "eaa742e43d8e48a3a450c4d59431b03e",
+              "8c304b20633145f39577a392201d2047"
             ],
             "e0e76a258d844385a16c9dc602caa316",
             [
@@ -81,10 +81,7 @@
             "bcefe9c41c7841c9a99b1dbac1793025"
           ],
           "gear": [
-            [
-              "8c304b20633145f39577a392201d2047",
-              "9c190bd2019742db8697ac91da1d985e"
-            ],
+            "9c190bd2019742db8697ac91da1d985e",
             "1c7a3dcf6afa4b48a7028642e596ab61",
             "bb427b937c304ece913793a020aea87f",
             [
@@ -162,8 +159,7 @@
         "e19301be9dc14d89b656c60a6c4f8e04",
         "365ad1a4ef1b4a47be74509c33b2be3b",
         "5de2d70b4ac9468ca723e84c57524eae",
-        "c7a53b43ac5f4f11a1aef612dd3f4f71",
-        "590cb5c394ee4b5eb213121c96063dec"
+        "c7a53b43ac5f4f11a1aef612dd3f4f71"
       ],
       "elites": [
         {
@@ -191,12 +187,7 @@
               "d043a2289a1f45f784a415057c725cb5"
             ],
             "e202201c375a45b697d7bba5ac68c6ee",
-            [
-              "c1c07d80309c47de99b055ba9eb43a07",
-              "9c163228266c4cc892dfb98086d27b52",
-              "9c8d4a592a284b20a9e2fcf4673135e4",
-              "51fad212bca146f889ae8d6e2be4d2fd"
-            ],
+            "c1c07d80309c47de99b055ba9eb43a07",
             "1b447777d38f43baa643fc2e915d6ef3",
             "2c37192f73bf4b89abd89d12e4040d75",
             "50c5be09ff9942969db57298b1beb4cb",
@@ -269,9 +260,9 @@
             "e202201c375a45b697d7bba5ac68c6ee",
             [
               "c1c07d80309c47de99b055ba9eb43a07",
-              "19df1ed2dd3a457682d1f78178912b3d",
-              "fab54297dc854f4aa917ce185b97062a",
-              "8b7a450f05fe46bc99b776625291b14d"
+              "25bdbe6c879b4795b76dd5e2c13dddc9",
+              "0a50d9c3a4e84f29a0f78894a1150e49",
+              "daffadd94a844e919a34d08e54bf5ff1"
             ],
             "1b447777d38f43baa643fc2e915d6ef3",
             "2c37192f73bf4b89abd89d12e4040d75",

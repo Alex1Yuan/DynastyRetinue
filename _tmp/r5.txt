@@ -1,0 +1,53 @@
+#### d891b6e2ca284b32aa5cfeafb07bdd29 正义火葬之杖 <StaffOfTheRigheousPyre_Item> [Unique]
+    REQUIRE ANY
+        - a6a38016b90148878593d977d96b8264 神圣力量 <Sanctic_Base_Feature>
+#### 7f57ba5ee2cc4fc7bcdc9a9ededc1fb4 刺客手枪 <AssasinPistol_Item> [Unique]
+    EXCLUDE-if ANY
+        - 950565a69d144391897cdc0024747755 星际战士装备 <SpaceMarineEquipment_Proficiency>
+        - c7a53b43ac5f4f11a1aef612dd3f4f71 黑暗灵族装备 <DrukhariArmourProficiency_Feature>
+        - 590cb5c394ee4b5eb213121c96063dec 艾达灵族装备 <AeldariArmourProficiency_Feature>
+#### 3e4dbb7086c74e3fb6e80eded7945816 亚空间先知的护目镜 <NavigatorsDiadem_Item> [Unique]
+    EXCLUDE-if ANY
+        - 590cb5c394ee4b5eb213121c96063dec 艾达灵族装备 <AeldariArmourProficiency_Feature>
+        - affa5fdded7e404b910b990f5d344a8c 星际战士装备 <SpaceMarineEquipment_Feature>
+        - c7a53b43ac5f4f11a1aef612dd3f4f71 黑暗灵族装备 <DrukhariArmourProficiency_Feature>
+#### 470ac26be1d44baaa85bb01c45783ead 燃烧信仰徽章 <BurningFaithInsignia_Item> [Unique]
+    (none)
+#### 26ee92e2e0884b5c9f535197f0790071 深渊回路 <AbyssalConduit_Item> [Common]
+    EXCLUDE-if ANY
+        - affa5fdded7e404b910b990f5d344a8c 星际战士装备 <SpaceMarineEquipment_Feature>
+#### f9e771d6f94f4601b7e6c955c40d2307 远程复苏仪 (MK“战略师”) <Augment_Arm_06_Strategist_Item> [Unique]
+    EXCLUDE-if ANY (inh)
+        - affa5fdded7e404b910b990f5d344a8c 星际战士装备 <SpaceMarineEquipment_Feature>
+        - c7a53b43ac5f4f11a1aef612dd3f4f71 黑暗灵族装备 <DrukhariArmourProficiency_Feature>
+        - 590cb5c394ee4b5eb213121c96063dec 艾达灵族装备 <AeldariArmourProficiency_Feature>
+        - 8e0cfa654ec24dbbba9e80c27433cc8e 导航者 <Navigator_Occupation_Feature>
+    EquipmentRestrictionAugmentTier: {}
+#### 33a49bd301814a2c803bb82650cea118 远程复苏仪 (MK-I) <Augment_Arm_06_MK_1_Item> [Pattern]
+    EXCLUDE-if ANY (inh)
+        - affa5fdded7e404b910b990f5d344a8c 星际战士装备 <SpaceMarineEquipment_Feature>
+        - c7a53b43ac5f4f11a1aef612dd3f4f71 黑暗灵族装备 <DrukhariArmourProficiency_Feature>
+        - 590cb5c394ee4b5eb213121c96063dec 艾达灵族装备 <AeldariArmourProficiency_Feature>
+        - 8e0cfa654ec24dbbba9e80c27433cc8e 导航者 <Navigator_Occupation_Feature>
+#### 3c1c3f3fb1444f3e96541b356ca64ab2 遥测逻辑分析仪 (MK-I) <Augment_Systems_03_DodgeToxin_MK_1_Item> [Pattern]
+    EXCLUDE-if ANY (inh)
+        - affa5fdded7e404b910b990f5d344a8c 星际战士装备 <SpaceMarineEquipment_Feature>
+        - c7a53b43ac5f4f11a1aef612dd3f4f71 黑暗灵族装备 <DrukhariArmourProficiency_Feature>
+        - 590cb5c394ee4b5eb213121c96063dec 艾达灵族装备 <AeldariArmourProficiency_Feature>
+        - 8e0cfa654ec24dbbba9e80c27433cc8e 导航者 <Navigator_Occupation_Feature>
+#### 756e0384483540e8a160b1b5584440c9 全息脑视仪 (MK-I) <Augment_Holo_Eye_MK_1_Item> [Pattern]
+    EXCLUDE-if ANY (inh)
+        - affa5fdded7e404b910b990f5d344a8c 星际战士装备 <SpaceMarineEquipment_Feature>
+        - c7a53b43ac5f4f11a1aef612dd3f4f71 黑暗灵族装备 <DrukhariArmourProficiency_Feature>
+        - 590cb5c394ee4b5eb213121c96063dec 艾达灵族装备 <AeldariArmourProficiency_Feature>
+        - 8e0cfa654ec24dbbba9e80c27433cc8e 导航者 <Navigator_Occupation_Feature>
+#### 8c304b20633145f39577a392201d2047 自主攻击能量剑 <AutoStriking_PowerSword_Item> [Unique]
+    EXCLUDE-if ANY
+        - 950565a69d144391897cdc0024747755 星际战士装备 <SpaceMarineEquipment_Proficiency>
+        - c7a53b43ac5f4f11a1aef612dd3f4f71 黑暗灵族装备 <DrukhariArmourProficiency_Feature>
+        - 590cb5c394ee4b5eb213121c96063dec 艾达灵族装备 <AeldariArmourProficiency_Feature>
+#### eaa742e43d8e48a3a450c4d59431b03e 哀恸之刃 <DeathCultSwordCH2Unique_Item> [Unique]
+    EXCLUDE-if ANY
+        - 950565a69d144391897cdc0024747755 星际战士装备 <SpaceMarineEquipment_Proficiency>
+        - c7a53b43ac5f4f11a1aef612dd3f4f71 黑暗灵族装备 <DrukhariArmourProficiency_Feature>
+        - 590cb5c394ee4b5eb213121c96063dec 艾达灵族装备 <AeldariArmourProficiency_Feature>

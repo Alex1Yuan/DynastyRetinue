@@ -1,0 +1,126 @@
+铁壁 · 先锋队长    s0  痛苦尖叫[Unique]<BladeOfMalice_Item> | 自主攻击能量剑[Unique]<AutoStriking_PowerSword_Item> | 哀恸之刃[Unique]<DeathCultSwordCH2Unique_Item>
+铁壁 · 先锋队长    s1  碎骨霰弹枪[Unique]<PistolShotgunCH04Unique_Item>
+铁壁 · 先锋队长    s2  雕血师[Unique]<AetherRuneArmour_Item> | 血腥报复[Unique]<HolyPowerArmour_Item_Uralon> | 元帅的科罗努斯扩区护甲[Unique]<MarshallsArmouroftheKoronusExpanse_Item_Unlootable> | 血色审判[Unique]<Fleshbreaker_PowerArmor_Item>
+铁壁 · 先锋队长    s3  痛苦欢宴[Common]<ReinforcedGloves_Item>
+铁壁 · 先锋队长    s4  轻型机械手[Unique]<PortativeManipulator_Item>
+铁壁 · 先锋队长    s5  马尔皮裹尸布[Common]<IronCape_Item>
+铁壁 · 先锋队长    s6  惯性之靴[Common]<InertiaBoots_Item> | 虚空老兵战靴[Unique]<ChargerBoots_Item>
+铁壁 · 先锋队长    s7  聚焦发射器 (MK“猎人”)[Unique]<Augment_Eye_01_Shoot_Hunter_Item> | 聚焦发射器 (MK-II)[Unique]<Augment_Eye_01_Shoot_MK_2_Item> | 聚焦发射器 (MK-I)[Pattern]<Augment_Eye_01_Shoot_MK_1_Item>
+铁壁 · 先锋队长    s8  相位振荡器 (MK“战术家”)[Unique]<Augment_Leg_03_TractorPass_Tactic_Item> | 相位振荡器 (MK-II)[Unique]<Augment_Leg_03_TractorPass_MK_2_Item> | 相位振荡器 (MK-I)[Pattern]<Augment_Leg_03_TractorPass_MK_1_Item>
+铁壁 · 先锋队长    s9  大脑逆变器 (MK“特工”)[Pattern]<Augment_Systems_05_Logic_Adept_Item> | 大脑逆变器 (MK-II)[Unique]<Augment_Systems_05_Logic_MK_2_Item> | 大脑逆变器 (MK-I)[Pattern]<Augment_Systems_05_Logic_MK_1_Item>
+磐石 · 首席战士    s0  能量镐[Common]<PowerPick_Item>
+磐石 · 首席战士    s1  【瑞扎型】敌者之锤[Pattern]<FoehammerT2CH3_Item>
+磐石 · 首席战士    s2  叛军狙击步枪[Pattern]<SniperRifleT2_Item>
+磐石 · 首席战士    s3  雕血师[Unique]<AetherRuneArmour_Item> | 血腥报复[Unique]<HolyPowerArmour_Item_Uralon> | 元帅的科罗努斯扩区护甲[Unique]<MarshallsArmouroftheKoronusExpanse_Item_Unlootable> | 血色审判[Unique]<Fleshbreaker_PowerArmor_Item>
+磐石 · 首席战士    s4  决心头盔[Unique]<CalmingHelmet_Item>
+磐石 · 首席战士    s5  遗忘恩典[Common]<ServoCollar_Item>
+磐石 · 首席战士    s6  植入物手套[Common]<AugmentedlGloves_Item>
+磐石 · 首席战士    s7  不屈先锋之靴[Unique]<BeaconBoots_Item>
+磐石 · 首席战士    s8  英雄主义披风[Unique]<CloakOfHeroes_Item>
+磐石 · 首席战士    s9  饮血戒指[Unique]<Absorber_Item>
+磐石 · 首席战士    s10 双重护套[Common]<PairHolster_Item>
+磐石 · 首席战士    s11 聚焦发射器 (MK-II)[Unique]<Augment_Eye_01_Shoot_MK_2_Item> | 聚焦发射器 (MK-I)[Pattern]<Augment_Eye_01_Shoot_MK_1_Item>
+寂静之眼         s0  库诺斯之礼[Unique]<LongRifleUniqueCh4V2_Item> | 纱芮尔摇篮曲[Unique]<LongRifleUniqueCh3V1_Item> | 残酷命运[Unique]<GovernorsSniperRifle_Item> | 流浪者之兆[Common]<JaeQuest_LongRifle_Item> | 赫卡顿之眼[Unique]<AeldariScout_LongRifle_Item>
+寂静之眼         s1  弹道计算单筒镜[Common]<ManipulusHeadCh2_Item>
+寂静之眼         s2  雕血师[Unique]<AetherRuneArmour_Item>
+寂静之眼         s3  神射手护腕[Common]<StabilizerBracers_Item>
+寂静之眼         s4  活力项饰[Common]<InvigoratingResolve_Item>
+寂静之眼         s5  作战计划[Unique]<BattlePlan_Item>
+寂静之眼         s6  指挥官计时器[Common]<CommandersChrono_Item>
+寂静之眼         s7  暗影潜伏斗篷[Common]<ShadowguideCloak_Item>
+寂静之眼         s8  散兵战靴[Common]<SkirmisherBoots_Item>
+寂静之眼         s9  弹道计算器[Pattern]<Augment_Eye_04_Ricochet_Item>
+寂静之眼         s10 大脑逆变器 (MK“猎人”)[Unique]<Augment_Systems_05_Logic_Hunt_Item> | 大脑逆变器 (MK-II)[Unique]<Augment_Systems_05_Logic_MK_2_Item> | 大脑逆变器 (MK-I)[Pattern]<Augment_Systems_05_Logic_MK_1_Item>
+赏金 · 猎首      s0  赫卡顿之眼[Unique]<AeldariScout_LongRifle_Item> | 库诺斯之礼[Unique]<LongRifleUniqueCh4V2_Item> | 纱芮尔摇篮曲[Unique]<LongRifleUniqueCh3V1_Item> | 残酷命运[Unique]<GovernorsSniperRifle_Item> | 流浪者之兆[Common]<JaeQuest_LongRifle_Item>
+赏金 · 猎首      s1  弹道计算单筒镜[Common]<ManipulusHeadCh2_Item>
+赏金 · 猎首      s2  雕血师[Unique]<AetherRuneArmour_Item> | 附魔走私者护甲[Unique]<ModifiedRibSuit_Item> | 肋骨套装[Unique]<HeavyRibSuit_Item> | 【源自战争世界】远征板甲[Pattern]<CrusadePlateArmour_Item>
+赏金 · 猎首      s3  神射手护腕[Common]<StabilizerBracers_Item>
+赏金 · 猎首      s4  活力项饰[Common]<InvigoratingResolve_Item>
+赏金 · 猎首      s5  作战计划[Unique]<BattlePlan_Item>
+赏金 · 猎首      s6  指挥官计时器[Common]<CommandersChrono_Item>
+赏金 · 猎首      s7  暗影潜伏斗篷[Common]<ShadowguideCloak_Item>
+赏金 · 猎首      s8  散兵战靴[Common]<SkirmisherBoots_Item>
+赏金 · 猎首      s9  弹道计算器[Pattern]<Augment_Eye_04_Ricochet_Item>
+怒火 · 首席连射    s0  枪手头盔[Unique]<PrecisionFocus_Item>
+怒火 · 首席连射    s1  改装工匠护甲[Unique]<ModifiedArtificerArmour_Item>
+怒火 · 首席连射    s2  血腥礼赞[Unique]<ArgentaBolterUnique_Item> | 泪如泉涌[Pattern]<BolterCH05Unique_Item> | 英勇不灭[Pattern]<ArgentaStartBolter_Item> | 改良重型爆矢枪[Unique]<SarragusHeavyBolter_Item> | 重型爆矢枪[Common]<HeavyBolter_Item>
+怒火 · 首席连射    s3  愤怒化身[Unique]<FuriousAmulet_Item>
+怒火 · 首席连射    s4  力量念珠[Unique]<BeadOfMight_Item>
+怒火 · 首席连射    s5  胜利回响[Unique]<TransonicEmitter_Item>
+怒火 · 首席连射    s6  补偿器手套[Common]<CompensatorGloves_Item>
+怒火 · 首席连射    s7  战术背包[Unique]<TacticalBackpack_Item>
+怒火 · 首席连射    s8  散兵战靴[Common]<SkirmisherBoots_Item>
+怒火 · 首席连射    s9  聚焦发射器 (MK“士兵”)[Pattern]<Augment_Eye_01_Shoot_Soldier_Item>
+怒火 · 首席连射    s10 武器优化仪 (MK-II)[Unique]<Augment_Torso_03_MK_2_Item> | 武器优化仪 (MK“首席战士”)[Unique]<Augment_Torso_03_Archmilitant_Item> | 武器优化仪 (MK-I)[Pattern]<Augment_Torso_03_MK_1_Item>
+怒火 · 首席连射    s11 公义之手[Pattern]<Augment_Arm_Dogmatic_Item>
+圣焰 · 净罪修女    s0  泪如泉涌[Pattern]<BolterCH05Unique_Item>
+圣焰 · 净罪修女    s1  高级重型伐木枪[Unique]<AdvancedHeavyStubber_Item>
+圣焰 · 净罪修女    s2  命运之星[Unique]<SororitasPowerArmourFury_Item>
+圣焰 · 净罪修女    s3  呢喃低语[Unique]<VulnerabilityVisor_Item>
+圣焰 · 净罪修女    s4  受祝福的爆矢枪弹壳[Unique]<BlessedBolterCasing_Item>
+圣焰 · 净罪修女    s5  补偿器手套[Common]<CompensatorGloves_Item>
+圣焰 · 净罪修女    s6  战斗修女之靴[Common]<SororitasBoots_Item>
+圣焰 · 净罪修女    s7  防火斗篷[Common]<FireproofCape_Item>
+圣焰 · 净罪修女    s8  兴奋剂注射器[Unique]<StimulantInjector_Item>
+圣焰 · 净罪修女    s9  战祷之书[Unique]<TomeOfCombatPrayers_Item>
+圣焰 · 净罪修女    s10 聚焦发射器 (MK“士兵”)[Pattern]<Augment_Eye_01_Shoot_Soldier_Item>
+圣焰 · 净罪修女    s11 公义之手[Pattern]<Augment_Arm_Dogmatic_Item>
+亚空间审判者       s0  烈阳法杖[Pattern]<SolarStaff_Item>
+亚空间审判者       s1  致命信使[Unique]<Repeater_Longlas_Item>
+亚空间审判者       s2  雷霆主宰[Unique]<Coil_Reactive_PowerArmor_Item>
+亚空间审判者       s3  战术护目镜[Unique]<TacticalGoggles_Item>
+亚空间审判者       s4  活力项饰[Common]<InvigoratingResolve_Item>
+亚空间审判者       s5  行刑者臂铠[Unique]<EnhancementGloves_Item>
+亚空间审判者       s6  惯性之靴[Common]<InertiaBoots_Item>
+亚空间审判者       s7  马尔皮裹尸布[Common]<IronCape_Item>
+亚空间审判者       s8  灵能猛袭之手[Common]<HandOfOffense_Item>
+亚空间审判者       s9  弱点笔记[Unique]<NotesOnWeaknesses_Item>
+火杖行刑者        s0  烈阳法杖[Pattern]<SolarStaff_Item>
+火杖行刑者        s1  血色契约[Unique]<DeathCultKnifeUnique_Item>
+火杖行刑者        s2  反载具左轮手枪[Unique]<AntiVechicle_StubRevolver_Item>
+火杖行刑者        s3  雷霆主宰[Unique]<Coil_Reactive_PowerArmor_Item>
+火杖行刑者        s4  乔伊斯之眼[Unique]<SanctifiedHelmet_Item>
+火杖行刑者        s5  卡西娅的礼物[Unique]<LoveAmulet_Item>
+火杖行刑者        s6  行刑者臂铠[Unique]<EnhancementGloves_Item>
+火杖行刑者        s7  惯性之靴[Common]<InertiaBoots_Item>
+火杖行刑者        s8  马尔皮裹尸布[Common]<IronCape_Item>
+火杖行刑者        s9  灵能猛袭之手[Common]<HandOfOffense_Item>
+火杖行刑者        s10 虚空魔典[Unique]<GrimoireOfVoid_Item>
+谕令 · 灵能军官    s0  政委帽[Unique]<CommissarCap_Item>
+谕令 · 灵能军官    s1  吸血法杖[Common]<BlooddrinkingStaff_Item>
+谕令 · 灵能军官    s2  星尘围巾[Unique]<StarmistScarf_Item>
+谕令 · 灵能军官    s3  审判庭的黑色图章[Common]<InquisitorGreaterRing_Item>
+谕令 · 灵能军官    s4  指挥官笔记[Unique]<CommandersNotes_Item>
+谕令 · 灵能军官    s5  深渊织网者手套[Common]<AbyssWeaverGloves_Item>
+谕令 · 灵能军官    s6  悯慈的礼物[Unique]<TacticianCloak_Item>
+谕令 · 灵能军官    s7  腐朽之靴[Common]<BootsOfDecay_Item>
+铁律 · 政委军官    s0  外围面甲[Unique]<PeripheralVisor_Item>
+铁律 · 政委军官    s1  人类拥护者[Unique]<PurityOfHumanity_PowerArmor_Item>
+铁律 · 政委军官    s2  反载具左轮手枪[Unique]<AntiVechicle_StubRevolver_Item>
+铁律 · 政委军官    s3  活力勋章[Unique]<MedalOfInspiration_Item>
+铁律 · 政委军官    s4  作战计划[Unique]<BattlePlan_Item>
+铁律 · 政委军官    s5  指挥官计时器[Common]<CommandersChrono_Item>
+铁律 · 政委军官    s6  神射手护腕[Common]<StabilizerBracers_Item>
+铁律 · 政委军官    s7  行商浪人斗篷[Unique]<LeadersCloak_Item>
+
+
+===== 首选撞车 (same first choice on >1 elite) =====
+c1c07d80309c47de99b055ba9eb43a07 雕血师[Unique] : [('铁壁 · 先锋队长', 2), ('磐石 · 首席战士', 3), ('寂静之眼', 2), ('赏金 · 猎首', 2)]
+819721a3da0740b6943b36f5d3d6dfd3 马尔皮裹尸布[Common] : [('铁壁 · 先锋队长', 5), ('亚空间审判者', 7), ('火杖行刑者', 8)]
+b5a23e5ce00248efb454d07871f5b3d4 惯性之靴[Common] : [('铁壁 · 先锋队长', 6), ('亚空间审判者', 6), ('火杖行刑者', 7)]
+e202201c375a45b697d7bba5ac68c6ee 弹道计算单筒镜[Common] : [('寂静之眼', 1), ('赏金 · 猎首', 1)]
+1b447777d38f43baa643fc2e915d6ef3 神射手护腕[Common] : [('寂静之眼', 3), ('赏金 · 猎首', 3), ('铁律 · 政委军官', 6)]
+2c37192f73bf4b89abd89d12e4040d75 活力项饰[Common] : [('寂静之眼', 4), ('赏金 · 猎首', 4), ('亚空间审判者', 4)]
+50c5be09ff9942969db57298b1beb4cb 作战计划[Unique] : [('寂静之眼', 5), ('赏金 · 猎首', 5), ('铁律 · 政委军官', 4)]
+47b52da77a194da2837e6d6ebfb9e918 指挥官计时器[Common] : [('寂静之眼', 6), ('赏金 · 猎首', 6), ('铁律 · 政委军官', 5)]
+774361e6945849889568fae24be57450 暗影潜伏斗篷[Common] : [('寂静之眼', 7), ('赏金 · 猎首', 7)]
+9dea103b7d9d41238a318142cf057273 散兵战靴[Common] : [('寂静之眼', 8), ('赏金 · 猎首', 8), ('怒火 · 首席连射', 8)]
+fd1da14cd1f54ef0a280ce1160dde3e6 弹道计算器[Pattern] : [('寂静之眼', 9), ('赏金 · 猎首', 9)]
+e97a0c7f8b9544c4a53b2ff78d57aa45 补偿器手套[Common] : [('怒火 · 首席连射', 6), ('圣焰 · 净罪修女', 5)]
+e807b19418564d1a8dedcc8b7def2d5b 聚焦发射器 (MK“士兵”)[Pattern] : [('怒火 · 首席连射', 9), ('圣焰 · 净罪修女', 10)]
+846a2ae351a34cfd921d5f15d9c2445c 公义之手[Pattern] : [('怒火 · 首席连射', 11), ('圣焰 · 净罪修女', 11)]
+7da9005aaf4d49969ff989cf0b1619cb 烈阳法杖[Pattern] : [('亚空间审判者', 0), ('火杖行刑者', 0)]
+ea60e97cfbe14231b8fdb8e1702b5f70 雷霆主宰[Unique] : [('亚空间审判者', 2), ('火杖行刑者', 3)]
+f3c90d709b2b4bf58da8fc6704e08fdb 行刑者臂铠[Unique] : [('亚空间审判者', 5), ('火杖行刑者', 6)]
+354cbd5a61c440aaa2f23c392467a09b 灵能猛袭之手[Common] : [('亚空间审判者', 8), ('火杖行刑者', 9)]
+4127a489515c4b9b9181d9b61fd33ec7 反载具左轮手枪[Unique] : [('火杖行刑者', 2), ('铁律 · 政委军官', 2)]

@@ -87,6 +87,8 @@ namespace KgdRetinue
             // v0.3.5 的判据是「有任意一件就整套跳过」，结果精英用的 lv45 预设阿贝拉德
             // 自带装备里只要撞上一件，整套毕业装备就一件都不发了。改成逐件。
             var worn = WornGuids(body);
+            // guid -> 中文名，事后核对用（见 using 块结束处）
+            var placedGuids = new Dictionary<string, string>();
             var used = new HashSet<ItemSlot>();
 
             // ★★ 全程开 IgnoreLock ★★
@@ -133,6 +135,7 @@ namespace KgdRetinue
                         // 回退过程要记下来 —— 否则"最后用了哪件、前面为什么不行"全看不见
                         if (tried.Count > 0)
                             Main.Log("    候选回退 -> " + bp.Name + "  (先试过: " + string.Join("; ", tried.ToArray()) + ")");
+                        placedGuids[guid.Trim()] = bp.Name;
                         placed = true;
                         break;
                     }
@@ -146,6 +149,29 @@ namespace KgdRetinue
                 }
             }
             }   // using IgnoreLock
+
+            // ★ 事后核对：装上去的有没有又被挤掉 ★
+            // 实测踩过一次：铁壁主手装了双手雷霆锤「崇高虔诚」，随后副手塞霰弹枪，
+            // 游戏为腾位置把双手武器摘了 —— 但日志里那一格早已记成"装上"，
+            // 于是日志说 9 件全好、游戏里主武器没了，白白误导了一轮排查。
+            // 这里在全部发完之后回读一次实际穿戴，把"装上又没了"的单独报出来。
+            try
+            {
+                var wornAfter = WornGuids(body);
+                var lost = new List<string>();
+                foreach (var kv in placedGuids)
+                    if (!wornAfter.Contains(kv.Key)) lost.Add(kv.Value);
+                if (lost.Count > 0)
+                {
+                    Main.LogError("  ⚠ 装上后又被挤掉 " + lost.Count + " 件: " + string.Join(", ", lost.ToArray())
+                                  + "  —— 多半是双手武器与副手冲突，或同槽位后发的把先发的顶了。"
+                                  + "请在 archetypes.json 里调整该格的候选顺序。");
+                    ok -= lost.Count;
+                    fail += lost.Count;
+                    foreach (var l in lost) rejected.Add(l + " ← 装上后被后续装备挤掉");
+                }
+            }
+            catch (Exception e) { Main.LogError("  装备事后核对失败: " + e.Message); }
 
             if (ok == 0 && already > 0 && fail == 0 && miss == 0) return 0;   // 全都已在身上，安静退出
 
@@ -299,9 +325,17 @@ namespace KgdRetinue
                     {
                         var set = sets[(cur + k) % sets.Count];
                         if (set == null) continue;
-                        if (bp is BlueprintItemShield) { Add(list, set.SecondaryHand, used); continue; }
+                        if (bp is BlueprintItemShield)
+                        {
+                            // 盾进副手，但主手是双手武器时这一组放不下
+                            if (!MainIsTwoHanded(set)) Add(list, set.SecondaryHand, used);
+                            continue;
+                        }
+
+                        // 双手武器只能进主手 —— 塞副手要么被拒、要么把主手顶掉
+                        bool twoH = IsTwoHanded(bp);
                         Add(list, set.PrimaryHand, used);
-                        Add(list, set.SecondaryHand, used);
+                        if (!twoH && !MainIsTwoHanded(set)) Add(list, set.SecondaryHand, used);
                     }
                 }
                 return list;
@@ -534,5 +568,32 @@ namespace KgdRetinue
         }
 
         private static bool NotEmpty(string[] a) { return a != null && a.Length > 0; }
+
+        /// <summary>这件蓝图是不是双手武器。</summary>
+        private static bool IsTwoHanded(BlueprintItem bp)
+        {
+            var w = bp as BlueprintItemWeapon;
+            return w != null && w.IsTwoHanded;
+        }
+
+        /// <summary>
+        /// 这一组的主手上放着双手武器吗？
+        ///
+        /// ★为什么要这个判断★ 实测：法杖/雷霆锤这类双手武器装进套装1主手后，
+        /// 副武器被 CandidateSlots 顺位塞进**同一组的副手**，游戏为腾位置直接把双手武器摘掉 ——
+        /// 日志却已经把它记成"装上"，是个静默失败（v0.14.1 的事后核对才把它抓出来）。
+        /// 正确的构筑姿势是**副武器放套装 2 主手**，靠切换套组用，而不是占同组副手。
+        /// 所以这里让本组副手在主手为双手武器时直接出局，候选自然落到下一组。
+        /// </summary>
+        private static bool MainIsTwoHanded(HandsEquipmentSet set)
+        {
+            try
+            {
+                if (set == null || set.PrimaryHand == null) return false;
+                var it = set.PrimaryHand.MaybeItem;
+                return it != null && IsTwoHanded(it.Blueprint);
+            }
+            catch { return false; }
+        }
     }
 }

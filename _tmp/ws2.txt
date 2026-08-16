@@ -1,0 +1,16 @@
+gap13  2H=1 Dmg=20 MaxDmg=30 Pen=20 DodgePen=0 AddHit=0 Recoil=30 Dist=24 Ammo=14 RoF=4
+        0adaa28e654e4fd6a74830eed3f63390 血腥礼赞 <ArgentaBolterUnique_Item> [Unique]
+gap13  2H=1 Dmg=10 MaxDmg=11 Pen=20 DodgePen=0 AddHit=0 Recoil=50 Dist=20 Ammo=80 RoF=10
+        594030b15093416c925dabc415eda101 高级重型伐木枪 <AdvancedHeavyStubber_Item> [Unique]
+gap13  2H=1 Dmg=12 MaxDmg=18 Pen=25 DodgePen=0 AddHit=0 Recoil=35 Dist=24 Ammo=60 RoF=6
+        dec66b3861c64c088c5f38fd49024d44 改良重型爆矢枪 <SarragusHeavyBolter_Item> [Unique]
+gap13  2H=1 Dmg=27 MaxDmg=41 Pen=25 DodgePen=0 AddHit=0 Recoil=25 Dist=24 Ammo=14 RoF=4
+        1ba5fc1726374b2a856b53ca172a3460 泪如泉涌 <BolterCH05Unique_Item> [Pattern]
+gap13  2H=1 Dmg=6 MaxDmg=10 Pen=15 DodgePen=0 AddHit=0 Recoil=40 Dist=24 Ammo=14 RoF=4
+        0f1194cdb530486f83be00c653ccab49 英勇不灭 <ArgentaStartBolter_Item> [Pattern]
+gap13  2H=1 Dmg=6 MaxDmg=10 Pen=25 DodgePen=0 AddHit=0 Recoil=40 Dist=24 Ammo=96 RoF=8
+        b11dc12ae9e943c29cce0aa7d52bf980 重型爆矢枪 <HeavyBolter_Item> [Common]
+gap13  2H=1 Dmg=9 MaxDmg=14 Pen=15 DodgePen=0 AddHit=0 Recoil=25 Dist=24 Ammo=14 RoF=3
+        2e6f4680bfcc45349d02830f518e04a3 爆矢枪 <Bolter_Item> [Common]
+gap13  2H=1 Dmg=4 MaxDmg=7 Pen=15 DodgePen=0 AddHit=0 Recoil=40 Dist=18 Ammo=120 RoF=10
+        053074cada484310a920573477ebc7ed 重型伐木枪 <HeavyStubber_Item> [Common]
