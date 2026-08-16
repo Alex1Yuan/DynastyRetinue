@@ -79,10 +79,34 @@ namespace KgdRetinue
         /// </summary>
         public static string[] GuardNamePool;
 
-        public static ChainProbe.Archetype[] All        {
+        /// <summary>
+        /// 上一次加载失败是不是**暂时性**的（蓝图还没就绪）。是就不缓存失败，下次访问重试。
+        ///
+        /// ★这是本机真实发生过的一次事故★（kgd_log.txt 16:18:15，v0.5.5）：
+        ///     分型「近战 Melee」里的 career path 解析不到: 974496d72fbe...
+        ///     …四条全部解析不到…
+        ///     archetypes.json 里没有一条有效分型，回退默认。
+        /// 那些 GUID 到今天都没改过、现在照样能载入 —— 所以不是数据错，是**时序**：
+        /// 有人在蓝图缓存就绪之前先读了 Archetypes.All。
+        ///
+        /// 而旧写法是 `if (!_tried) { _tried = true; _loaded = LoadTemplate(); }` ——
+        /// **_tried 在知道结果之前就置了 true**，于是一次过早访问会让整个会话
+        /// 永久退回内置 4 分型（无精英、无装备表、无人名池），再也不重试。
+        /// 玩家看到的是"mod 装了但什么都不对"，而日志里那四行 ERROR 早就滚没了。
+        /// </summary>
+        private static bool _transientFail;
+
+        public static ChainProbe.Archetype[] All
+        {
             get
             {
-                if (!_tried) { _tried = true; _loaded = LoadTemplate(); }
+                if (!_tried || _transientFail)
+                {
+                    _loaded = LoadTemplate();
+                    // 成功、或失败但属于"文件缺失/格式错"这类**不会自愈**的，才封盘。
+                    // 蓝图解析不到属于会自愈的，留着下次重试。
+                    _tried = (_loaded != null) || !_transientFail;
+                }
                 return _loaded ?? ChainProbe.Archetypes;
             }
         }
@@ -90,13 +114,14 @@ namespace KgdRetinue
         /// <summary>面板上的「重载模板」按钮用 —— 改完 json 不用重启游戏。</summary>
         public static void Reload()
         {
-            _tried = false; _loaded = null;
+            _tried = false; _loaded = null; _transientFail = false;
             var a = All;
             Main.Log("分型模板已重载：" + a.Length + " 个 —— " + string.Join(" / ", a.Select(x => x.Name).ToArray()));
         }
 
         private static ChainProbe.Archetype[] LoadTemplate()
         {
+            _transientFail = false;
             try
             {
                 var path = TemplatePath;
@@ -184,7 +209,20 @@ namespace KgdRetinue
                     list.Add(a);
                 }
 
-                if (list.Count == 0) { Main.LogError("archetypes.json 里没有一条有效分型，回退默认。"); return null; }
+                if (list.Count == 0)
+                {
+                    // ★区分两种"没有有效分型"★
+                    // json 结构是好的、条目也在，却一条都没通过 —— 那几乎一定是
+                    // career path 解析不到，而那是**会自愈**的（蓝图缓存还没就绪）。
+                    // 标成暂时性失败，下次访问重试，别把整个会话钉死在内置默认上。
+                    _transientFail = arr.Count > 0;
+                    Main.LogError("archetypes.json 里没有一条有效分型，本次回退默认。"
+                                + (_transientFail
+                                   ? "　<注意：多半是蓝图缓存还没就绪，下次访问会自动重试；"
+                                     + "如果读档之后仍然是这条，才是 GUID 真的错了>"
+                                   : ""));
+                    return null;
+                }
                 Main.Log("已从 archetypes.json 载入 " + list.Count + " 个分型。");
                 return list.ToArray();
             }

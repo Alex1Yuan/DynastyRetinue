@@ -952,7 +952,13 @@ namespace KgdRetinue
         public int ArchetypeIndex = 0;
         // 毕业装备：凭空生成（不动玩家仓库）。精英拿 gear，普通拿玩家自配的 playerGear
         public bool EquipGraduationGear = true;
-        // 精英：每条路线限一个，且要先有卫兵练到 T3 才解锁
+        /// <summary>
+        /// 每条分型里**每种精英**各允许几个（不是"每条分型总共几个"）。
+        /// 默认 1 = 每种精英一个；一条分型有 2 种精英，所以默认每条分型能有 2 名。
+        /// 实际判据在 GearTool.cs:533 —— `EliteCount(arch) >= cap * arch.Elites.Length`。
+        /// ★这行注释原来写的是"每条路线限一个"，和代码不符★ 语义没错、注释错了。
+        /// 另外要先有卫兵练到 T3 才解锁（EliteIgnoreUnlock 可跳过）。
+        /// </summary>
         public int EliteLimitPerArchetype = 1;
         public bool UnlockEliteLimit = false;
         public bool EliteIgnoreUnlock = false;
