@@ -859,6 +859,9 @@ namespace KgdRetinue
         /// <summary>换船模装好武器后，自动重拍改装界面里那条船。
         /// ShipDollRoom 的展示模型是一次性哑拷贝，不自动跟新武器美术。</summary>
         public bool ShipDollResnap = true;
+        /// <summary>同一挂点被多件武器的美术抢时，优先显示光矛（其次新星炮/宏炮，鱼雷垫底）。
+        /// vanilla 是先毁后建、只能活一件，谁赢本来取决于遍历顺序、玩家控制不了。</summary>
+        public bool ShipArtPreferLance = true;
         /// <summary>在 NPC 对话里加「船坞改装」两条选项（用废料换巡洋 / 大巡）。</summary>
         public bool ShipDialogEntry = true;
         public int ShipPriceCruiser = 500;

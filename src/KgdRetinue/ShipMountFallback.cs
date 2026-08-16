@@ -225,6 +225,14 @@ namespace KgdRetinue
                 if (ws == null) return null;
 
                 var need = new System.Collections.Generic.HashSet<string>(StringComparer.Ordinal);
+                // ★只补 vanilla 船体**真的会摆**的那几种★
+                // v0.40.0 改成"照美术要求补"之后，给鱼雷补出了 TorpedoTubes 挂点，
+                // 屏幕上多了一坨没贴图的白色占位体 —— 玩家实测。
+                // 回头看：**没有任何一条 vanilla 船体有 TorpedoTubes 挂点**，
+                // 那不是遗漏而是设计：鱼雷是船体开口，不该有外挂炮塔，
+                // 它那份美术就是个占位。同理 AugurArray / LandingBays / PlasmaDrive
+                // 是结构件不是武器。所以取交集，别把占位体请出来。
+                var allowed = new System.Collections.Generic.HashSet<string>(WeaponSlotTypes, StringComparer.Ordinal);
                 foreach (var slot in ws)
                 {
                     object item = null;
@@ -240,7 +248,9 @@ namespace KgdRetinue
                         foreach (var r in req)
                         {
                             var t = Get(r, "SlotType");
-                            if (t != null) need.Add(t.ToString());
+                            if (t == null) continue;
+                            var ts = t.ToString();
+                            if (allowed.Contains(ts)) need.Add(ts);
                         }
                     }
                 }
