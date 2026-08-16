@@ -94,6 +94,16 @@ namespace KgdRetinue
 
         // ---------- IUnitDeathHandler ----------
 
+        /// <summary>
+        /// ★ 接口名在骗人 ★ IUnitDeathHandler.HandleUnitDeath **倒地也会触发**：
+        ///     UnitLifeController.cs:135-141
+        ///         if (newLifeState == Unconscious || newLifeState == Dead)
+        ///             EventBus.RaiseEvent(h =&gt; h.HandleUnitDeath(unit));
+        /// v0.34.0 的实现没查生命状态，把"倒地"当成"死了"，于是**精英一倒地就被我
+        /// 摘名册 + 销毁** —— 玩家实测：日志同时打出「★精英真的死了★」和
+        /// 「生命状态 = Unconscious」，两句自相矛盾，正是这个 bug 的签名。
+        /// 倒地豁免其实一直是生效的，坏的是这里。
+        /// </summary>
         public void HandleUnitDeath(AbstractUnitEntity unitEntity)
         {
             try
@@ -102,6 +112,13 @@ namespace KgdRetinue
                 var g = unitEntity as BaseUnitEntity;
                 if (g == null || !RetinueRegistry.IsGuard(g)) return;
 
+                // ★第一件事★ 真死了才往下走。倒地的什么都不做 ——
+                // 它还在名册上、还占名额、还能被救起来，这正是精英该有的行为。
+                bool dead;
+                try { dead = g.LifeState != null && g.LifeState.IsDead; }
+                catch { dead = false; }
+                if (!dead) return;
+
                 int ai = RetinueRegistry.ArchetypeOf(g);
                 var arch = Archetypes.Get(ai >= 0 ? ai : 0);
                 bool isElite = false;
@@ -109,8 +126,8 @@ namespace KgdRetinue
 
                 if (isElite)
                 {
-                    // 精英走倒地流程，这里不该被调到（除非豁免没挂上或被 ScriptedKill 强杀）。
-                    // 报一条，方便发现"以为开了倒地其实没生效"。
+                    // 精英走到这里 = 真的死了。豁免没挂上，或者被剧本 ScriptedKill 强杀
+                    // （CalculateLifeState 第一条：ScriptedKill 直接 Dead，豁免拦不住）。
                     Main.LogError("[死亡规则] ★精英 " + Name(g) + " 真的死了★ —— "
                                   + "倒地豁免没生效或被剧本强杀。它已从名册移除，"
                                   + "如果这不是预期，请把这条连同上下文发给作者。");
