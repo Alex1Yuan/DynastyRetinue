@@ -250,6 +250,41 @@ namespace KgdRetinue
         /// 修法：Destroy 之前先摘掉 UnitPartCompanion，TryUnrecruit 就会返回 false。
         /// 并且结束后**复查**而不是自报成功 —— 原来的日志是会骗人的。
         /// </summary>
+        /// <summary>
+        /// 把**一名**卫兵移出名册并销毁。给"普通卫兵永久死亡"用。
+        ///
+        /// 拆解顺序和 DismissAll 一致，两处都不能省：
+        ///   UnitPartFollowUnit  —— OnDetach 才会撤销队长侧的 AddIndependentFollower 登记
+        ///   UnitPartCompanion   —— 不摘的话 TryUnrecruit 会取消销毁
+        /// 销毁**延迟两帧**：死亡事件是在伤害结算途中发出来的，
+        /// 当场销毁会打断原版的死亡演出/掉落流水线。
+        /// </summary>
+        public static void RemoveOne(BaseUnitEntity g)
+        {
+            if (g == null) return;
+            try
+            {
+                // 先摘掉身份标记 —— 这一步立刻生效，名额当场释放，
+                // 不用等销毁完成（销毁是延迟的）。
+                try { var cg = g.CombatGroup; if (cg != null) cg.Id = "kgd_dead_" + Guid.NewGuid().ToString("N").Substring(0, 8); }
+                catch { }
+                try { g.Remove<UnitPartFollowUnit>(); } catch { }
+                try { g.Remove<UnitPartCompanion>(); } catch { }
+            }
+            catch (Exception e) { Main.LogError("[名册] 拆解失败: " + e.Message); }
+
+            Deferred.NextFrames(2, () =>
+            {
+                try
+                {
+                    g.IsInGame = false;
+                    Game.Instance.EntityDestroyer.Destroy(g);
+                    Game.Instance.EntityDestroyer.Tick();
+                }
+                catch (Exception e) { Main.LogError("[名册] 销毁失败: " + e.Message); }
+            });
+        }
+
         public static int DismissAll()
         {
             var targets = All();

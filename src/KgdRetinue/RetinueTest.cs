@@ -192,6 +192,17 @@ namespace KgdRetinue
             //    Player.Party.Contains(...)，卫兵不在队伍里 ⇒ 变 false，必须自己置回
             try { g.IsInGame = true; } catch (Exception e) { Main.LogError("IsInGame: " + e.Message); }
 
+            // a2) 死亡规则 —— 精英挂倒地豁免。
+            //     必须每次过图重挂：PartMechanicFeatures 整类零 [JsonProperty]，
+            //     OnPrePostLoad 强制 Initialize()，Retain 的计数器读档后归零。
+            try
+            {
+                int _ai = RetinueRegistry.ArchetypeOf(g);
+                var _arch = Archetypes.Get(_ai >= 0 ? _ai : Main.Settings.ArchetypeIndex);
+                DeathRules.ApplyLifeRule(g, GearTool.EliteDefOf(g, _arch) != null);
+            }
+            catch (Exception e) { Main.LogError("死亡规则: " + e.Message); }
+
             // b) 自愈 —— ToyBox 的 Party Editor 可能改了 CompanionState。
             //    发现不是 ExCompanion 就重设，并补回被覆写的 CombatGroup.Id。
             try

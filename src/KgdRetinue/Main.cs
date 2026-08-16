@@ -30,6 +30,7 @@ namespace KgdRetinue
             PatchAllSafe(HarmonyInstance, System.Reflection.Assembly.GetExecutingAssembly());
 
             RetinueLifecycle.Subscribe();
+            DeathRules.Subscribe();
 
             // ★必须在载入时装，不能懒装★
             // m_CustomPrefabGuid 进存档，冷启动读档根本不会走 Apply()；
@@ -146,10 +147,11 @@ namespace KgdRetinue
         private static bool OnToggle(UnityModManager.ModEntry modEntry, bool value)
         {
             Enabled = value;
-            if (value) RetinueLifecycle.Subscribe();
+            if (value) { RetinueLifecycle.Subscribe(); DeathRules.Subscribe(); }
             else
             {
                 RetinueLifecycle.Unsubscribe();
+                DeathRules.Unsubscribe();
                 RecruitWindow.Shutdown();   // 连宿主 GameObject 一起销毁，不留残留
                 UI.RetinueUI.Shutdown();    // 新的 uGUI 窗口：销毁 Canvas 根
                 UnitPortraits.Cleanup();    // 把 hold 住的立绘资源还回去
@@ -443,6 +445,9 @@ namespace KgdRetinue
             Settings.GuardKillFeedsOwnPool = GUILayout.Toggle(Settings.GuardKillFeedsOwnPool, "卫兵杀敌也给卫队池加分（不动你那份，否则卫队只出力不进账）");
             Settings.GuardPsykerNoVeil = GUILayout.Toggle(Settings.GuardPsykerNoVeil, "卫兵灵能不推高亚空间威胁（帷幕是区域唯一值、做不了独立池，只能选计不计入）");
             Settings.NoCameraFollowGuards = GUILayout.Toggle(Settings.NoCameraFollowGuards, "卫兵行动时镜头不跟随（含技能演出特写；你自己队伍不受影响）");
+            Settings.EliteCanBeDowned = GUILayout.Toggle(Settings.EliteCanBeDowned,
+                "精英倒地可救（0 血进昏迷而非死亡）　<color=#aaaaaa>普通卫兵始终永久死亡 —— "
+                + "那是原版对 ExCompanion 的默认行为（UnitLifeController.CalculateLifeState），不需要我们做任何事</color>");
             GUILayout.Label("<b>解除限制</b>　<color=#aaaaaa>三件互不相干的事，分开控制</color>");
             GUILayout.BeginHorizontal();
             Settings.UnlockPfGate   = GUILayout.Toggle(Settings.UnlockPfGate,
@@ -837,6 +842,9 @@ namespace KgdRetinue
         public int XpCatchUpMax = 250;
         /// <summary>落后多少级时吃满上限。中间线性插值。</summary>
         public int XpCatchUpSpan = 15;
+        /// <summary>精英倒地可救（0 血进昏迷而非死亡）。普通卫兵始终永久死亡 ——
+        /// 那是原版对 ExCompanion 的默认行为，不需要我们做任何事。</summary>
+        public bool EliteCanBeDowned = true;
         public KeyCode SpawnKey = KeyCode.F7;
         // 遣散 = 永久销毁，默认不给热键，只能从面板点
         public KeyCode DespawnKey = KeyCode.None;
