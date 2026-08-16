@@ -143,6 +143,7 @@ namespace KgdRetinue
             var have = new System.Collections.Generic.HashSet<string>();
             Transform dorsal = null, anyT = null;
             float? dorsalLocalY = null;
+            float? minBroadsideY = null;
             float pxSum = 0f, pySum = 0f, sxSum = 0f, sySum = 0f;
             int pN = 0, sN = 0;
             float zMin = float.MaxValue, zMax = float.MinValue;
@@ -161,6 +162,8 @@ namespace KgdRetinue
                 if (l.z > zMax) zMax = l.z;
                 if (ty == "Port")           { pxSum += l.x; pySum += l.y; pN++; }
                 else if (ty == "Starboard") { sxSum += l.x; sySum += l.y; sN++; }
+                if (ty == "Port" || ty == "Starboard")
+                    if (!minBroadsideY.HasValue || l.y < minBroadsideY.Value) minBroadsideY = l.y;
             }
             if (anyT == null)
             {
@@ -192,21 +195,23 @@ namespace KgdRetinue
             // 船体中线 X：用左右舷挂点反推（它们本来就骑在中线两侧）
             float cx = (pN > 0 && sN > 0) ? (pxSum / pN + sxSum / sN) * 0.5f : (hasBounds ? bb.center.x : 0f);
 
-            // ★ 高度 Y：舰首炮取**船体下表面**，不是船脊 ★
-            // 这门光矛的美术是吊装式的 —— 安装板在上、炮体从板下挂出来。
-            // 锚点放在船脊（顶面）等于把"该悬在下面的东西"架在了顶上，板子会翘出船体；
-            // 放在下表面，炮体自然垂在船腹下，和原版 Dictator 的舰首炮观感一致。
+            // ★ 高度 Y：取**舷炮挂点里最低的那个** ★
+            // 为什么不用包围盒底：那是**整艘船的全局最小值**，落在舯部龙骨上；
+            // 而船艏那一段的底面比它高不少，把舰首炮摆到全局底部就掉到船体外面去了
+            //（实测：炮悬在船腹下方的空中）。
+            // 舷炮挂点是美术手工摆在船壳侧面的真实点，按构造一定贴着船体，
+            // 取其中最低的一个 ⇒ 落在下层炮甲板那条线上，正是吊装式舰首炮该在的高度。
             //
-            // 演进记录（每一步都是实测反馈驱动的，别退回去）：
-            //   v0.28.0 左右舷平均高度 → 炮飘在船头下方虚空（腰线 + 最前端 = 撞角上方的空隙）
-            //   v0.28.1 船脊高度       → 位置对了，但底座板翘在船体外
-            //   v0.29.3 船体下表面     → 吊装式炮体垂在船腹下
-            // 拿不到包围盒时退回船脊 / 左右舷均值，那两条至少保证在船体附近。
+            // 演进记录（每步都是实测反馈驱动的，别退回去）：
+            //   v0.28.0 左右舷**平均**高度 + 只回收 4%  → 炮飘在撞角上方的虚空
+            //   v0.28.1 船脊高度                        → 位置对了，但底座板翘在船体外
+            //   v0.29.2 回收 12% → 18%                  → 前后贴上了
+            //   v0.29.3 包围盒底 + 10%                  → 太低，炮掉到船腹下方的空中
+            //   v0.29.6 舷炮最低点                      → 贴在下层炮甲板线上
             float cy;
-            if (hasBounds)              cy = bb.min.y + bb.size.y * 0.10f;
+            if (minBroadsideY.HasValue)     cy = minBroadsideY.Value;
             else if (dorsalLocalY.HasValue) cy = dorsalLocalY.Value;
-            else if (pN > 0 && sN > 0)  cy = (pySum / pN + sySum / sN) * 0.5f;
-            else                        cy = 0f;
+            else                            cy = hasBounds ? bb.center.y : 0f;
 
             if (axisOk && hasBounds)
             {

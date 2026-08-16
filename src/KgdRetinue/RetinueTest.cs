@@ -359,44 +359,121 @@ namespace KgdRetinue
         public static void ApplyName(BaseUnitEntity g)
         {
             var d = g.GetOrCreate<PartUnitDescription>();
-            if (!string.IsNullOrEmpty(d.CustomName)) return;   // 已经有名字，不动
-
-            string prefix = Main.Settings.GuardNamePrefix;
-            if (string.IsNullOrEmpty(prefix)) prefix = "卫兵";
 
             int ai = RetinueRegistry.ArchetypeOf(g);
             var arch = Archetypes.Get(ai >= 0 ? ai : Main.Settings.ArchetypeIndex);
-            string an = (arch != null && !string.IsNullOrEmpty(arch.Name)) ? arch.Name : "";
 
             // 精英有专属名字，不带编号 —— 每种精英只有一个，编号没意义
             var _ed = GearTool.EliteDefOf(g, arch);
             if (_ed != null && !string.IsNullOrEmpty(_ed.Name))
             {
+                if (d.CustomName == _ed.Name) return;
                 d.SetName(_ed.Name);
                 Main.Log("  改名(精英): " + (g.Blueprint != null ? g.Blueprint.CharacterName : "?") + " -> " + _ed.Name);
                 return;
             }
 
-            // 扫一遍已有编号取最大值
+            // ---- 普通卫兵：按阶位取名字 ----
+            // 分型可以在 archetypes.json 里配 guardNames（三档，T1/T2/T3）；
+            // 没配就退回旧的「前缀·分型名 编号」。
+            string baseName = TierBaseName(arch, g);
+
+            // ★升阶要换名，但编号必须保留★
+            // 旧实现是「有名字就直接 return」，那样卫兵会一辈子叫 T1 的称呼。
+            // 这里的判据：现有名字的**基名**是本分型三档中的某一档 ⇒ 是我们起的，
+            // 可以安全改写；否则认为玩家手动改过，一个字都不动。
+            string cur = d.CustomName;
+            if (!string.IsNullOrEmpty(cur))
+            {
+                int num;
+                string curBase = SplitTrailingNumber(cur, out num);
+                if (curBase == baseName) return;                    // 已经是当前档，不动
+                if (IsOurGuardName(arch, curBase))
+                {
+                    string renamed = num > 0 ? baseName + " " + num : baseName;
+                    d.SetName(renamed);
+                    Main.Log("  升阶改名: " + cur + " -> " + renamed);
+                    return;
+                }
+                return;                                             // 玩家自己改的，尊重它
+            }
+
+            // 扫一遍已有编号取最大值。★按"是不是我们起的名"来认，不再按前缀匹配★
+            // 前缀匹配在换成 guardNames 之后就失效了（名字不再以 GuardNamePrefix 开头）。
             int max = 0;
             foreach (var other in RetinueRegistry.All())
             {
                 if (ReferenceEquals(other, g)) continue;
                 string n = null;
                 try { var od = other.GetOptional<PartUnitDescription>(); if (od != null) n = od.CustomName; } catch { }
-                if (string.IsNullOrEmpty(n) || !n.StartsWith(prefix, StringComparison.Ordinal)) continue;
-                // 取结尾的连续数字
-                int end = n.Length, start = end;
-                while (start > 0 && n[start - 1] >= '0' && n[start - 1] <= '9') start--;
-                int val;
-                if (start < end && int.TryParse(n.Substring(start, end - start), out val) && val > max) max = val;
+                if (string.IsNullOrEmpty(n)) continue;
+                int v;
+                SplitTrailingNumber(n, out v);
+                if (v > max) max = v;
             }
 
-            string name = string.IsNullOrEmpty(an)
-                        ? prefix + " " + (max + 1)
-                        : prefix + "·" + an + " " + (max + 1);
+            string name = baseName + " " + (max + 1);
             d.SetName(name);
             Main.Log("  改名: " + (g.Blueprint != null ? g.Blueprint.CharacterName : "?") + " -> " + name);
+        }
+
+        /// <summary>该卫兵当前阶位对应的基名（不含编号）。</summary>
+        private static string TierBaseName(ChainProbe.Archetype arch, BaseUnitEntity g)
+        {
+            string an = (arch != null && !string.IsNullOrEmpty(arch.Name)) ? arch.Name : "";
+            try
+            {
+                if (arch != null && arch.GuardNames != null && arch.GuardNames.Length > 0)
+                {
+                    // 阶位按**卫兵自己的等级**推，不是玩家的 —— 名字该跟着它自己的成长走
+                    int lv = g.Progression != null ? g.Progression.CharacterLevel : 1;
+                    int t = lv >= 36 ? 3 : (lv >= 16 ? 2 : 1);
+                    int idx = t - 1;
+                    if (idx >= arch.GuardNames.Length) idx = arch.GuardNames.Length - 1;
+                    var s = arch.GuardNames[idx];
+                    if (!string.IsNullOrEmpty(s)) return s;
+                }
+            }
+            catch { }
+
+            string prefix = Main.Settings.GuardNamePrefix;
+            if (string.IsNullOrEmpty(prefix)) prefix = "卫兵";
+            return string.IsNullOrEmpty(an) ? prefix : prefix + "·" + an;
+        }
+
+        /// <summary>这个基名是不是本分型三档里的某一档（或旧的前缀式命名）。</summary>
+        private static bool IsOurGuardName(ChainProbe.Archetype arch, string baseName)
+        {
+            if (string.IsNullOrEmpty(baseName)) return false;
+            try
+            {
+                if (arch != null && arch.GuardNames != null)
+                    foreach (var s in arch.GuardNames)
+                        if (s == baseName) return true;
+            }
+            catch { }
+            try
+            {
+                string prefix = Main.Settings.GuardNamePrefix;
+                if (!string.IsNullOrEmpty(prefix) && baseName.StartsWith(prefix, StringComparison.Ordinal))
+                    return true;
+            }
+            catch { }
+            return false;
+        }
+
+        /// <summary>拆掉结尾的" 123"，返回基名；num 输出那个数字（没有则 0）。</summary>
+        private static string SplitTrailingNumber(string s, out int num)
+        {
+            num = 0;
+            if (string.IsNullOrEmpty(s)) return s;
+            int end = s.Length, start = end;
+            while (start > 0 && s[start - 1] >= '0' && s[start - 1] <= '9') start--;
+            if (start == end) return s;                       // 结尾不是数字
+            int v;
+            if (!int.TryParse(s.Substring(start, end - start), out v)) return s;
+            num = v;
+            return s.Substring(0, start).TrimEnd();
         }
 
         /// <summary>

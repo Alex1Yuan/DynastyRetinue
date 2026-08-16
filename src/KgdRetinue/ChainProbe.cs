@@ -120,6 +120,9 @@ namespace KgdRetinue
             /// ItemLevel 在本作里 2755/2940 是 0，用不了。
             /// playerGear 有配置时优先用 playerGear（手动压过默认）。</summary>
             public string[] GearT1, GearT2, GearT3;
+            /// <summary>可选：普通卫兵按阶位取的三档名字（T1/T2/T3）。
+            /// 升阶时会把已有卫兵改名到新档、保留编号。精英不走这里，用 EliteDef.Name。</summary>
+            public string[] GuardNames;
             /// <summary>可选：该分型的多个精英（每个有自己的单位/名字/装备/链）。
             /// 配了这个就忽略上面的 EliteUnitId/EliteName/Gear 单精英字段。</summary>
             public EliteDef[] Elites;

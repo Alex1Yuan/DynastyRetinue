@@ -134,6 +134,7 @@ namespace KgdRetinue
                     a.GearT1     = ReadGuidList(item["gearT1"]);
                     a.GearT2     = ReadGuidList(item["gearT2"]);
                     a.GearT3     = ReadGuidList(item["gearT3"]);
+                    a.GuardNames = ReadGuidList(item["guardNames"]);   // 复用同一个字符串数组读法
                     a.GrantFeatures = ReadGuidList(item["grantFeatures"]);
                     a.PreGrant      = ReadGuidList(item["preGrant"]);
 
