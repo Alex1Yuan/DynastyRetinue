@@ -854,6 +854,10 @@ namespace KgdRetinue
         /// Dictator 之类自带 Prow 挂点的船模一出现就会自动学，之后套用到 Gothic 这种缺挂点的船上。
         /// 归一化而不是绝对坐标：两条船长短不一，搬比例才对，搬坐标会落到船体外。
         /// </summary>
+        /// <summary>换船模装好武器后，自动重拍改装界面里那条船。
+        /// ShipDollRoom 的展示模型是一次性哑拷贝，不自动跟新武器美术。</summary>
+        public bool ShipDollResnap = true;
+
         public bool  ProwLearned;
         /// <summary>舰首比舷炮低多少，以「舷炮→船脊」的高度差为 1 单位。
         /// 默认 0.784 = Dictator 原生 prow_01 实测：(-0.01-(-0.41))/(0.50-(-0.01))。
