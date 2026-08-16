@@ -515,6 +515,21 @@ namespace KgdRetinue
             GUILayout.EndHorizontal();
             GUILayout.Label("<i>无创伤=不进创伤流水线；跟队恢复=队友被治时一起治；原版=每倒地一次永久掉最大生命，且重伤阈值写死 50% 不吃难度减免</i>");
 
+            // ---------- 经验追赶 ----------
+            GUILayout.BeginHorizontal();
+            Settings.XpCatchUp = GUILayout.Toggle(Settings.XpCatchUp,
+                "经验追赶（落后越多拿越多）", GUILayout.Width(200));
+            GUILayout.Label("落后", GUILayout.Width(34));
+            Settings.XpCatchUpSpan = (int)GUILayout.HorizontalSlider(Settings.XpCatchUpSpan, 1f, 40f, GUILayout.Width(110));
+            GUILayout.Label(Settings.XpCatchUpSpan + " 级吃满", GUILayout.Width(70));
+            GUILayout.Label("上限", GUILayout.Width(34));
+            Settings.XpCatchUpMax = (int)GUILayout.HorizontalSlider(Settings.XpCatchUpMax, 80f, 500f, GUILayout.Width(110));
+            GUILayout.Label("×" + (Settings.XpCatchUpMax / 100f).ToString("F1"), GUILayout.Width(46));
+            GUILayout.EndHorizontal();
+            GUILayout.Label("<color=#aaaaaa>固定比例的问题是**差距只会单调拉大** —— 越往后招的卫兵越追不上。"
+                          + "追赶制：落后 0 级拿「经验比例」那个地板值，落后到设定级数拿满上限，中间线性插值；"
+                          + "追平后回落到地板，所以卫兵<b>永远不会反超主角</b>。</color>");
+
             }
 
             if (Fold(ref Settings.PanelShowDev, "开发 · 测试", "★注意：好几个按钮会清空全部卫兵★"))
@@ -816,6 +831,12 @@ namespace KgdRetinue
         public string SpawnKeyName = "F7";
         public string DespawnKeyName = "None";
         public string XpRatio = "0.8";
+        /// <summary>追赶制：卫兵落后主角越多，拿的经验倍率越高，追平后回落到 XpRatio。</summary>
+        public bool XpCatchUp = true;
+        /// <summary>追赶倍率上限（百分比，250 = 2.5 倍）。</summary>
+        public int XpCatchUpMax = 250;
+        /// <summary>落后多少级时吃满上限。中间线性插值。</summary>
+        public int XpCatchUpSpan = 15;
         public KeyCode SpawnKey = KeyCode.F7;
         // 遣散 = 永久销毁，默认不给热键，只能从面板点
         public KeyCode DespawnKey = KeyCode.None;

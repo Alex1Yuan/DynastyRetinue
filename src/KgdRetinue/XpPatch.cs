@@ -30,14 +30,57 @@ namespace KgdRetinue
                 var u = __instance.Owner as BaseUnitEntity;
                 if (u == null || !RetinueRegistry.IsGuard(u)) return;
 
-                float ratio;
-                if (!float.TryParse(Main.Settings.XpRatio, out ratio)) ratio = 0.8f;
-                if (ratio < 0f) ratio = 0f;
-                if (ratio > 4f) ratio = 4f;
-
-                exp = (int)(exp * ratio);
+                exp = (int)(exp * RatioFor(u));
             }
             catch { /* 补丁出错不能影响原版发经验 */ }
+        }
+
+        /// <summary>
+        /// 这名卫兵这次该拿多少倍经验。
+        ///
+        /// ★ 为什么不能用固定系数 ★
+        /// 原来是恒定 0.8：卫兵永远比主角涨得慢，**差距只会单调拉大**，
+        /// 于是越往后招的卫兵越追不上、越没用，最后只能靠面板手动灌经验补救。
+        ///
+        /// 改成追赶制（用户提议）：落后越多拿得越多，追平后回落到地板值。
+        ///     落后 0 级   → 地板（默认 0.8，即和原来一样）
+        ///     落后 span 级 → 上限（默认 2.5 倍）
+        ///     中间线性插值
+        /// 追平之后不会超过地板，所以卫兵**永远不会反超主角**，
+        /// 只是"落后了能补回来"。三个数都在面板上可调。
+        /// </summary>
+        private static float RatioFor(BaseUnitEntity guard)
+        {
+            float floorR = ParseF(Main.Settings.XpRatio, 0.8f);
+            if (floorR < 0f) floorR = 0f;
+            if (floorR > 4f) floorR = 4f;
+
+            if (!Main.Settings.XpCatchUp) return floorR;
+
+            try
+            {
+                var g = Kingmaker.Game.Instance;
+                var leader = g != null && g.Player != null ? g.Player.MainCharacterEntity : null;
+                if (leader == null || leader.Progression == null || guard.Progression == null) return floorR;
+
+                int gap = leader.Progression.CharacterLevel - guard.Progression.CharacterLevel;
+                if (gap <= 0) return floorR;
+
+                float maxR = Main.Settings.XpCatchUpMax / 100f;      // 面板存百分比
+                if (maxR < floorR) maxR = floorR;
+                int span = Main.Settings.XpCatchUpSpan;
+                if (span < 1) span = 1;
+
+                float t = gap >= span ? 1f : (float)gap / span;
+                return floorR + (maxR - floorR) * t;
+            }
+            catch { return floorR; }
+        }
+
+        private static float ParseF(string s, float dflt)
+        {
+            float v;
+            return float.TryParse(s, out v) ? v : dflt;
         }
     }
 
