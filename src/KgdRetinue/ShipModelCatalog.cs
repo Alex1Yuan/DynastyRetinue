@@ -119,18 +119,33 @@ namespace KgdRetinue
         /// <summary>
         /// 每个档位的**默认**船模。
         ///
-        /// 设计（用户拍板）：巡洋舰和大巡洋舰都用**帝国 Gothic 级**，大巡是把它等比放大。
-        /// 理由：GrandCruiser_3x6 全游戏只有 2 个船模（混沌战列巡洋舰、帝国质量运输舰），
-        /// 帝国没有战舰造型 —— 与其用混沌造型或一艘货船，不如把 Gothic 撑大。
-        /// 菜单里仍可手动选别的。
+        /// 设计（用户拍板，v0.23 修订）：**大巡改用放大的帝国 Dictator 级**。
+        ///
+        /// 改的理由是实测挂点数据，不是审美：
+        ///     Gothic 巡洋    9 个挂点  Port×4 Starboard×4 Dorsal×1                    ← 无 Prow
+        ///     Universe 运输 23 个挂点  Dorsal×1 Port×11 Starboard×11                  ← 无 Prow
+        ///     混沌战列巡洋  27 个挂点  Dorsal×1 NoType×1 AugurArray×1 Port×12 Starboard×12  ← 无 Prow
+        ///     Dictator 巡洋 20 个挂点  AugurArray Dorsal Keel LandingBays PlasmaDrive×7 Port×4 Prow×1 Starboard×4
+        /// 光矛装在 **Prow** 槽位，武器美术是挂到船体 prefab 上同类型的 StarshipItemSlot 下面的
+        /// （StarshipView: ItemSlots.FindAll(x => x.Type == requiredSlots.SlotType)）。
+        /// 匹配不到 ⇒ 美术挂不上去 ⇒ 开火点退回原点，表现为「光矛从虚空里开火」——
+        /// 玩家实测确认了这一点：换 Gothic 后宏炮正常、光矛在虚空。
+        ///
+        /// **Dictator 是四个里唯一 Prow/Keel 齐全的**，而两个原生 GrandCruiser 反而都缺 Prow。
+        /// 所以「大巡 = 放大的 Dictator」既解决光矛，又仍然是帝国战舰造型。
+        ///
+        /// 巡洋舰档保持 Gothic（用户原选择，造型最"帝国巡洋舰"）；
+        /// 它缺 Prow 的问题由 StarshipView 的挂点兜底补丁处理，
+        /// 想要开箱即用无兜底的话菜单里手动选 Dictator。
         /// </summary>
         public static ShipModel DefaultFor(Size tier)
         {
             switch (tier)
             {
                 case Size.Cruiser_2x4:
-                case Size.GrandCruiser_3x6:
                     return ByPrefab(Cruiser_ImperialGothic);
+                case Size.GrandCruiser_3x6:
+                    return ByPrefab(Cruiser_ImperialDictator);   // 原生巡洋，放大 ×1.5152 当大巡
                 default:
                     return null;      // 护卫舰用原版模型，不换
             }
@@ -149,7 +164,7 @@ namespace KgdRetinue
         {
             switch (tier)
             {
-                case Size.GrandCruiser_3x6: return ByPrefab(Grand_ChaosBattlecruiser);
+                case Size.GrandCruiser_3x6: return ByPrefab(Cruiser_ImperialDictator);
                 case Size.Cruiser_2x4:      return ByPrefab(Cruiser_ImperialGothic);
                 case Size.Frigate_1x2:      return ByPrefab(Frigate_Sword);
                 default:                    return null;

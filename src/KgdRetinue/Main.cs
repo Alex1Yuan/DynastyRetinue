@@ -362,6 +362,12 @@ namespace KgdRetinue
             }
             if (GUILayout.Button("还原原版船模", GUILayout.Width(140))) StarshipViewTool.RevertAll();
             if (GUILayout.Button("挂点诊断", GUILayout.Width(110))) ShipSlotProbe.Dump();
+            GUILayout.Label("<color=#c8a45c>实测挂点（决定武器美术挂不挂得上，挂不上就会「在虚空里开火」）：</color>\n"
+                          + "  <color=#7ec8ff>Dictator</color> 20 个：Prow ✓ Keel ✓ Dorsal ✓ Port×4 Starboard×4 —— <color=#7ec8ff>四个里唯一齐全的，大巡默认</color>\n"
+                          + "  Gothic 9 个：Port×4 Starboard×4 Dorsal×1 —— <color=#ff8080>缺 Prow，光矛会在虚空开火</color>\n"
+                          + "  Universe 运输舰 23 个 / 混沌战列巡洋舰 27 个 —— <color=#ff8080>同样缺 Prow</color>\n"
+                          + "<color=#aaaaaa>光矛装在 Prow 槽位。武器美术是挂到船体 prefab 上同类型的 StarshipItemSlot 下面的，"
+                          + "匹配不到就退回原点。两个原生大巡船模反而都缺 Prow，所以大巡用放大的 Dictator。</color>");
             Settings.ShipStretchModel = GUILayout.Toggle(Settings.ShipStretchModel,
                 "船模档位低于分档时等比放大撑满（比如把 Gothic 巡洋舰当大巡用 ×1.52）");
             GUILayout.BeginHorizontal();
