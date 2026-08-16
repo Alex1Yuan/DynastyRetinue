@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using UnityEngine;
 using UnityModManagerNet;
 using HarmonyLib;
@@ -20,6 +20,11 @@ namespace KgdRetinue
         {
             ModEntry = modEntry;
             Settings = UnityModManager.ModSettings.Load<Settings>(modEntry);
+
+            // 这两个曾经是开关，现在是唯一路径：新窗口早就是正式 UI，命名也早就成体系了。
+            // 面板上不再露出来，但字段留着 —— 老 Settings.xml 里可能存着 false，
+            // 不在这里强制拉回 true，升级上来的玩家会莫名其妙没窗口/没名字。
+            try { Settings.UseNewUI = true; Settings.RenameGuards = true; } catch { }
 
             modEntry.OnToggle  = OnToggle;
             modEntry.OnGUI     = OnGUI;
@@ -282,9 +287,7 @@ namespace KgdRetinue
             if (GUILayout.Button("直接开窗", GUILayout.Width(90))) OpenRecruitUI(null);
             GUILayout.EndHorizontal();
             GUILayout.BeginHorizontal();
-            Settings.UseNewUI = GUILayout.Toggle(Settings.UseNewUI, "用新窗口（uGUI，仿原版配色/字体）");
             if (GUILayout.Button("预览新窗口", GUILayout.Width(110))) UI.RetinueUI.Open();
-            if (GUILayout.Button("摘素材自检", GUILayout.Width(110))) UI.VanillaSkin.DumpNineSliceCandidates();
             GUILayout.EndHorizontal();
             GUILayout.Label("<color=#aaaaaa>名单打在 kgd_log.txt 里。本船的高阶顾问蓝图名是 HighFactotum，音阵大师是 VoxMaster。</color>");
 
@@ -393,17 +396,16 @@ namespace KgdRetinue
             if (GUILayout.Button("挂点几何诊断", GUILayout.Width(130))) ShipSlotGeometryProbe.Dump();
             Settings.ShipMountFallback = GUILayout.Toggle(Settings.ShipMountFallback,
                 "换船模后自动补上缺失的武器挂点（修「光矛/鱼雷在虚空开火」）");
-            Settings.ShipSynthKeel = GUILayout.Toggle(Settings.ShipSynthKeel,
-                "连船底(Keel)挂点也补　<color=#aaaaaa>默认关：一件武器的美术可以列多个槽位类型，"
-                + "vanilla 会在每个匹配到的挂点上都实例化一份，补了船底可能多长出一门挂在船腹下的炮。"
-                + "只有你真装了船底武器才需要打开。</color>");
             GUILayout.BeginHorizontal();
-            GUILayout.Label("舰首挂点前后", GUILayout.Width(100));
+            GUILayout.Label("舰首挂点微调　前后", GUILayout.Width(130));
             Settings.ShipProwOffsetPct = (int)GUILayout.HorizontalSlider(Settings.ShipProwOffsetPct, -50f, 50f, GUILayout.Width(130));
             GUILayout.Label(Settings.ShipProwOffsetPct + "%", GUILayout.Width(42));
             GUILayout.Label("上下", GUILayout.Width(40));
             Settings.ShipProwUpPct = (int)GUILayout.HorizontalSlider(Settings.ShipProwUpPct, -60f, 60f, GUILayout.Width(130));
             GUILayout.Label(Settings.ShipProwUpPct + "%", GUILayout.Width(42));
+            // 拖歪了没法凭记忆拖回来 —— 这个按钮就是"默认值是多少"的答案
+            if (GUILayout.Button("归零", GUILayout.Width(60)))
+            { Settings.ShipProwOffsetPct = 0; Settings.ShipProwUpPct = 0; Log("[挂点] 微调已归零，回到算出来的位置。"); }
             GUILayout.EndHorizontal();
             GUILayout.Label("<color=#aaaaaa>0% = 用算出来的船艏位置。合成挂点挂在 StarshipView 下、旋转归零，"
                           + "坐标系的 +Z=船艏 有实据（StarshipFxHitMask 按 mesh.z 分前后舱室）。"
@@ -431,7 +433,7 @@ namespace KgdRetinue
 
             }
 
-            if (Fold(ref Settings.PanelShowRules, "规则", "士气池 / 镜头 / 成长 / 命名 / 热键"))
+            if (Fold(ref Settings.PanelShowRules, "规则", "士气池 / 镜头 / 成长 / 命名 / 解除限制"))
             {
             // ---------- 规则 ----------
             GUILayout.Space(8);
@@ -498,12 +500,11 @@ namespace KgdRetinue
             }
 
             GUILayout.BeginHorizontal();
-            Settings.RenameGuards = GUILayout.Toggle(Settings.RenameGuards, "自定义卫兵名（压掉单位蓝图自带的名字）", GUILayout.Width(300));
-            GUILayout.Label("名字前缀:", GUILayout.Width(70));
-            Settings.GuardNamePrefix = GUILayout.TextField(Settings.GuardNamePrefix, GUILayout.Width(100));
+            GUILayout.Label("<b>命名</b>　<color=#aaaaaa>「军衔·人名」，军衔随本人等级三档自动晋升，人名跟他一辈子</color>", GUILayout.Width(520));
             if (GUILayout.Button("重新命名全部", GUILayout.Width(120))) RetinueTest.RenameAll();
             GUILayout.EndHorizontal();
-            GUILayout.Label("<i>命名为「前缀·分型 编号」。只在卫兵还没有自定义名时赋值；改了前缀要点【重新命名全部】才会重算。</i>");
+            GUILayout.Label("<i>军衔取自 archetypes.json 的 guardNames（每条线三档），人名取自根级 guardNamePool；"
+                          + "精英用自己的专属军衔。你手改过的名字不会被覆盖 —— 想让 mod 重新接管就点【重新命名全部】。</i>");
 
             GUILayout.BeginHorizontal();
             GUILayout.Label("创伤:", GUILayout.Width(60));

@@ -374,8 +374,36 @@ namespace KgdRetinue
             int ai = RetinueRegistry.ArchetypeOf(g);
             var arch = Archetypes.Get(ai >= 0 ? ai : Main.Settings.ArchetypeIndex);
 
-            // 精英有专属名字，不带编号 —— 每种精英只有一个，编号没意义
+            // 精英：有 rank 就和普通卫兵走同一套「位阶·人名」，只是位阶固定不晋升
+            // （精英一出场就是顶端，没有三档可爬）。人名共用同一个池子，所以
+            // 精英和普通卫兵之间也不会重名 —— PickPersonName 是全名册去重的。
+            // 没配 rank 的旧数据退回专属固定名，保证升级上来的存档不改名。
             var _ed = GearTool.EliteDefOf(g, arch);
+            if (_ed != null && !string.IsNullOrEmpty(_ed.Rank))
+            {
+                string ecur = d.CustomName;
+                if (!string.IsNullOrEmpty(ecur))
+                {
+                    string er, ep;
+                    SplitRankPerson(ecur, out er, out ep);
+                    // ★要求人名也在★ 否则「寂静之眼」这种位阶和旧固定名同字的会在这里
+                    // 早退，永远补不上人名（旧名整串被当成位阶，person 是空的）
+                    if (er == _ed.Rank && !string.IsNullOrEmpty(ep)) return;
+                    // 旧的固定专属名（「铁壁 · 先锋队长」）没有人名可继承，直接重发一个
+                    if (!string.IsNullOrEmpty(ep) && IsOurRank(arch, er))
+                    {
+                        string ren = _ed.Rank + SEP + ep;
+                        d.SetName(ren);
+                        Main.Log("  改名(精英): " + ecur + " -> " + ren);
+                        return;
+                    }
+                    if (ecur != _ed.Name) return;                     // 玩家手改过，不动
+                }
+                string en = _ed.Rank + SEP + PickPersonName(g);
+                d.SetName(en);
+                Main.Log("  改名(精英): " + (g.Blueprint != null ? g.Blueprint.CharacterName : "?") + " -> " + en);
+                return;
+            }
             if (_ed != null && !string.IsNullOrEmpty(_ed.Name))
             {
                 if (d.CustomName == _ed.Name) return;
@@ -494,7 +522,7 @@ namespace KgdRetinue
             return string.IsNullOrEmpty(an) ? prefix : prefix + SEP + an;
         }
 
-        /// <summary>这个军衔是不是本分型三档之一（或旧版的前缀式命名）。</summary>
+        /// <summary>这个军衔是不是本分型认得的（三档之一、精英位阶，或旧版的前缀式命名）。</summary>
         private static bool IsOurRank(ChainProbe.Archetype arch, string rank)
         {
             if (string.IsNullOrEmpty(rank)) return false;
@@ -503,6 +531,10 @@ namespace KgdRetinue
                 if (arch != null && arch.GuardNames != null)
                     foreach (var s in arch.GuardNames)
                         if (s == rank) return true;
+                // 精英位阶也算 —— 否则改了 rank 之后老名字会被当成"玩家手改的"而不敢动
+                if (arch != null && arch.Elites != null)
+                    foreach (var e in arch.Elites)
+                        if (e != null && !string.IsNullOrEmpty(e.Rank) && e.Rank == rank) return true;
             }
             catch { }
             try

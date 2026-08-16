@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -43,8 +43,11 @@ namespace KgdRetinue
         {
             /// <summary>精英专用单位蓝图 —— 兼作"是不是这个精英"的持久判据。</summary>
             public string UnitId;
-            /// <summary>专属名字。</summary>
+            /// <summary>专属名字。旧格式，只在没有 Rank 时用。</summary>
             public string Name;
+            /// <summary>专属位阶（archetypes.json 的 "rank"）。有它就走「位阶·人名」，
+            /// 和普通卫兵同一套机制，只是位阶固定不随等级晋升 —— 精英本来就在顶。</summary>
+            public string Rank;
             /// <summary>该精英的毕业套装。</summary>
             public string[] Gear;
             /// <summary>可选：覆盖分型的职业链（同一分型下的两个精英可以走不同链）。</summary>

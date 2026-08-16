@@ -27,6 +27,7 @@
         {
           "unit": "4a02a1bee6f84892b3cb7a3f8c818c69",
           "name": "铁壁 · 先锋队长",
+          "rank": "铁壁卫长",
           "plan": "rt_abelard_vanguard",
           "chain": [
             "974496d72fbe4329b438ee15cf004bd2",
@@ -75,6 +76,7 @@
         {
           "unit": "30e6364a1d7a425b93d877122c6eed40",
           "name": "磐石 · 首席战士",
+          "rank": "磐石首席",
           "plan": "abelard_fighter_veteran",
           "chain": [
             "974496d72fbe4329b438ee15cf004bd2",
@@ -173,6 +175,7 @@
         {
           "unit": "aca1e823dbf64d6999d2132e3198dd5a",
           "name": "寂静之眼",
+          "rank": "寂静之眼",
           "plan": "yrliet_adept_hunter",
           "_注preGrant": "伊莉耶特的两条专属天赋（迅捷视觉 Yrliet_Talent01 / 流浪者道途 WayOfTheWanderer）。它们只挂在她本人身上，别的单位升级时永远不会出现在候选池里，只能直接授予。都是原版蓝图。 追加 穿透洞见=Yrliet_Talent02 / 预知远景=Yrliet_Talent03，同样是她本人专属。",
           "preGrant": [
@@ -222,6 +225,7 @@
         {
           "unit": "53281ae602a34756a47c3e23f66c06cd",
           "name": "赏金 · 猎首",
+          "rank": "猎首赏金人",
           "chain": [
             "06f4f78a9c1a472b85cd79a9a142153d",
             "6f276e8a8e2c4a548504ae39d2a7f22a",
@@ -350,6 +354,7 @@
         {
           "unit": "9bc515c1b1b84c3ab0f65544807e22ee",
           "name": "怒火 · 首席连射",
+          "rank": "怒火铳长",
           "plan": "rt_soldier_suppress",
           "chain": [
             "06f4f78a9c1a472b85cd79a9a142153d",
@@ -383,6 +388,7 @@
         {
           "unit": "2cf75c27e6d34681ab623101b0be1135",
           "name": "圣焰 · 净罪修女",
+          "rank": "圣焰净罪者",
           "plan": "argenta_soldier_veteran",
           "chain": [
             "06f4f78a9c1a472b85cd79a9a142153d",
@@ -472,6 +478,7 @@
         {
           "unit": "d1287134a3e64a4dbdae16b58d21bd8b",
           "name": "亚空间审判者",
+          "rank": "亚空间审判官",
           "plan": "heinrix_fighter_assassin",
           "_注preGrant": "Sanctic_Base_Feature。海因里希是生物系(起源=合法灵能者·生物系)，但他额外从剧情特性表 HeinrixFeatureList_Chapter1_Start 白拿了神圣系 —— 存档里那条 Sanctic_Base 的来源就是它的 AddFacts。方案里的 英雄诗篇 记录为 Ascension r1 / PathFeatureSource=Sanctic_Base，只能从神圣系池出。我们的模板没有那份剧情表，所以要补。原版蓝图。",
           "preGrant": [
@@ -501,6 +508,7 @@
         {
           "unit": "638ab19bfae74bb99dacc93e7d6fe7f3",
           "name": "火杖行刑者",
+          "rank": "火杖行刑官",
           "plan": "rt_fire_executioner",
           "_注preGrant": "Pyromancy_Base_Feature —— 火系灵能学派。它带 9 个 AddFeaturesToLevelUp，不给的话方案里 7 条火系灵能一条都进不了候选池（怒焰迸射/烈焰风暴/烈焰焚尽…）。原版蓝图，不新增 AssetId。",
           "preGrant": [
@@ -584,6 +592,7 @@
         {
           "unit": "bc5ca9badb2042b48afb13c1829619b3",
           "name": "谕令 · 灵能军官",
+          "rank": "谕令参谋长",
           "plan": "rt_psyker_officer",
           "_注preGrant": "Biomancy_Base_Feature —— 生物系灵能学派。同理，不给的话方案里 9 条生物系（恢复生机/亚空神速/过度代谢/躯体转化…）全进不来。原版蓝图。",
           "preGrant": [
@@ -610,6 +619,7 @@
         {
           "unit": "5990a9129d6648a68aa7b62ebe2cdc05",
           "name": "铁律 · 政委军官",
+          "rank": "铁律政委",
           "plan": "rt_commissar_officer",
           "chain": [
             "33725d84e95e4323ac46d8fbf899b250",

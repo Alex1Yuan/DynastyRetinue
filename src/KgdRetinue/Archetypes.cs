@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using Kingmaker;
@@ -162,6 +162,7 @@ namespace KgdRetinue
                             {
                                 UnitId   = (string)e["unit"],
                                 Name     = (string)e["name"],
+                                Rank     = (string)e["rank"],
                                 PlanName = (string)e["plan"],
                                 Gear     = ReadGuidList(e["gear"]),
                                 Chain    = ReadGuidList(e["chain"]),
