@@ -862,6 +862,9 @@ namespace KgdRetinue
         /// <summary>同一挂点被多件武器的美术抢时，优先显示光矛（其次新星炮/宏炮，鱼雷垫底）。
         /// vanilla 是先毁后建、只能活一件，谁赢本来取决于遍历顺序、玩家控制不了。</summary>
         public bool ShipArtPreferLance = true;
+        /// <summary>界面语言：0=跟随游戏，1=中文，2=English。
+        /// 默认跟随 —— 装英文版游戏的人开箱即英文，不用先来设置里找开关。</summary>
+        public int Language;
         /// <summary>解除船体限制：连未校准的船体也允许更换（挂点/缩放可能不对）。</summary>
         public bool ShipYardUnlockAll;
         /// <summary>在 NPC 对话里加「船坞改装」两条选项（用废料换巡洋 / 大巡）。</summary>

@@ -353,6 +353,14 @@ namespace KgdRetinue
                     float fit = 1f;
                     for (int i = 0; i < tiers; i++) fit *= 0.66f;
 
+                    // ★留白★ 归一到"护卫舰观感"之后，巡洋/大巡仍然把画面填得很满
+                    //（玩家实测："镜头距离还行，但有点填得太满"）。
+                    // 原因是这两条船的网格比例比护卫舰更"宽扁"，同样的纵向尺度下横向更占地方。
+                    // 再收一点点，留出边距。
+                    // ★只对换过档的船生效★ tiers==0 时一个乘数都不加 ——
+                    // 没换过船的玩家看到的必须还是 vanilla 原样，我们不去改原版构图。
+                    if (tiers > 0) fit *= 0.85f;
+
                     float mult = Main.Settings.ShipDollScale / 100f;
                     if (mult <= 0f) mult = 1f;
 

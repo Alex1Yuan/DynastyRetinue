@@ -226,17 +226,40 @@ namespace KgdRetinue
         /// <summary>还原成蓝图默认模型（不动 Size）。</summary>
         public static bool Clear() { return Apply(null); }
 
-        /// <summary>完全复位：还原外观 + 把 Size 设回蓝图原生档。卸载 mod 前请点这个。</summary>
+        /// <summary>
+        /// 完全复位：把 Size 设回蓝图原生档 + 还原外观。卸载 mod 前请点这个。
+        ///
+        /// ★顺序：先 Size 再外观★ 和 ApplyModel 一致，理由也一样但方向相反：
+        /// Clear() 内部会 Rebuild view，而 vanilla 在建 view 时按**当时的 Size**
+        /// 算缩放（GetSizeScale：每高一档 /0.66）。先 Clear 的话，重建发生在 Size
+        /// 还是大巡的时候 ⇒ 新 view 带着 1.515 的缩放出生，随后 SetSize 只改数值、
+        /// **不会去重新缩放已经建好的 view**。
+        ///
+        /// 实测（v0.45.0 日志）：还原之后
+        ///     原始 (1.515,1.515,1.515)　分档高于护卫舰 0 档 → ×1.000
+        /// 分档读对了、缩放没跟上 ⇒ 改装界面里护卫舰被撑成 1.515 倍，
+        /// 表现为"变回原船之后镜头很近"。玩家实测报的就是这个。
+        ///
+        /// SetSize 可能被拒（战斗中）。被拒就整个放弃 —— 只清 prefab 不改 Size
+        /// 会留下"原版外观 + 大巡档位"的中间态，比什么都不做更糟。
+        /// </summary>
         public static bool RevertAll()
         {
-            bool ok = Clear();
             try
             {
                 var s = PlayerShip;
-                if (s != null) ok &= StarshipTool.SetSize(s.OriginalSize);
+                if (s != null && StarshipTool.CurrentSize() != s.OriginalSize)
+                {
+                    if (!StarshipTool.SetSize(s.OriginalSize))
+                    {
+                        Main.LogError("[船模] 分档复位被拒（多半在战斗中），本次不还原，保持原样。");
+                        return false;
+                    }
+                }
             }
-            catch (Exception e) { Main.LogError("[船模] 分档复位失败: " + e.Message); ok = false; }
-            return ok;
+            catch (Exception e) { Main.LogError("[船模] 分档复位失败: " + e.Message); return false; }
+
+            return Clear();   // 此时 Size 已是原生档，重建出来的 view 缩放自然是 1
         }
 
         // ================================================================
