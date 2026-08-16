@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Reflection;
+using System.Text;
 using HarmonyLib;
 using Kingmaker;
 using Kingmaker.Enums;
@@ -385,6 +387,146 @@ namespace KgdRetinue
             }
 
             private static bool _logged;
+        }
+
+        // ==================================================================
+        // 4) 改装界面 tooltip：把分档带来的加成写清楚
+        // ==================================================================
+
+        /// <summary>
+        /// TooltipTemplateItem.GetBody() 的 Postfix —— 在组件 tooltip 末尾追加一段说明。
+        ///
+        /// ★ 为什么落在这里 ★
+        /// 改装界面里**所有**组件槽（武器、船板、护盾发生器）的 tooltip 都是
+        /// ShipComponentItemSlotVM 构造的同一个 TooltipTemplateItem：
+        ///     Tooltip.Value = new TooltipTemplateItem(item, null, false, false, null, true);
+        /// 所以一个补丁就能覆盖三类组件，不用去动任何槽位的布局或预制体 ——
+        /// 这也是"轻量级"的含义：**纯追加**，原有的砖块一块不改、一块不删。
+        ///
+        /// 数字全部走 StarshipChargesPatch 的 Ui* 只读入口，和真正生效的算式同源。
+        /// 原版有三处各抄一遍装甲聚合逻辑、结果互相不一致，这个教训不想再犯一次。
+        ///
+        /// 功能总开关关掉、或当前是护卫舰档时，一个字都不加，tooltip 保持原版。
+        /// </summary>
+        [HarmonyPatch]
+        public static class ShipComponentTooltipPatch
+        {
+            private static Type _tpl;
+
+            private static MethodBase TargetMethod()
+            {
+                _tpl = AccessTools.TypeByName("Kingmaker.Code.UI.MVVM.VM.Tooltip.Templates.TooltipTemplateItem");
+                return _tpl == null ? null : AccessTools.Method(_tpl, "GetBody");
+            }
+
+            private static bool Prepare()
+            {
+                var m = TargetMethod();
+                if (m == null) Main.LogError("[舰船] 找不到 TooltipTemplateItem.GetBody —— 改装界面不会显示加成说明。");
+                return m != null;
+            }
+
+            private static void Postfix(object __instance,
+                                        ref IEnumerable<Owlcat.Runtime.UI.Tooltips.ITooltipBrick> __result)
+            {
+                try
+                {
+                    if (__result == null) return;
+                    var text = LineFor(__instance);
+                    if (string.IsNullOrEmpty(text)) return;
+                    __result = Append(__result, text);
+                }
+                catch (Exception e) { Main.LogError("[舰船] tooltip 追加失败: " + e.Message); }
+            }
+
+            private static IEnumerable<Owlcat.Runtime.UI.Tooltips.ITooltipBrick> Append(
+                IEnumerable<Owlcat.Runtime.UI.Tooltips.ITooltipBrick> src, string text)
+            {
+                foreach (var b in src) yield return b;
+                yield return new Kingmaker.Code.UI.MVVM.VM.Tooltip.Bricks.TooltipBrickText(text);
+            }
+
+            /// <summary>这件组件该不该加说明、加什么。不该加返回 null。</summary>
+            private static string LineFor(object tpl)
+            {
+                int shieldPct = StarshipChargesPatch.UiShieldPct();
+                int armourPct = StarshipChargesPatch.UiArmourPct();
+                // 护卫舰档 / 功能关闭：三个百分比都是 0，武器加成也必然是 0，直接退出
+                var item = Get(tpl, "m_Item");
+                if (item == null) return null;
+
+                string tier = StarshipChargesPatch.UiTierName();
+                string head = "<color=#c8a45c>【卫队 Mod · " + tier + "】</color>\n";
+
+                // ---- 武器：多打 + 射程 ----
+                if (item.GetType().Name == "ItemEntityStarshipWeapon")
+                {
+                    int shots = StarshipChargesPatch.UiExtraShots(item);
+                    int range = StarshipChargesPatch.UiExtraRange(item);
+                    if (shots <= 0 && range <= 0) return null;
+
+                    string slot = StarshipChargesPatch.SlotName(item);
+                    string slotZh = slot == "Port" ? "左舷" : slot == "Starboard" ? "右舷"
+                                  : slot == "Dorsal" ? "船脊" : slot == "Prow" ? "舰首"
+                                  : slot == "Keel" ? "船底" : slot;
+
+                    var sb = new StringBuilder(head);
+                    sb.Append(slotZh).Append("槽位：");
+                    if (shots > 0)
+                    {
+                        int baseCharges = StarshipChargesPatch.UiBaseCharges(item);
+                        if (baseCharges >= 0)
+                            sb.Append("每轮 <color=#7ec8ff>×").Append(baseCharges + shots)
+                              .Append("</color> 次开火（原本 ").Append(baseCharges).Append(" 次）");
+                        else
+                            sb.Append("每轮 <color=#7ec8ff>额外 +").Append(shots).Append("</color> 次开火");
+                        if (range > 0) sb.Append(" · ");
+                    }
+                    if (range > 0) sb.Append("射程 <color=#7ec8ff>+").Append(range).Append("</color>");
+                    return sb.ToString();
+                }
+
+                // ---- 船板：装甲 ----
+                var bp = Get(item, "Blueprint");
+                if (bp != null && bp.GetType().Name == "BlueprintItemArmorPlating")
+                {
+                    if (armourPct <= 0) return null;
+                    return head + "所有方向的减伤 <color=#7ec8ff>+" + armourPct
+                         + "%</color>（下方船形图上的数字已是加成后的实际值）";
+                }
+
+                // ---- 护盾发生器 ----
+                if (item.GetType().Name == "ItemEntityVoidShieldGenerator"
+                    || (bp != null && bp.GetType().Name == "BlueprintVoidShieldGenerator"))
+                {
+                    if (shieldPct <= 0) return null;
+                    return head + "四个扇区的护盾上限 <color=#7ec8ff>+" + shieldPct
+                         + "%</color>（下方船形图上的数字已是加成后的实际值）";
+                }
+
+                return null;
+            }
+        }
+
+        private static object Get(object o, string name)
+        {
+            // 逐层 DeclaredOnly —— 不这么写会在 Blueprint / Owner 这类
+            // 基类派生类同名的成员上抛 AmbiguousMatchException（这坑踩过两次了）
+            if (o == null) return null;
+            const BindingFlags DECL = BindingFlags.Instance | BindingFlags.Public
+                                    | BindingFlags.NonPublic | BindingFlags.DeclaredOnly;
+            for (var t = o.GetType(); t != null; t = t.BaseType)
+            {
+                try
+                {
+                    var p = t.GetProperty(name, DECL);
+                    if (p != null && p.CanRead) return p.GetValue(o, null);
+                    var f = t.GetField(name, DECL);
+                    if (f != null) return f.GetValue(o);
+                }
+                catch { }
+            }
+            return null;
         }
     }
 }

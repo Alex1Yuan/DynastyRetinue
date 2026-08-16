@@ -494,6 +494,69 @@ namespace KgdRetinue
 
         private const BindingFlags BF = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
 
+        // ================================================================
+        // 给 UI 层用的只读查询
+        //
+        // ShipUiPatches 要在改装界面的 tooltip 里把这些加成写清楚，
+        // 但上面那几个算式是 private 的。与其在 UI 那边再抄一份（抄一份就多一处
+        // 会和补丁本体走偏的地方 —— 装甲那三个读取点就是原版自己抄出来的教训），
+        // 不如在这里开几个只读入口，保证**显示的数字和真正生效的数字同源**。
+        //
+        // 全部带总开关判断：功能关掉时一律返回 0，tooltip 就什么都不会加。
+        // ================================================================
+
+        private static bool UiOn()
+        {
+            return Main.Enabled && Main.Settings != null && Main.Settings.ShipExtraShots;
+        }
+
+        /// <summary>这门炮每轮多打几次（0 = 没加成）。</summary>
+        public static int UiExtraShots(object weapon) { return UiOn() ? BonusFor(weapon) : 0; }
+
+        /// <summary>这门炮加多少射程（0 = 没加成）。</summary>
+        public static int UiExtraRange(object weapon) { return UiOn() ? RangeBonusFor(weapon) : 0; }
+
+        /// <summary>当前分档的护盾上限加成百分比。</summary>
+        public static int UiShieldPct() { return UiOn() ? ShieldPct() : 0; }
+
+        /// <summary>当前分档的装甲（减伤）加成百分比。</summary>
+        public static int UiArmourPct() { return UiOn() ? ArmourPct() : 0; }
+
+        /// <summary>当前分档的撞角额外行程百分比（基准是速度属性）。</summary>
+        public static int UiRamPct() { return UiOn() ? RamPct() : 0; }
+
+        /// <summary>
+        /// 这门炮的**基础**开火次数（不含我们的加成），拿不到返回 -1。
+        ///
+        /// 取 Blueprint.Charges —— 也就是 Reload() 里那个基数：
+        ///     Charges = Blueprint.Charges + Σ(StarshipModifyMaxCharges 匹配的)
+        /// 严格说 vanilla 的 StarshipModifyMaxCharges 那部分没算进来，
+        /// 所以 tooltip 里写"原本 N 次"时如果玩家装了那类组件会偏小。
+        /// 拿不到就返回 -1，调用方改成只显示增量，不写一个可能错的总数。
+        /// </summary>
+        public static int UiBaseCharges(object weapon)
+        {
+            try
+            {
+                var bp = Get(weapon, "Blueprint");
+                if (bp == null) return -1;
+                var v = Get(bp, "Charges");
+                return v is int ? (int)v : -1;
+            }
+            catch { return -1; }
+        }
+
+        /// <summary>分档的中文名，给 tooltip 用。</summary>
+        public static string UiTierName()
+        {
+            var sz = ShipSize();
+            if (sz == Size.Cruiser_2x4)      return "巡洋舰";
+            if (sz == Size.GrandCruiser_3x6) return "大巡洋舰";
+            if (sz == Size.Frigate_1x2)      return "护卫舰";
+            if (sz == Size.Raider_1x1)       return "袭击舰";
+            return sz.ToString();
+        }
+
         /// <summary>
         /// 按名字取成员。
         ///
