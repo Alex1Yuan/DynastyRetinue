@@ -705,8 +705,11 @@ namespace KgdRetinue
                             if (nm.IndexOf(k, StringComparison.OrdinalIgnoreCase) >= 0) { target = i; break; }
                         if (target >= 0) break;
                     }
-                    // 认不出退出项 ⇒ 放到最后一条之前（原版最后一个可见选项就是退出）
-                    if (target < 0) target = list.Count;
+                    // 认不出退出项 ⇒ 放到**最后一条之前**（原版最后一个可见选项就是退出）。
+                    // ★别写成 list.Count★ 那是"追加到末尾"，等于排到退出项**后面**——
+                    // v0.41.0 就是这么写的，玩家实测：两条选项跑到了「离开」下面。
+                    // 这里的 list 已经把我们自己的条目摘干净了，所以 Count-1 就是退出项的下标。
+                    if (target < 0) target = list.Count - 1;
                     if (target < 0) target = 0;
                     if (target > list.Count) target = list.Count;
 
