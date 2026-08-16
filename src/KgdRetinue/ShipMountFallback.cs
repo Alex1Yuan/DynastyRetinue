@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Reflection;
 using HarmonyLib;
 using Kingmaker;
@@ -195,6 +196,57 @@ namespace KgdRetinue
                 z = m; return true;
             }
             catch { return false; }
+        }
+
+
+        /// <summary>
+        /// 已装武器的**美术**实际要求哪些槽位类型（去重）。
+        ///
+        /// ★为什么不能只认死那 5 种★ v0.39.x 的实测把这个假设打穿了：
+        ///     槽位 Prow    焚化者光矛      → 美术要求 Prow          （一致）
+        ///     槽位 Prow    加努斯之勇鱼雷  → 美术要求 TorpedoTubes  （★不一致★）
+        ///     槽位 Dorsal  重型导弹炮台    → 美术要求 Prow          （★不一致★）
+        /// vanilla 的 FindAll 用的是**美术描述里写死的 RequiredSlots**
+        /// （StarshipView.cs:250），不是"这件武器装在哪个槽位"。
+        /// 而 TorpedoTubes 是 StarshipItemSlotType 的合法成员（=4），
+        /// Gothic 和 Dictator 两条船都没有这种挂点 —— 于是那件鱼雷的美术永远挂不上。
+        ///
+        /// 拿不到就返回 null，调用方退回原来那 5 种。
+        /// </summary>
+        private static System.Collections.Generic.HashSet<string> NeededSlotTypes(object shipEntity)
+        {
+            try
+            {
+                var hull = shipEntity == null ? null : Get(shipEntity, "Hull");
+                if (hull == null) return null;
+                var slots = Get(hull, "HullSlots");
+                if (slots == null) return null;
+                var ws = Get(slots, "WeaponSlots") as IEnumerable;
+                if (ws == null) return null;
+
+                var need = new System.Collections.Generic.HashSet<string>(StringComparer.Ordinal);
+                foreach (var slot in ws)
+                {
+                    object item = null;
+                    try { item = Get(slot, "Item"); } catch { }
+                    if (item == null) continue;
+                    var bp = Get(item, "Blueprint"); if (bp == null) continue;
+                    var see = Get(bp, "StarshipEE"); if (see == null) continue;
+                    var descs = Get(see, "EEArtSlotsDescription") as IEnumerable; if (descs == null) continue;
+                    foreach (var d in descs)
+                    {
+                        if (d == null) continue;
+                        var req = Get(d, "RequiredSlots") as IEnumerable; if (req == null) continue;
+                        foreach (var r in req)
+                        {
+                            var t = Get(r, "SlotType");
+                            if (t != null) need.Add(t.ToString());
+                        }
+                    }
+                }
+                return need.Count > 0 ? need : null;
+            }
+            catch { return null; }
         }
 
         private static bool Resolve()
@@ -428,7 +480,22 @@ namespace KgdRetinue
 
             int added = 0;
             var names = new System.Collections.Generic.List<string>();
-            foreach (var want in WeaponSlotTypes)
+
+            // 优先按**武器美术实际要求**的槽位类型来补；读不到才退回那 5 种硬编码。
+            var need = NeededSlotTypes(entity);
+            System.Collections.Generic.IEnumerable<string> wants = need != null
+                ? (System.Collections.Generic.IEnumerable<string>)need
+                : WeaponSlotTypes;
+            if (need != null)
+            {
+                var miss = new System.Collections.Generic.List<string>();
+                foreach (var w in need) if (!have.Contains(w)) miss.Add(w);
+                if (miss.Count > 0)
+                    Main.Log("[挂点] 武器美术要求的槽位类型: " + string.Join(" ", new List<string>(need).ToArray())
+                           + "　船体缺: " + string.Join(" ", miss.ToArray()));
+            }
+
+            foreach (var want in wants)
             {
                 if (have.Contains(want)) continue;
 

@@ -82,7 +82,9 @@ namespace KgdRetinue
 
                 // ---- 2. 已装的武器各自需要什么槽位 ----
                 Main.Log("  --- 已装武器 ---");
+                reqCount.Clear();
                 DumpWeapons(ship, counts);
+                ReportCollisions();
                 Main.Log("======== 诊断结束 ========");
                 Main.Log("  判读（两件事，别混）："
                          + "\n    · 「挂点」= 船体上有没有这个类型的挂点。没有 ⇒ 美术挂不上去 ⇒ 开火点退回原点（在虚空开火）。"
@@ -200,10 +202,33 @@ namespace KgdRetinue
 
                     if (item == null) { Main.Log("    槽位 " + slotType.PadRight(11) + " (空)"); continue; }
 
-                    bool ok = have.ContainsKey(slotType);
-                    string verdict = slotType == "?"
-                        ? "槽位类型读不出来，无法判断"
-                        : (ok ? "有 ✓" : "★没有 —— 开火点会跑到虚空★");
+                    // ★判定必须用「美术要求的槽位」，不是「武器装在哪个槽位」★
+                    // 两者可以不一致，实测：重型导弹炮台装在 Dorsal，美术却要 Prow。
+                    // vanilla 的 FindAll 用的是前者（StarshipView.cs:250），
+                    // 按后者判会给出假阳性 —— 显示「有 ✓」而实际一门炮都挂不上。
+                    var reqTypes = ArtRequiredSlots(item);
+                    string verdict;
+                    if (reqTypes == null || reqTypes.Count == 0)
+                    {
+                        bool ok0 = have.ContainsKey(slotType);
+                        verdict = slotType == "?" ? "槽位类型读不出来，无法判断"
+                                : (ok0 ? "有 ✓（按安装槽位判，该武器无美术要求）"
+                                       : "★没有 —— 开火点会跑到虚空★");
+                    }
+                    else
+                    {
+                        var missing = new List<string>();
+                        foreach (var t in reqTypes) if (!have.ContainsKey(t)) missing.Add(t);
+                        verdict = missing.Count == 0
+                            ? "有 ✓"
+                            : "★缺 " + string.Join("/", missing.ToArray())
+                              + " —— 美术挂不上（注意：这是**美术要求**的槽位，"
+                              + "和它装在 " + slotType + " 槽无关）★";
+                        foreach (var t in reqTypes)
+                        {
+                            int c; reqCount.TryGetValue(t, out c); reqCount[t] = c + 1;
+                        }
+                    }
                     Main.Log("    槽位 " + slotType.PadRight(11) + " 武器 " + wname
                              + "  [" + wtype + "]   挂点: " + verdict
                              + "   美术: " + ArtReport(item));
@@ -265,6 +290,58 @@ namespace KgdRetinue
                 return n + " 个挂件" + sb.ToString();
             }
             catch (Exception e) { return "查美术失败: " + e.Message; }
+        }
+
+
+        /// <summary>各槽位类型被几件武器的美术抢占。</summary>
+        private static readonly Dictionary<string,int> reqCount = new Dictionary<string,int>(StringComparer.Ordinal);
+
+        /// <summary>
+        /// 报告"多件武器的美术抢同一个挂点类型"。
+        ///
+        /// ★这是 vanilla 的硬限制，补挂点解决不了★
+        /// StarshipView.cs:252-259 是**先毁后建**，而且作用于该类型的**全部**挂点：
+        ///     var list = ItemSlots.FindAll(x =&gt; x.Type == requiredSlots.SlotType);
+        ///     foreach (var item2 in list) if (item2.itemPrefab != null) Destroy(item2.itemPrefab);
+        /// 所以两件要求同一类型的武器，**后处理的那件会把前一件的美术砸掉**，
+        /// 最终只剩最后一件可见。多补几个同类型挂点也没用 —— 那只会让胜者出现好几份。
+        /// </summary>
+        private static void ReportCollisions()
+        {
+            foreach (var kv in reqCount)
+            {
+                if (kv.Value < 2) continue;
+                Main.LogError("  ★挂点争用★ 有 " + kv.Value + " 件武器的美术都要求 " + kv.Key
+                            + " 槽位。vanilla 是先毁后建（StarshipView.cs:252-259），"
+                            + "后处理的那件会把前一件砸掉 ⇒ 最终只看得到一件。"
+                            + "这是原版硬限制，补再多挂点也没用（只会让胜者出现好几份）。");
+            }
+        }
+
+        /// <summary>这件武器的美术要求哪些槽位类型。没有美术返回 null。</summary>
+        private static List<string> ArtRequiredSlots(object item)
+        {
+            try
+            {
+                var bp = Get(item, "Blueprint"); if (bp == null) return null;
+                var see = Get(bp, "StarshipEE"); if (see == null) return null;
+                var descs = Get(see, "EEArtSlotsDescription") as System.Collections.IEnumerable;
+                if (descs == null) return null;
+                var r = new List<string>();
+                foreach (var d in descs)
+                {
+                    if (d == null) continue;
+                    var req = Get(d, "RequiredSlots") as System.Collections.IEnumerable;
+                    if (req == null) continue;
+                    foreach (var q in req)
+                    {
+                        var t = Get(q, "SlotType");
+                        if (t != null && !r.Contains(t.ToString())) r.Add(t.ToString());
+                    }
+                }
+                return r;
+            }
+            catch { return null; }
         }
 
         private static object GetPart(object entity, string typeName)
