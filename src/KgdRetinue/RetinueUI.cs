@@ -574,10 +574,15 @@ namespace KgdRetinue.UI
                 Main.Log(g != null
                     ? "[招募] 成功: " + (elite != null ? elite.Name : "普通卫兵")
                     : "[招募] 未生成（数量上限或解锁条件，看日志）");
-                // ★整窗刷新，不只是 RebuildUnits★
-                // 招完一个之后要变的东西有三处：名额计数、按钮灰不灰、精英排队状态。
-                // 原来只调 RebuildUnits，标题下那条状态永远停在招募前的数字。
+
+                // ★ 必须延迟刷新，同帧刷是错的 ★
+                // SpawnUnit 是**延迟入册**的：新卫兵要到下一次 Tick 才进 state，
+                // 所以同帧读 RetinueRegistry.Count 拿到的还是招募**前**的数字。
+                // 症状是计数和按钮灰不灰都慢一拍 —— 招第 1 个显示 0、招第 2 个才显示 1
+                //（实测截图确认）。
+                // 先刷一次让界面立刻有反馈，再延迟两帧刷成真值。
                 Refresh();
+                Deferred.NextFrames(2, Refresh);
             }
             catch (Exception e) { Main.LogError("[招募] 失败: " + e.Message); }
         }
