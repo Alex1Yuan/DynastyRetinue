@@ -192,16 +192,21 @@ namespace KgdRetinue
             // 船体中线 X：用左右舷挂点反推（它们本来就骑在中线两侧）
             float cx = (pN > 0 && sN > 0) ? (pxSum / pN + sxSum / sN) * 0.5f : (hasBounds ? bb.center.x : 0f);
 
-            // ★ 高度 Y 用**船脊挂点**，不是左右舷的平均高度 ★
-            // 左右舷炮组在船体腰线上，而船艏最前端往往只有一根细撞角 ——
-            // "腰线高度 + 最前端" 正好落在撞角上方的空隙里（Gothic 实测就是这样：
-            // 包围盒 (2.1, 2.5, 6.5)，算出来 y=0.05，炮飘在船头下方的虚空）。
-            // 船脊是美术手工摆在船体**顶部**的真实点，拿它当高度基准，
-            // 炮塔就落在上层船艏的建筑上，而不是空气里。
+            // ★ 高度 Y：舰首炮取**船体下表面**，不是船脊 ★
+            // 这门光矛的美术是吊装式的 —— 安装板在上、炮体从板下挂出来。
+            // 锚点放在船脊（顶面）等于把"该悬在下面的东西"架在了顶上，板子会翘出船体；
+            // 放在下表面，炮体自然垂在船腹下，和原版 Dictator 的舰首炮观感一致。
+            //
+            // 演进记录（每一步都是实测反馈驱动的，别退回去）：
+            //   v0.28.0 左右舷平均高度 → 炮飘在船头下方虚空（腰线 + 最前端 = 撞角上方的空隙）
+            //   v0.28.1 船脊高度       → 位置对了，但底座板翘在船体外
+            //   v0.29.3 船体下表面     → 吊装式炮体垂在船腹下
+            // 拿不到包围盒时退回船脊 / 左右舷均值，那两条至少保证在船体附近。
             float cy;
-            if (dorsalLocalY.HasValue) cy = dorsalLocalY.Value;
+            if (hasBounds)              cy = bb.min.y + bb.size.y * 0.10f;
+            else if (dorsalLocalY.HasValue) cy = dorsalLocalY.Value;
             else if (pN > 0 && sN > 0)  cy = (pySum / pN + sySum / sN) * 0.5f;
-            else                        cy = hasBounds ? bb.center.y : 0f;
+            else                        cy = 0f;
 
             if (axisOk && hasBounds)
             {
