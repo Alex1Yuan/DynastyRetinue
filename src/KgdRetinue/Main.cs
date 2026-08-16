@@ -309,6 +309,19 @@ namespace KgdRetinue
             {
             // ---------- 舰船 ----------
             GUILayout.Space(8);
+            // 状态行：不点任何按钮就能看出"现在到底是不是巡洋舰"。
+            // 之前只能靠点一次切换按钮、从日志里读「当前分档=」，太绕。
+            {
+                string _sz = "?", _pf = "原版";
+                try { _sz = StarshipTool.CurrentSize().ToString(); } catch { }
+                try { var _p = StarshipViewTool.CurrentPrefab;
+                      if (!string.IsNullOrEmpty(_p))
+                      { var _k = ShipModelCatalog.ByPrefab(_p); _pf = _k != null ? _k.Hull : _p; } }
+                catch { }
+                GUILayout.Label("<b>当前座舰</b>　分档 = <color=#80ff80>" + _sz + "</color>"
+                              + "　船模 = <color=#80ff80>" + _pf + "</color>"
+                              + "　<color=#aaaaaa>两项都写进存档，但要**存过盘**才留得住：改完直接读档就没了。</color>");
+            }
             GUILayout.Label("<b>舰船</b>（只改开火次数，不动配置界面、不扩槽位、不改蓝图）");
             Settings.ShipExtraShots = GUILayout.Toggle(Settings.ShipExtraShots,
                 "换大船后同一槽位可多次开火（当前舰船分档: " + StarshipChargesPatch.ShipSize() + "）");

@@ -225,7 +225,7 @@
         {
           "unit": "53281ae602a34756a47c3e23f66c06cd",
           "name": "赏金 · 猎首",
-          "rank": "猎首赏金人",
+          "rank": "赏金猎手",
           "chain": [
             "06f4f78a9c1a472b85cd79a9a142153d",
             "6f276e8a8e2c4a548504ae39d2a7f22a",
@@ -388,7 +388,7 @@
         {
           "unit": "2cf75c27e6d34681ab623101b0be1135",
           "name": "圣焰 · 净罪修女",
-          "rank": "圣焰净罪者",
+          "rank": "圣焰净罪",
           "plan": "argenta_soldier_veteran",
           "chain": [
             "06f4f78a9c1a472b85cd79a9a142153d",
@@ -478,7 +478,7 @@
         {
           "unit": "d1287134a3e64a4dbdae16b58d21bd8b",
           "name": "亚空间审判者",
-          "rank": "亚空间审判官",
+          "rank": "灵能判官",
           "plan": "heinrix_fighter_assassin",
           "_注preGrant": "Sanctic_Base_Feature。海因里希是生物系(起源=合法灵能者·生物系)，但他额外从剧情特性表 HeinrixFeatureList_Chapter1_Start 白拿了神圣系 —— 存档里那条 Sanctic_Base 的来源就是它的 AddFacts。方案里的 英雄诗篇 记录为 Ascension r1 / PathFeatureSource=Sanctic_Base，只能从神圣系池出。我们的模板没有那份剧情表，所以要补。原版蓝图。",
           "preGrant": [
@@ -508,7 +508,7 @@
         {
           "unit": "638ab19bfae74bb99dacc93e7d6fe7f3",
           "name": "火杖行刑者",
-          "rank": "火杖行刑官",
+          "rank": "灵能刽子",
           "plan": "rt_fire_executioner",
           "_注preGrant": "Pyromancy_Base_Feature —— 火系灵能学派。它带 9 个 AddFeaturesToLevelUp，不给的话方案里 7 条火系灵能一条都进不了候选池（怒焰迸射/烈焰风暴/烈焰焚尽…）。原版蓝图，不新增 AssetId。",
           "preGrant": [
@@ -592,7 +592,7 @@
         {
           "unit": "bc5ca9badb2042b48afb13c1829619b3",
           "name": "谕令 · 灵能军官",
-          "rank": "谕令参谋长",
+          "rank": "谕令参谋",
           "plan": "rt_psyker_officer",
           "_注preGrant": "Biomancy_Base_Feature —— 生物系灵能学派。同理，不给的话方案里 9 条生物系（恢复生机/亚空神速/过度代谢/躯体转化…）全进不来。原版蓝图。",
           "preGrant": [
