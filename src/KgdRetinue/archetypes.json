@@ -20,7 +20,8 @@
         "5069a24051354e50a663da0125e19b02",
         "684c766dc9c24fcf856dc1d6f01d9290",
         "e19301be9dc14d89b656c60a6c4f8e04",
-        "1dbbd844e25b447e99f247c3a88aa5d4"
+        "1dbbd844e25b447e99f247c3a88aa5d4",
+        "1bc89bf8232c4254919bd11fbab15344"
       ],
       "elites": [
         {
@@ -97,7 +98,7 @@
             "78d1a75785df4d638b813d5b8e32d817",
             "db9cd531f9914828915fa4158d07f6d0",
             "470ac5563173442c858b767d68e27836",
-            "e16a1788d69040328ac3b706cd873e06",
+            "819721a3da0740b6943b36f5d3d6dfd3|e16a1788d69040328ac3b706cd873e06|4b2b5f6ab84a40d4a807d57bf3c9916c",
             "5f77ec7d55304efc9c7eb92748d3ba17",
             "6b85b79132e140a7a52d9fe32d8f5c36",
             [
@@ -161,9 +162,7 @@
         "684c766dc9c24fcf856dc1d6f01d9290",
         "e19301be9dc14d89b656c60a6c4f8e04",
         "365ad1a4ef1b4a47be74509c33b2be3b",
-        "5de2d70b4ac9468ca723e84c57524eae",
-        "c7a53b43ac5f4f11a1aef612dd3f4f71",
-        "590cb5c394ee4b5eb213121c96063dec"
+        "5de2d70b4ac9468ca723e84c57524eae"
       ],
       "elites": [
         {
@@ -192,8 +191,7 @@
             ],
             "e202201c375a45b697d7bba5ac68c6ee",
             [
-              "c1c07d80309c47de99b055ba9eb43a07",
-              "9c163228266c4cc892dfb98086d27b52",
+              "ddd6d0a5bdfc4fefaed5f247cf46e852|d081b0d5d44a48fb89b6adb7173c53d1|5bee6a60c37341b6a4cb39995498546e|9598d953dd4e4af3a4fbd2b2940dbf33",
               "9c8d4a592a284b20a9e2fcf4673135e4",
               "51fad212bca146f889ae8d6e2be4d2fd"
             ],
@@ -268,8 +266,7 @@
             ],
             "e202201c375a45b697d7bba5ac68c6ee",
             [
-              "c1c07d80309c47de99b055ba9eb43a07",
-              "19df1ed2dd3a457682d1f78178912b3d",
+              "ddd6d0a5bdfc4fefaed5f247cf46e852|d081b0d5d44a48fb89b6adb7173c53d1|5bee6a60c37341b6a4cb39995498546e|9598d953dd4e4af3a4fbd2b2940dbf33",
               "fab54297dc854f4aa917ce185b97062a",
               "8b7a450f05fe46bc99b776625291b14d"
             ],
@@ -289,7 +286,7 @@
       "gearT1": [
         "db96ff8975434c40b78705377291ff4e",
         "74a91d0251d447c798efab2f72c604dc",
-        "6610d41f2118476986b3022f53d2c791",
+        "aefff08c4a7843c4982c66fbd423674e|9598d953dd4e4af3a4fbd2b2940dbf33",
         "06c9cace056641b6843f43c514a99189",
         "f37dd20306d34bdcbc5a3edac3775fad",
         "0c26742029854f6fbca188bf1354fd2e",
@@ -299,17 +296,17 @@
       "gearT2": [
         "c8c2bdcf4a8c49a398db939a3b160787",
         "1025b5850b95477296280af42b1c31f8",
-        "b8dabd5873ed455bb3b299180c4ad782",
+        "eacceef2db4d41fb9ab46faf8f011a28|8fe1068ed34746ba83d2388efc97c79f|9598d953dd4e4af3a4fbd2b2940dbf33",
         "b48e40d87ac0417abeb1b7ab3fc7c781",
         "9c92a7c55d3b4d4891060d63bb5f9873",
-        "453917c7b74a430d9b13037384f75caa",
+        "1b447777d38f43baa643fc2e915d6ef3",
         "8729750ca66049cc8f92a93f2933e534",
         "116f9387b5ec4a0c8ce2728ab84bace6"
       ],
       "gearT3": [
         "9fff749bf072433fac15cc2907f4e266",
         "3535abdbb30543bbaa395ef07059dbc1",
-        "199b3d86b5214c0c8fe483806f3122ce",
+        "5bee6a60c37341b6a4cb39995498546e|2d262a9870604d3e88260a11c984d725|8fe1068ed34746ba83d2388efc97c79f",
         "78787ef16bb84f28b68f71b98c726260",
         "31d4ecc2b4ff4fa48c0414687d2d6844",
         "a056c47963334568b26d7ae9f143c87f",
@@ -504,7 +501,7 @@
             "4127a489515c4b9b9181d9b61fd33ec7",
             "ea60e97cfbe14231b8fdb8e1702b5f70",
             "7f67bc4d7e1c4ef6b217b46e4f55bf0b",
-            "c36e22c76e7c4a3aabdc397ad319ba54",
+            "2c37192f73bf4b89abd89d12e4040d75|4733a2e3bce3437a890d98ed499570b4|ccc03cf23d0e4681a7bedf3d2c14f22c",
             "f3c90d709b2b4bf58da8fc6704e08fdb",
             "b5a23e5ce00248efb454d07871f5b3d4",
             "819721a3da0740b6943b36f5d3d6dfd3",
