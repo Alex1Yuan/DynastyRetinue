@@ -95,11 +95,15 @@ namespace KgdRetinue
         }
 
         /// <summary>
-        /// 一键测装备：5 个分型 × T1/T2/T3 三档 = 15 组，全部跑一遍。
+        /// 一键测装备：5 个分型 × T1/T2/T3 = 15 组普通卫兵，**外加全部 10 个精英**。
         ///
         /// 为什么要有它：装备档位由玩家等级推出（PlayerTier），55 级存档恒为 T3；
         /// 要验 T1/T2 得手动切面板档位再一个个招，15 组要点几十次。
         /// 这里把「切档位 → 招一个 → 记结果 → 遣散」整个循环自动化，只点一次。
+        ///
+        /// 精英那一趟是后加的：精英不吃档位（用各自 EliteDef.Gear 的毕业套），
+        /// 以前只在【一键全测】里覆盖，于是"改精英点全测、改分型三档点这个"，
+        /// 两边都得点还容易漏。现在一个按钮把 15 组普通 + 全部精英一次跑完。
         ///
         /// 结果同时写进 geartest.tsv，方便离线对着 items_zh.tsv 排查装不上的那些。
         /// </summary>
@@ -121,7 +125,7 @@ namespace KgdRetinue
             int totalFail = 0;
             try
             {
-                Main.Log("================ 一键测装备开始（5 分型 × 3 档）================");
+                Main.Log("================ 一键测装备开始（5 分型 × 3 档 + 全部精英）================");
                 RetinueRegistry.DismissAll();
 
                 var archs = Archetypes.All;
@@ -158,6 +162,42 @@ namespace KgdRetinue
                                      + " 格装不上: " + GearTool.LastRejected);
 
                         try { RetinueRegistry.DismissAll(); } catch { }
+                    }
+
+                    // ★ 精英也一起测 ★
+                    // 精英**不吃档位**——它们用各自 EliteDef.Gear 那份毕业套，跟 T1/T2/T3 无关。
+                    // 以前精英只在【一键全测】里测、普通卫兵只在这里测，
+                    // 于是改了精英装备要点全测、改了分型三档要点这个，两边都得点一次还容易漏。
+                    // 现在这一个按钮把 15 组普通 + 全部精英一次跑完。
+                    if (a.Elites != null)
+                    {
+                        for (int ei = 0; ei < a.Elites.Length; ei++)
+                        {
+                            var ed = a.Elites[ei];
+                            if (ed == null) continue;
+
+                            GearTool.LastOk = GearTool.LastFail = GearTool.LastMiss = GearTool.LastAlready = 0;
+                            GearTool.LastNames = GearTool.LastRejected = "";
+
+                            string tag = "精英:" + (string.IsNullOrEmpty(ed.Name) ? ("#" + ei) : ed.Name);
+                            Main.Log("---- " + a.Name + "  " + tag + " ----");
+
+                            try { RetinueTest.SpawnOne(ai, ed, true); }
+                            catch (Exception e) { Main.LogError("  生成失败: " + e.Message); }
+
+                            int wantE = ed.Gear == null ? 0 : ed.Gear.Length;
+                            lines.Add(string.Join("\t", new[]{
+                                a.Name, tag, wantE.ToString(),
+                                GearTool.LastOk.ToString(), GearTool.LastFail.ToString(),
+                                GearTool.LastMiss.ToString(), GearTool.LastNames, GearTool.LastRejected }));
+                            totalFail += GearTool.LastFail;
+
+                            if (GearTool.LastFail > 0)
+                                Main.Log("  ⚠ " + tag + " 有 " + GearTool.LastFail
+                                         + " 格装不上: " + GearTool.LastRejected);
+
+                            try { RetinueRegistry.DismissAll(); } catch { }
+                        }
                     }
                 }
 

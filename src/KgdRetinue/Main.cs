@@ -438,8 +438,9 @@ namespace KgdRetinue
             if (GUILayout.Button("★ 一键全测 ★", GUILayout.Width(130))) AutoTest.RunAll();
             if (GUILayout.Button("★ 一键测装备 ★", GUILayout.Width(140))) AutoTest.RunGearMatrix();
             if (GUILayout.Button("导出天赋名录", GUILayout.Width(130))) ItemTool.ExportFeatures();
-            GUILayout.Label("<i>一键全测：清场 → 每个分型生成全部精英+一个普通 → 收集命中率/属性/装备 → 写 autotest.tsv → 自动遣散。临时解除数量与解锁限制。</i>");
             GUILayout.EndHorizontal();
+            GUILayout.Label("<i>一键测装备：5 分型 × T1/T2/T3 = 15 组普通卫兵 <b>+ 全部 10 个精英</b>，一次跑完，写 geartest.tsv。"
+                          + "　一键全测：额外收集命中率/属性，写 autotest.tsv。两个都会自动清场并还原限制。</i>");
 
             GUILayout.BeginHorizontal();
             GUILayout.Label("经验数:", GUILayout.Width(60));
