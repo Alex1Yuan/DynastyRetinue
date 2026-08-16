@@ -666,8 +666,11 @@ namespace KgdRetinue
 
             GUILayout.Label("<b>工具</b>");
             GUILayout.BeginHorizontal();
-            if (GUILayout.Button("属性/装备/brain 全表（会清场）", GUILayout.Width(210))) AutoTest.RunAll();
-            if (GUILayout.Button("只测装备矩阵（会清场）", GUILayout.Width(180))) AutoTest.RunGearMatrix();
+            // ★这两个按钮已合并进【一键全测（会清空卫兵）】★
+            // AutoTest.RunAll 和 RunGearMatrix 都会把 25 组配装**各生成一遍**，
+            // 而 RunGearMatrix 的日志里已经带了属性（上面那张属性对比表就是从它的输出里解的），
+            // RunAll 独有的只剩 brain 记录。为了那一列跑第二遍 25 次生成不划算，
+            // brain 已并进 GearTool 的每组日志。留一个入口，少一次误点、少一半时间。
             if (GUILayout.Button("探测 brain", GUILayout.Width(110))) BrainTool.Probe();
             if (GUILayout.Button("探测候选单位", GUILayout.Width(120))) Probe.ProbeUnits();
             if (GUILayout.Button("批量试算方案", GUILayout.Width(120))) PlanProbe.Run();

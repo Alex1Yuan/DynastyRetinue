@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
@@ -35,6 +35,16 @@ namespace KgdRetinue
             get { return Path.Combine(Main.ModEntry != null ? Main.ModEntry.Path : ".", "autotest.tsv"); }
         }
 
+        /// <summary>
+        /// ★已被【一键全测（会清空卫兵）】取代，面板上不再有入口★
+        ///
+        /// 它和 RunGearMatrix 都会把 25 组配装**各生成一遍**，而 RunGearMatrix 的日志里
+        /// 本来就带属性（属性对比表就是从它的输出里解出来的），RunAll 独有的只剩 brain 一列 ——
+        /// 为一列信息跑第二轮 25 次生成不划算。brain 已并进 RunGearMatrix 的每组日志。
+        ///
+        /// 保留函数体是因为它还写 autotest.tsv（列比 geartest.tsv 全，离线对表时有用）。
+        /// 需要的时候直接从代码里调，不占面板一行、也不会被误点。
+        /// </summary>
         public static void RunAll()
         {
             var game = Game.Instance;
@@ -107,6 +117,19 @@ namespace KgdRetinue
         ///
         /// 结果同时写进 geartest.tsv，方便离线对着 items_zh.tsv 排查装不上的那些。
         /// </summary>
+        /// <summary>刚生成的那名卫兵的 brain 蓝图名。合并自原【一键全测】。</summary>
+        private static string BrainOf()
+        {
+            try
+            {
+                var list = RetinueRegistry.All();
+                if (list.Count == 0) return "(没有在册卫兵)";
+                var g = list[list.Count - 1];
+                return (g.Brain != null && g.Brain.Blueprint != null) ? g.Brain.Blueprint.name : "(无)";
+            }
+            catch (Exception e) { return "(读不到: " + e.Message + ")"; }
+        }
+
         public static void RunGearMatrix()
         {
             var game = Game.Instance;
@@ -161,6 +184,10 @@ namespace KgdRetinue
                             Main.Log("  ⚠ " + a.Name + " T" + tier + " 有 " + GearTool.LastFail
                                      + " 格装不上: " + GearTool.LastRejected);
 
+                        // brain 原来只有【一键全测】记，而那个按钮会把 25 组再生成一遍。
+                        // 为一列信息跑第二轮不划算，并到这里。
+                        Main.Log("  brain: " + BrainOf());
+
                         try { RetinueRegistry.DismissAll(); } catch { }
                     }
 
@@ -195,6 +222,8 @@ namespace KgdRetinue
                             if (GearTool.LastFail > 0)
                                 Main.Log("  ⚠ " + tag + " 有 " + GearTool.LastFail
                                          + " 格装不上: " + GearTool.LastRejected);
+
+                            Main.Log("  brain: " + BrainOf());
 
                             try { RetinueRegistry.DismissAll(); } catch { }
                         }
