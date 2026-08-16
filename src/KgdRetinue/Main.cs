@@ -26,6 +26,18 @@ namespace KgdRetinue
             modEntry.OnSaveGUI = OnSaveGUI;
             modEntry.OnUpdate  = OnUpdate;
 
+            // ★开发区可见性：靠标记文件，不靠条件编译★
+            // 用 #if DEBUG 编译掉的话，我自己测的就不是发出去的那个二进制了 ——
+            // 发布版独有的代码路径永远没被跑过。同一个 DLL、只切可见性，
+            // 才能保证"我测过的"和"玩家拿到的"逐字节一致。
+            // bump.sh pack 只打四个具名文件，这个 flag 永远进不了发布包。
+            try
+            {
+                DevMode = System.IO.File.Exists(
+                    System.IO.Path.Combine(modEntry.Path, "kgd_dev.flag"));
+            }
+            catch { DevMode = false; }
+
             HarmonyInstance = new Harmony(modEntry.Info.Id);
             PatchAllSafe(HarmonyInstance, System.Reflection.Assembly.GetExecutingAssembly());
 
@@ -177,6 +189,13 @@ namespace KgdRetinue
         }
 
         public static bool Enabled { get; private set; }
+
+        /// <summary>
+        /// 开发模式。mod 目录下有 kgd_dev.flag 才为 true。
+        /// 控制「开发 · 测试」整区是否出现 —— 那里面的一键测试会清空全部卫兵，
+        /// 诊断按钮的输出也只有作者看得懂，不该出现在玩家的面板上。
+        /// </summary>
+        public static bool DevMode { get; private set; }
 
         private static void OnUpdate(UnityModManager.ModEntry modEntry, float dt)
         {
@@ -613,6 +632,21 @@ namespace KgdRetinue
 
             }
 
+            // ---------- 反馈（玩家可见）----------
+            GUILayout.Space(8);
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("导出诊断包", GUILayout.Width(120)))
+            {
+                var _p = DiagnosticReport.Export();
+                if (!string.IsNullOrEmpty(_p)) Log("[诊断包] 请把这个文件发给作者：" + _p);
+            }
+            GUILayout.Label("<color=#aaaaaa>反馈问题时点这个 —— 会把版本、你改过的设置、在册情况、舰船状态"
+                          + "和日志尾部打包成**一个文件**，用户名已抹掉。比直接发 kgd_log.txt 小得多也全得多。</color>");
+            GUILayout.EndHorizontal();
+            if (!string.IsNullOrEmpty(DiagnosticReport.LastPath))
+                GUILayout.Label("<color=#7ec8ff>最近导出：" + DiagnosticReport.LastPath + "</color>");
+
+            if (DevMode)
             if (Fold(ref Settings.PanelShowDev, "开发 · 测试", "装备档位 / 诊断 / 热键　★注意：好几个按钮会清空全部卫兵★"))
             {
             // ---------- 工具 ----------
