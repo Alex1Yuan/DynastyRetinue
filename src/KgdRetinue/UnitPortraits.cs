@@ -65,37 +65,76 @@ namespace KgdRetinue
         public static readonly Dictionary<string, string> UnitPortraitOverride =
             new Dictionary<string, string>
             {
-                // DLC3_DL_Guard_Melee_Ally_Unit      -> AstraMilitarumMale
-                { "270b3e09cf424209b126b236f1655108", "1b9082909e854f6d97c366358a280102" },
-                // DLC3_DL_Guard_Sniper_Unit          -> ArbitesMale
-                { "36e39788d1c648c8a75fbf36371f35f9", "f0d5da655acb4b47846e52e8e97a5254" },
-                // DLC3_DL_Sororitas_HBolter_Unit     -> AdeptusMinistorumFemale
-                { "5fc80452fb6a4e2db02cd0a305715446", "e5fa9cc788be4459bc0b9c6a74968da6" },
-                // DLC3_DL_Inquisitor_Unit            -> PsykerMale
-                { "5bc8b3a8fb834977a3692a2325aff0f6", "0114a2db302c45a9bc780593d0ec5134" },
-                // OfficersDeckGuard                  -> ImperialNavyMale
-                { "1fb60c0ef5fe459980c34a271dfad088", "d03e6b0de6994d8f8b10a8ad16ebd94e" },
-                // DLC3_DL_Guard_Ranged_Ally_Unit     -> ImperialNavyFemale
-                { "02094127ee4c402fbedbce1aff086e62", "8d19acfeea77464783d579110e4a89e4" },
+                // ================= 精英卫兵立绘 =================
+                //
+                // ★ v0.25.0 按用户新口径重排 ★
+                //   · 建卡池的脸**可以用**（只在玩家恰好捏了同类主角时撞 1 个）
+                //   · **禁止**用会和玩家经常互动的 NPC（同伴、剧情要角、高台词量角色）
+                //   · **普通卫兵不再给立绘** —— 原来那 6 行 override 已删除，
+                //     它们现在落到解析链第 3 步的 Empty_Portrait（原版正规的"无立绘"图，
+                //     三种尺寸都真实存在，不是破图）。
+                //
+                // ★ 删掉普通卫兵那 6 行顺带解决了两处「精英和自己手下同脸」★
+                //     ArbitesMale      原本 普通狙击卫兵 与 磐石 共用
+                //     ImperialNavyMale 原本 OfficersDeckGuard 与 谕令 共用
+                //   现在这两张脸独归精英。
+                //
+                // 为什么大部分行没动：这张表本来就是借建卡池的脸建的，
+                // 天然符合新口径。上一轮工作流为了**避开**建卡池而改选高露面 NPC
+                //（赏金猎首→Ruoldo cue=95、谕令→Zacchary_Weisz cue=53），方向恰好反了，未采纳。
+                //
+                // 全部 GUID 已逐个在 ref/bbp/catalog.tsv 核到名字。
 
-                // ---- 精英卫兵（v0.14.0 换成 10 个互不相同的单位蓝图后新增）----
-                // 换掉的 4 个 StartGame_Pregen_* 自带立绘，但它们**共用同一个 prefab**，
-                // 所以同一分型下两个精英在游戏里是一模一样的人。换成各自的单位后模型区分开了，
-                // 代价是新单位多半没配立绘 —— 这里按主题借 CharGenRoot 的原版建卡立绘。
-                // TreasureWorld_Arbites_ShieldNShotgun -> ArbitesHelmetMale
+                // 铁壁·先锋队长  TreasureWorld_Arbites_ShieldNShotgun -> ArbitesHelmetMale
+                //   法务部全盔，与盾+霰弹枪的暴动装扮相符。建卡池。
                 { "4a02a1bee6f84892b3cb7a3f8c818c69", "53f44b5aa25442ed8bedd0015e33d25c" },
-                // VC2_Arbitres_Melee                   -> ArbitesMale
+
+                // 磐石·首席战士  VC2_Arbitres_Melee -> ArbitesMale
+                //   同为法务部但**不戴盔**，和铁壁区分得开。建卡池。
                 { "30e6364a1d7a425b93d877122c6eed40", "f0d5da655acb4b47846e52e8e97a5254" },
-                // FootfallAnverSniper_Ranged_Elite     -> CriminalMale
+
+                // 寂静之眼  Quetza_EldarRangerHard -> DrukhariWych_BeastmasterBase_Portrait
+                //   ★新增★ 该单位自带 BCT_Eldar_Male_Guardian2，但那张**图没发货**，
+                //   游戏里显示为占位符（玩家实测）。
+                //   这是全库唯一的非剧情灵族脸：光头苍白尖耳素颜，不戴黑暗灵族盔。
+                //   被 0 个蓝图引用 ⇒ 零撞脸风险。
+                //   ⚠ 只有 Small 尺寸，无 Half/Full —— 我们目前只画小头像，够用；
+                //     将来若要在角色面板画半身像需另挑。
+                { "aca1e823dbf64d6999d2132e3198dd5a", "d328a891cc7749f49e75b08b636f2ebd" },
+
+                // 赏金·猎首  FootfallAnverSniper_Ranged_Elite -> CriminalMale
+                //   疤脸罪犯，赏金猎人主题契合。建卡池。
+                //   ★保留不改★ —— 工作流建议换成 Ruoldo（cue=95，全场露面最多的一张），
+                //   按新口径那是明确禁止的。
                 { "53281ae602a34756a47c3e23f66c06cd", "28e3d61fbcb94305bdbfe3e598ef72c0" },
-                // DLC3_DL_Sororitas_Melta_Unit         -> ArbitesHelmetFemale
-                { "2cf75c27e6d34681ab623101b0be1135", "789d150f4e2b4f7da536980fcabdae31" },
-                // Ch05Inquisitor_Psyker_unit           -> AdeptusMinistorumMale
+
+                // 圣焰·净罪修女  DLC3_DL_Sororitas_Melta_Unit -> AdeptusMinistorumFemale
+                //   ★改★ 原来是 ArbitesHelmetFemale（法务部盔）—— 给战斗修女戴法务部盔主题不符。
+                //   AdeptusMinistorumFemale 原被普通修女卫兵占用，现已释放。
+                //   全游戏唯一的非同伴教会系女性脸（另一张 SisterArgenta 是阿尔金塔本人，属禁用）。
+                { "2cf75c27e6d34681ab623101b0be1135", "e5fa9cc788be4459bc0b9c6a74968da6" },
+
+                // 亚空间审判者  Ch05Inquisitor_Psyker_unit -> AdeptusMinistorumMale
+                //   教会系男性，审判庭气质相符。建卡池。
                 { "d1287134a3e64a4dbdae16b58d21bd8b", "b8c150a212dc43b8ae2a580c0145fa20" },
-                // VC2_Astropath -> ImperialNavyMale
-                //   ★ 不用 PsykerMale ★ 那张已被灵能分型的**普通**卫兵占用，
-                //   精英跟自己手下同脸就白换了。
+
+                // 火杖行刑者  Ch04Chorda_Pyromancer_unit -> PsykerMale
+                //   ★新增★ 该单位自带立绘的 SpriteLink 是空的，游戏里显示为占位符（玩家实测）。
+                //   PsykerMale 原被灵能分型的**普通**卫兵占用，现已释放；
+                //   与同为灵能的亚空间审判者（AdeptusMinistorumMale）不撞脸。建卡池。
+                { "638ab19bfae74bb99dacc93e7d6fe7f3", "0114a2db302c45a9bc780593d0ec5134" },
+
+                // 谕令·灵能军官  VC2_Astropath -> ImperialNavyMale
+                //   帝国海军军官装，与"星语者兼军官"的定位相符。建卡池。
+                //   原本与 OfficersDeckGuard 撞脸，删掉普通卫兵那行后已独占。
                 { "bc5ca9badb2042b48afb13c1829619b3", "d03e6b0de6994d8f8b10a8ad16ebd94e" },
+
+                // ---- 下面两个**不需要** override：单位自带立绘且图正常 ----
+                // 怒火·首席连射  TaintedStreets_Arbites_SolomonSquad -> 自带 ArbitratorClayton
+                //     1704807cd8944603b71331183ff36a1f
+                // 铁律·政委军官  HumanCommissar_MeleeRanged_Prison   -> 自带 CommorraghCommissar_Portrait
+                //     a2699823ca3140eba4a1445871d456c5
+                // 解析链第 1 步就命中了，加 override 也不会生效（override 只在自带的取不到时才查）。
             };
 
         private static readonly Dictionary<string, Sprite> Cache = new Dictionary<string, Sprite>();
