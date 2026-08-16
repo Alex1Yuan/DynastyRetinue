@@ -190,21 +190,25 @@ namespace KgdRetinue.UI
                 UnityEngine.Object.Destroy(_content.GetChild(i).gameObject);
 
             Size cur = ShipDialog.Current();
+            // ★按"买到手的档"分组，不是按船体的原生档★
+            // 大巡那档用的是放大后的 Dictator，而 Dictator 的 m.Tier 是 Cruiser_2x4 ——
+            // 按 m.Tier 分组会把它排进巡洋舰那一栏，大巡栏则空着。
             Size lastTier = (Size)(-999);
-            foreach (var m in Sorted())
+            foreach (var o in ShipDialog.Offers())
             {
-                if (m.Tier != lastTier)
+                if (o.Tier != lastTier)
                 {
-                    lastTier = m.Tier;
+                    lastTier = o.Tier;
                     RetinueUI.MakeSectionLabel(_content,
-                        ShipDialog.SizeName(m.Tier) + "　总价 " + ShipDialog.TotalFor(m.Tier) + " 废料");
+                        ShipDialog.SizeName(o.Tier) + "　总价 " + ShipDialog.TotalFor(o.Tier) + " 废料");
                 }
-                MakeRow(m, cur);
+                MakeRow(o, cur);
             }
         }
 
-        private static void MakeRow(ShipModel m, Size cur)
+        private static void MakeRow(ShipDialog.Offer o, Size cur)
         {
+            var m = o.Model;
             string why = null;
             try { why = ShipModelBundleHold.WhyUnusable(m.PrefabAssetId); }
             catch (Exception e) { why = e.Message; }
@@ -212,8 +216,8 @@ namespace KgdRetinue.UI
 
             bool isCurrent = string.Equals(StarshipViewTool.CurrentPrefab, m.PrefabAssetId,
                                            StringComparison.OrdinalIgnoreCase);
-            bool supported = ShipDialog.IsSupported(m);
-            int price = ShipDialog.PriceTo(m.Tier);
+            bool supported = o.Supported;
+            int price = ShipDialog.PriceTo(o.Tier);
             bool afford = ShipDialog.Scrap() >= price;
 
             GameObject row = RetinueUI.NewUI("Row_" + m.Hull, _content);
@@ -262,7 +266,7 @@ namespace KgdRetinue.UI
                 return;
             }
 
-            if (isCurrent && m.Tier == cur)
+            if (isCurrent && o.Tier == cur)
             {
                 var w = RetinueUI.MakeLabelPublic(row.transform, "<color=#7ec87e>当前座舰</color>",
                                                   18f, VanillaSkin.Text, TextAlignmentOptions.Right);
@@ -283,9 +287,9 @@ namespace KgdRetinue.UI
             prt.sizeDelta = new Vector2(150f, 0f);
             prt.anchoredPosition = new Vector2(-176f, 0f);
 
-            var model = m;   // 闭包捕获：别在 lambda 里用循环变量
+            var offer = o;   // 闭包捕获：别在 lambda 里用循环变量
             Button b = RetinueUI.MakeButton(row.transform, "改装", 140f, 34f,
-                                            delegate { OnBuy(model); });
+                                            delegate { OnBuy(offer); });
             var brt = (RectTransform)b.transform;
             brt.anchorMin = new Vector2(1f, 0.5f); brt.anchorMax = new Vector2(1f, 0.5f);
             brt.pivot = new Vector2(1f, 0.5f);
@@ -295,9 +299,9 @@ namespace KgdRetinue.UI
 
         // ------------------------------------------------------------ 动作
 
-        private static void OnBuy(ShipModel m)
+        private static void OnBuy(ShipDialog.Offer o)
         {
-            _replyText = ShipDialog.BuyModel(m);
+            _replyText = ShipDialog.BuyOffer(o.Tier, o.Model);
             // 换船会重建 view，延两帧再刷，让分档/价格读到新值
             Deferred.NextFrames(2, Refresh);
             Refresh();
@@ -310,16 +314,5 @@ namespace KgdRetinue.UI
             Refresh();
         }
 
-        private static List<ShipModel> Sorted()
-        {
-            var l = new List<ShipModel>(ShipModelCatalog.All);
-            l.Sort(delegate (ShipModel a, ShipModel b)
-            {
-                int c = ((int)a.Tier).CompareTo((int)b.Tier);
-                if (c != 0) return c;
-                return string.Compare(a.Hull, b.Hull, StringComparison.Ordinal);
-            });
-            return l;
-        }
     }
 }

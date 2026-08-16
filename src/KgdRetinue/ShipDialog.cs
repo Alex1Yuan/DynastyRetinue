@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using UnityEngine;
 using Kingmaker;
 using Kingmaker.Enums;
@@ -103,6 +104,55 @@ namespace KgdRetinue
         // ---------------------------------------------------------------- 支持名单
 
         /// <summary>
+        /// 一份"改装方案" = **(目标分档, 船体) 这一对**，不是单独一条船体。
+        ///
+        /// ★为什么必须成对★ 目录里 Dictator 的 Tier 写的是 Cruiser_2x4 —— 它本来就是
+        /// 巡洋舰船体，我们只是把它按大巡的尺寸放大来用：
+        ///     DefaultFor(GrandCruiser_3x6) => Cruiser_ImperialDictator
+        /// 所以"船体的原生档"和"你买到的档"根本不是一回事。
+        /// v0.43.1 把两者当成一回事，后果是 Dictator 被自己的判据判成"未调整好"、
+        /// 而大巡那一组里只剩没校准的混沌/运输舰 ⇒ **大巡这档实际上买不到**。
+        /// </summary>
+        public sealed class Offer
+        {
+            public Size Tier;          // 买到手是什么档（决定价格、格子占位、加成）
+            public ShipModel Model;    // 用哪个船体外观
+            public bool Supported;     // 校准过、允许更换
+        }
+
+        /// <summary>
+        /// 全部方案：**校准过的排前面**，其余照常列出但不给按钮。
+        /// 列而不藏 —— 让玩家知道有这些船、也知道为什么点不了。
+        /// </summary>
+        public static List<Offer> Offers()
+        {
+            var list = new List<Offer>();
+            var taken = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var tier in new[] { Size.Cruiser_2x4, Size.GrandCruiser_3x6 })
+            {
+                ShipModel d = null;
+                try { d = ShipModelCatalog.DefaultFor(tier); } catch { }
+                if (d == null) continue;
+                list.Add(new Offer { Tier = tier, Model = d, Supported = true });
+                taken.Add(tier + "|" + d.PrefabAssetId);
+            }
+
+            bool all = Main.Settings != null && Main.Settings.ShipYardUnlockAll;
+            foreach (var m in ShipModelCatalog.All)
+            {
+                if (m == null) continue;
+                if (taken.Contains(m.Tier + "|" + m.PrefabAssetId)) continue;
+                // 护卫舰档不列：回原生船走底部那条「还原为原样」，语义更清楚也能退款
+                if (m.Tier != Size.Cruiser_2x4 && m.Tier != Size.GrandCruiser_3x6) continue;
+                list.Add(new Offer { Tier = m.Tier, Model = m, Supported = all });
+            }
+            return list;
+        }
+
+        public const string UnsupportedHint = "未调整好（挂点与缩放未在这条船体上校准）";
+
+        /// <summary>
         /// 这条船体是不是**校准过**的。
         ///
         /// 目录里那些船体（混沌战列巡洋舰、Universe 运输舰…）prefab 都能加载，
@@ -117,42 +167,42 @@ namespace KgdRetinue
         ///
         /// 想试的人可以在面板打开「解除船体限制」。
         /// </summary>
-        public static bool IsSupported(ShipModel m)
+        public static bool IsSupported(Size tier, ShipModel m)
         {
             if (m == null) return false;
             if (Main.Settings != null && Main.Settings.ShipYardUnlockAll) return true;
-            if (m.Tier != Size.Cruiser_2x4 && m.Tier != Size.GrandCruiser_3x6) return false;
+            if (tier != Size.Cruiser_2x4 && tier != Size.GrandCruiser_3x6) return false;
             try
             {
-                var def = ShipModelCatalog.DefaultFor(m.Tier);
+                // ★按目标分档查默认船体★ 不能拿 m.Tier 查 —— Dictator 的 m.Tier 是
+                // Cruiser_2x4，而它正是大巡那档的默认船体。
+                var def = ShipModelCatalog.DefaultFor(tier);
                 return def != null && string.Equals(def.PrefabAssetId, m.PrefabAssetId,
                                                     StringComparison.OrdinalIgnoreCase);
             }
             catch { return false; }
         }
 
-        public const string UnsupportedHint = "未调整好（挂点与缩放未在这条船体上校准）";
-
         // ---------------------------------------------------------------- 成交
 
-        /// <summary>换成指定船体（含它自己的档位）。返回给玩家看的一句话。</summary>
-        public static string BuyModel(ShipModel m)
+        /// <summary>按方案改装。tier 是**买到手的档**，可能和 m.Tier 不同（大巡=放大的巡洋船体）。</summary>
+        public static string BuyOffer(Size tier, ShipModel m)
         {
             try
             {
                 if (m == null) return "船坞里没有这份图纸。";
                 // ★兜底放在这里而不是 UI 里★ 两个窗口共用这条路，
                 // 任何一边漏了判断都不会让未校准的船体真的换上去。
-                if (!IsSupported(m))
+                if (!IsSupported(tier, m))
                     return "这条船体船坞还没调校好，暂不承接。（" + UnsupportedHint + "）";
-                int price = PriceTo(m.Tier);
+                int price = PriceTo(tier);
                 int have  = Scrap();
                 if (have < price)
                     return "废料不够 —— 需要 " + price + "，账上只有 " + have + "。（一枚都没扣。）";
 
                 // ★先换船再扣钱★ 换船可能被拒（战斗中 StarshipTool.SetSize 会拒），
                 // 顺序反了就是"钱花了船没换"。宁可白换不能白扣。
-                if (!StarshipViewTool.ApplyModelAtTier(m, m.Tier))
+                if (!StarshipViewTool.ApplyModelAtTier(m, tier))
                     return "现在动不了船坞（在战斗中？）。废料未扣除。";
 
                 if (price > 0)
@@ -160,8 +210,9 @@ namespace KgdRetinue
                     try { Game.Instance.Player.Scrap.Spend(price); }
                     catch (Exception e) { Main.LogError("[船坞] ★船已改装但废料扣除失败★: " + e.Message); }
                 }
-                Main.Log("[船坞] 成交 -> " + m.Hull + "（" + m.Tier + "）　花费 " + price + "　余额 " + Scrap());
-                return "改装完成。您的座舰现在是一艘「" + m.Hull + "」，"
+                Main.Log("[船坞] 成交 -> " + m.Hull + " @ " + tier + "　花费 " + price + "　余额 " + Scrap());
+                return "改装完成。您的座舰现在是一艘" + SizeName(tier)
+                     + "（船体：" + m.Hull + "），"
                      + (price > 0 ? "船坞收讫 " + price + " 单位废料。" : "本次无需补价。");
             }
             catch (Exception e) { Main.LogError("[船坞] 交易异常: " + e); return "船坞出了点岔子，交易未完成。"; }

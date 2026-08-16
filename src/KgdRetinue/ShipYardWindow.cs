@@ -94,16 +94,16 @@ namespace KgdRetinue
                 _scroll = GUILayout.BeginScrollView(_scroll, GUILayout.Height(340));
 
                 Size lastTier = (Size)(-999);
-                foreach (var m in Sorted())
+                foreach (var o in ShipDialog.Offers())
                 {
-                    if (m.Tier != lastTier)
+                    if (o.Tier != lastTier)
                     {
-                        lastTier = m.Tier;
+                        lastTier = o.Tier;
                         GUILayout.Space(6);
-                        GUILayout.Label("── " + ShipDialog.SizeName(m.Tier)
-                                      + "　总价 " + ShipDialog.TotalFor(m.Tier) + " 废料 ──", _sHead);
+                        GUILayout.Label("── " + ShipDialog.SizeName(o.Tier)
+                                      + "　总价 " + ShipDialog.TotalFor(o.Tier) + " 废料 ──", _sHead);
                     }
-                    Row(m, cur);
+                    Row(o, cur);
                 }
                 GUILayout.EndScrollView();
 
@@ -128,8 +128,9 @@ namespace KgdRetinue
                 GUI.DragWindow(new Rect(0, 0, 10000, 22));
             }
 
-            private void Row(ShipModel m, Size cur)
+            private void Row(ShipDialog.Offer o, Size cur)
             {
+                var m = o.Model;
                 // ★可用性：真的去试加载★ 只被 DLC 引用的船体，没装 DLC 时 bundle 里可能没有。
                 // WhyUnusable 带缓存，每个 prefab 只真加载一次。
                 string why = null;
@@ -138,7 +139,7 @@ namespace KgdRetinue
 
                 bool isCurrent = string.Equals(StarshipViewTool.CurrentPrefab, m.PrefabAssetId,
                                                StringComparison.OrdinalIgnoreCase);
-                int price = ShipDialog.PriceTo(m.Tier);
+                int price = ShipDialog.PriceTo(o.Tier);
                 bool afford = ShipDialog.Scrap() >= price;
 
                 GUILayout.BeginHorizontal();
@@ -150,7 +151,7 @@ namespace KgdRetinue
                 {
                     GUILayout.Label("<color=#b06060>不可用：" + why + "</color>", _sDim);
                 }
-                else if (isCurrent && m.Tier == cur)
+                else if (isCurrent && o.Tier == cur)
                 {
                     GUILayout.Label("<color=#80c880>当前座舰</color>", GUILayout.Width(110));
                     GUILayout.FlexibleSpace();
@@ -162,7 +163,7 @@ namespace KgdRetinue
                     if (GUILayout.Button(afford ? "改装" : "废料不足", GUILayout.Width(90)))
                     {
                         // 目标档由船体决定；先设档再换模由 ApplyModelAtTier 内部保证顺序
-                        _reply = BuyModel(m);
+                        _reply = BuyModel(o);
                     }
                     GUI.enabled = true;
                 }
@@ -170,19 +171,8 @@ namespace KgdRetinue
             }
 
             /// <summary>换船逻辑与 uGUI 版共用一份，别分叉。</summary>
-            private static string BuyModel(ShipModel m) { return ShipDialog.BuyModel(m); }
+            private static string BuyModel(ShipDialog.Offer o) { return ShipDialog.BuyOffer(o.Tier, o.Model); }
 
-            private static List<ShipModel> Sorted()
-            {
-                var l = new List<ShipModel>(ShipModelCatalog.All);
-                l.Sort(delegate (ShipModel a, ShipModel b)
-                {
-                    int c = ((int)a.Tier).CompareTo((int)b.Tier);
-                    if (c != 0) return c;
-                    return string.Compare(a.Hull, b.Hull, StringComparison.Ordinal);
-                });
-                return l;
-            }
         }
     }
 }
