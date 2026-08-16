@@ -625,6 +625,13 @@ namespace KgdRetinue
             Settings.EliteIgnoreUnlock = GUILayout.Toggle(Settings.EliteIgnoreUnlock, "无视 T3 解锁条件", GUILayout.Width(150));
             if (GUILayout.Button("在游戏内面板打开选中卫兵", GUILayout.Width(200))) RetinueTest.OpenNativePanel();
             GUILayout.EndHorizontal();
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("<color=#ff8080>死亡规则测试（会真的打死）:</color>", GUILayout.Width(200));
+            if (GUILayout.Button("打死一个普通卫兵", GUILayout.Width(150))) RetinueTest.TestKill("normal");
+            if (GUILayout.Button("打死一个精英", GUILayout.Width(130))) RetinueTest.TestKill("elite");
+            GUILayout.EndHorizontal();
+            GUILayout.Label("<color=#aaaaaa>走的是原版同一条判定路径（SetHitPointsLeft(0) → UnitLifeController.ForceTickOnUnit），"
+                          + "不是模拟。预期：普通卫兵 <b>Dead</b> 且从名册移除、名额释放；精英 <b>Unconscious</b> 且仍在册。</color>");
             GUILayout.Label("<i>精英每条路线限 1 个，需该路线先有卫兵练到 T3 职业；用专属蓝图生成（模型/名字都不同），拿毕业套装。普通卫兵拿上面「玩家自配」那套。</i>");
 
             GUILayout.BeginHorizontal();

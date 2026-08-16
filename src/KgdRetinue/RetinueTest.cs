@@ -675,6 +675,73 @@ namespace KgdRetinue
         ///
         /// 渲染得好不好只能实测 —— 头像栏里没有卫兵，某些 VM 可能假定单位在队伍里。
         /// </summary>
+        /// <summary>
+        /// 测试用：把在册卫兵打到 0 血，走原版的生死判定。
+        ///
+        /// 为什么要有它：死亡规则（普通永久死亡 / 精英倒地）只有真死一次才验得了，
+        /// 而在战斗里精确打死某一个卫兵既慢又不可控。这里直接调原版自己的两步：
+        ///     Health.SetHitPointsLeft(0)
+        ///     UnitLifeController.ForceTickOnUnit(unit)   ← 它内部就是 CalculateLifeState + SetLifeState
+        /// 所以走的是**和真实战斗完全同一条**判定路径，不是模拟。
+        ///
+        /// which: "normal" 只打普通卫兵，"elite" 只打精英，其它值打列表里第一个。
+        /// </summary>
+        public static void TestKill(string which)
+        {
+            try
+            {
+                var list = RetinueRegistry.All();
+                if (list == null || list.Count == 0) { Main.Log("[死亡测试] 没有在册卫兵。"); return; }
+
+                BaseUnitEntity target = null;
+                foreach (var g in list)
+                {
+                    bool isElite = false;
+                    try
+                    {
+                        int ai = RetinueRegistry.ArchetypeOf(g);
+                        var arch = Archetypes.Get(ai >= 0 ? ai : 0);
+                        isElite = GearTool.EliteDefOf(g, arch) != null;
+                    }
+                    catch { }
+                    if (which == "elite" && !isElite) continue;
+                    if (which == "normal" && isElite) continue;
+                    target = g; break;
+                }
+                if (target == null)
+                {
+                    Main.Log("[死亡测试] 找不到" + (which == "elite" ? "精英" : which == "normal" ? "普通" : "") + "卫兵。");
+                    return;
+                }
+
+                string name = target.CharacterName;
+                try
+                {
+                    var d = target.GetOptional<PartUnitDescription>();
+                    if (d != null && !string.IsNullOrEmpty(d.CustomName)) name = d.CustomName;
+                }
+                catch { }
+
+                bool downedFlag = false;
+                try { downedFlag = target.Features.UnconsciousOnZeroHealth.Value; } catch { }
+                int before = RetinueRegistry.Count;
+
+                Main.Log("[死亡测试] 目标 " + name + "　倒地豁免=" + (downedFlag ? "有" : "无")
+                         + "　名册 " + before + " 名。开始打到 0 血……");
+
+                target.Health.SetHitPointsLeft(0);
+                Kingmaker.Controllers.Units.UnitLifeController.ForceTickOnUnit(target);
+
+                string state = "?";
+                try { state = target.LifeState.State.ToString(); } catch { }
+                Main.Log("[死亡测试] 结果：生命状态 = <b>" + state + "</b>"
+                         + "（Dead=永久死亡  Unconscious=倒地可救）"
+                         + "\n    名册人数会在两帧后更新（RemoveOne 是延迟销毁的），"
+                         + "再点一次【Dump 状态】看最终值。");
+            }
+            catch (Exception e) { Main.LogError("[死亡测试] 失败: " + e); }
+        }
+
         public static void OpenNativePanel()
         {
             try
