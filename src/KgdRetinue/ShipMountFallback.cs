@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Reflection;
 using HarmonyLib;
@@ -68,30 +68,50 @@ namespace KgdRetinue
         public static void ResetLog() { _logged = false; }
 
         /// <summary>
-        /// 把一个**原生**舰首挂点换算成包围盒归一化坐标存进设置。
+        /// 从一个**原生**舰首挂点学两个比例。
         ///
-        /// 归一化用 (p - bb.min) / bb.size，三个分量都落在 [0,1]（挂点在盒外就会越界，允许）。
-        /// 为什么用包围盒归一而不是绝对坐标：Dictator 和 Gothic 船长/船高差一截，
-        /// 直接搬绝对坐标会落到船体外面；归一化把"舰首炮在船身多靠前、多靠上"这个
-        /// **比例**搬过去，这才是美术真正表达的东西。
+        /// ★为什么学"比例"而不是"包围盒归一化坐标"★
+        /// 第一版用 (p - bb.min)/bb.size 归一化，错的：Gothic 的包围盒高 2.54，
+        /// 但其中很大一块是船底垂下来的吊坠装饰（Keel 挂点在 y=-0.99，包围盒底 -1.09）；
+        /// Dictator 的包围盒高 1.95，几乎全是实体船身。同一个归一化 y 在两条船上
+        /// 指向完全不同的结构层。
         ///
-        /// 只在数值明显变化时写盘 + 打日志，避免每次重建 view 都刷屏。
+        /// 改成用**两条船都有的挂点**当标尺：
+        ///   垂直 = (舷炮y - 舰首y) / (船脊y - 舷炮y)     ← 舰首比舷炮低多少，以"舷炮到船脊"为单位
+        ///   纵向 = (包围盒最前 - 舰首z) / 船长            ← 从船头往回收多少
+        /// 这两个量对船体比例不敏感，因为分子分母都是同一条船自己的结构尺度。
+        ///
+        /// Dictator 实测（19:52:37 诊断）：
+        ///   船脊 y=0.50   舷炮 y=-0.01   舰首 y=-0.41   龙骨 y=-0.44
+        ///   舰首 z=2.68   包围盒 z∈[-3.00,3.00] 船长 5.99
+        ///   ⇒ 垂直 = (-0.01 - (-0.41)) / (0.50 - (-0.01)) = 0.40/0.51 = 0.784
+        ///   ⇒ 纵向 = (3.00 - 2.68) / 5.99 = 0.053
+        /// 也就是说**舰首炮基本贴在龙骨线上**（-0.41 vs 龙骨 -0.44），
+        /// 而我之前一直摆在舷炮中线，整整高了一层甲板 —— 这就是"炮浮在船艏上方"的全部原因。
         /// </summary>
-        private static void LearnFrom(Vector3 prowLocal, Bounds bb)
+        private static void LearnFrom(Vector3 prowLocal, Bounds bb, float broadsideY, float dorsalY)
         {
             try
             {
                 var st = Main.Settings; if (st == null) return;
-                float nx = (prowLocal.x - bb.min.x) / bb.size.x;
-                float ny = (prowLocal.y - bb.min.y) / bb.size.y;
-                float nz = (prowLocal.z - bb.min.z) / bb.size.z;
-                if (float.IsNaN(nx) || float.IsNaN(ny) || float.IsNaN(nz)) return;
+                float span = dorsalY - broadsideY;
+                if (Mathf.Abs(span) < 1e-3f || bb.size.z < 1e-3f) return;
+
+                float drop  = (broadsideY - prowLocal.y) / span;
+                float zback = (bb.max.z - prowLocal.z) / bb.size.z;
+                if (float.IsNaN(drop) || float.IsNaN(zback)) return;
+                // 离谱值不学：挂点被父级变换坑了、或者这条船结构特殊
+                if (drop < -3f || drop > 5f || zback < -0.2f || zback > 0.6f)
+                {
+                    Main.LogError("[挂点] 学到的比例超出合理范围（下沉 " + drop.ToString("F2")
+                                + "　后收 " + zback.ToString("F3") + "），本次不采纳。");
+                    return;
+                }
 
                 bool changed = !st.ProwLearned
-                            || Mathf.Abs(st.ProwLearnNY - ny) > 0.002f
-                            || Mathf.Abs(st.ProwLearnNZ - nz) > 0.002f;
-                st.ProwLearnNX = nx; st.ProwLearnNY = ny; st.ProwLearnNZ = nz;
-                st.ProwLearned = true;
+                            || Mathf.Abs(st.ProwDropRatio - drop) > 0.01f
+                            || Mathf.Abs(st.ProwZBackRatio - zback) > 0.002f;
+                st.ProwDropRatio = drop; st.ProwZBackRatio = zback; st.ProwLearned = true;
                 try
                 {
                     var m = ShipModelCatalog.ByPrefab(StarshipViewTool.CurrentPrefab);
@@ -101,25 +121,31 @@ namespace KgdRetinue
 
                 if (changed)
                     Main.Log("[挂点] ★学到原生舰首挂点★ 来源「" + st.ProwLearnedFrom + "」"
-                           + "　局部坐标 " + prowLocal.ToString("F2")
-                           + "　包围盒 min" + bb.min.ToString("F2") + " 尺寸" + bb.size.ToString("F2")
-                           + "\n  归一化 (x " + nx.ToString("F3") + ", y " + ny.ToString("F3")
-                           + ", z " + nz.ToString("F3") + ")"
-                           + " —— 以后没有原生舰首挂点的船就按这个比例摆。"
-                           + "这是美术自己摆的位置，比任何公式都可信。");
+                           + "　舰首局部坐标 " + prowLocal.ToString("F2")
+                           + "\n  舷炮 y=" + broadsideY.ToString("F2") + "　船脊 y=" + dorsalY.ToString("F2")
+                           + "　包围盒最前 z=" + bb.max.z.ToString("F2") + "　船长 " + bb.size.z.ToString("F2")
+                           + "\n  ⇒ 下沉比 " + drop.ToString("F3") + "（舰首比舷炮低多少，以舷炮→船脊为 1）"
+                           + "　后收比 " + zback.ToString("F3") + "（从船头往回收，占船长）"
+                           + "\n  以后没有原生舰首挂点的船就按这两个比例摆。这是美术自己摆的位置，比任何公式都可信。");
             }
             catch (Exception e) { Main.LogError("[挂点] 学习失败: " + e.Message); }
         }
 
-        /// <summary>把学来的归一化位置还原成这条船的局部坐标。没学过返回 false。</summary>
-        private static bool TryLearned(Bounds bb, out Vector3 p)
+        /// <summary>
+        /// 用学来的（或 Dictator 实测的默认）比例算这条船的舰首挂点。
+        /// 拿不到舷炮/船脊这两个标尺就返回 false，交给上层退回公式。
+        /// </summary>
+        private static bool TryLearned(Bounds bb, float broadsideY, float? dorsalY, out Vector3 p)
         {
             p = Vector3.zero;
             var st = Main.Settings;
-            if (st == null || !st.ProwLearned || !st.ShipProwUseLearned) return false;
-            p = new Vector3(bb.min.x + st.ProwLearnNX * bb.size.x,
-                            bb.min.y + st.ProwLearnNY * bb.size.y,
-                            bb.min.z + st.ProwLearnNZ * bb.size.z);
+            if (st == null || !st.ShipProwUseLearned) return false;
+            if (!dorsalY.HasValue) return false;
+            float span = dorsalY.Value - broadsideY;
+            if (Mathf.Abs(span) < 1e-3f) return false;
+            p = new Vector3(0f,
+                            broadsideY - st.ProwDropRatio * span,
+                            bb.max.z - st.ProwZBackRatio * bb.size.z);
             return true;
         }
 
@@ -256,8 +282,11 @@ namespace KgdRetinue
             // 把它换算成**包围盒归一化坐标**存下来，下次遇到没有 Prow 的船就照搬。
             // 这是唯一一份"美术自己认为舰首炮该在哪"的地面真值 ——
             // 比任何"包围盒 max.z 往回收 N%"的公式都可信，那种公式我猜错了六版。
-            if (realProw != null && hasBounds && bb.size.x > 1e-4f && bb.size.y > 1e-4f && bb.size.z > 1e-4f)
-                LearnFrom(root.InverseTransformPoint(realProw.position), bb);
+            float bsY = (pN > 0 && sN > 0) ? (pySum / pN + sySum / sN) * 0.5f
+                      : (minBroadsideY.HasValue ? minBroadsideY.Value : 0f);
+            bool hasBs = (pN > 0 && sN > 0) || minBroadsideY.HasValue;
+            if (realProw != null && hasBounds && hasBs && dorsalLocalY.HasValue && bb.size.z > 1e-4f)
+                LearnFrom(root.InverseTransformPoint(realProw.position), bb, bsY, dorsalLocalY.Value);
 
             // 船体中线 X：用左右舷挂点反推（它们本来就骑在中线两侧）
             float cx = (pN > 0 && sN > 0) ? (pxSum / pN + sxSum / sN) * 0.5f : (hasBounds ? bb.center.x : 0f);
@@ -301,14 +330,15 @@ namespace KgdRetinue
             else                             cy = 0f;
 
             Vector3 learned;
-            if (axisOk && hasBounds && TryLearned(bb, out learned))
+            if (axisOk && hasBounds && hasBs && TryLearned(bb, bsY, dorsalLocalY, out learned))
             {
-                // L0.5：用从原生 Prow 挂点学来的归一化位置。
-                // x 仍然取舷炮中线 —— 学来的 x 理论上也是 0，但中线是这条船自己的实测值，更稳。
+                // L0.5：按 Dictator 实测比例摆。x 仍取舷炮中线 —— 那是这条船自己的实测值。
                 prowLocal = new Vector3(cx, learned.y, learned.z);
-                how = "L0.5 学自「" + (Main.Settings.ProwLearnedFrom ?? "?") + "」的原生舰首挂点"
-                    + "　归一化(" + Main.Settings.ProwLearnNY.ToString("F3")
-                    + ", " + Main.Settings.ProwLearnNZ.ToString("F3") + ")";
+                how = "L0.5 比例定位（" + (Main.Settings.ProwLearned
+                        ? "学自「" + (Main.Settings.ProwLearnedFrom ?? "?") + "」"
+                        : "Dictator 实测默认值")
+                    + "　下沉 " + Main.Settings.ProwDropRatio.ToString("F3")
+                    + "　后收 " + Main.Settings.ProwZBackRatio.ToString("F3") + "）";
             }
             else if (axisOk && hasBounds)
             {

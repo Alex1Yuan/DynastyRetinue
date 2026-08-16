@@ -423,13 +423,14 @@ namespace KgdRetinue
             // 学到的舰首挂点 —— 这是整条链上唯一的地面真值，值得单独一行
             GUILayout.BeginHorizontal();
             if (Settings.ProwLearned)
-                GUILayout.Label("<color=#80ff80>已学到原生舰首挂点</color>　来源「" + Settings.ProwLearnedFrom
-                              + "」　归一化 y=" + Settings.ProwLearnNY.ToString("F3")
-                              + "  z=" + Settings.ProwLearnNZ.ToString("F3"), GUILayout.Width(520));
+                GUILayout.Label("<color=#80ff80>舰首比例已学自「" + Settings.ProwLearnedFrom + "」</color>　"
+                              + "下沉 " + Settings.ProwDropRatio.ToString("F3")
+                              + "　后收 " + Settings.ProwZBackRatio.ToString("F3"), GUILayout.Width(520));
             else
-                GUILayout.Label("<color=#ffcc66>还没学到原生舰首挂点</color>　"
-                              + "切一次 <b>大巡（Dictator）</b> 就会自动学到 —— 那条船的舰首挂点是美术摆的真值",
-                              GUILayout.Width(520));
+                GUILayout.Label("<color=#aaaaaa>舰首比例用 Dictator 实测默认值</color>　"
+                              + "下沉 " + Settings.ProwDropRatio.ToString("F3")
+                              + "　后收 " + Settings.ProwZBackRatio.ToString("F3")
+                              + "　<color=#888888>（切一次大巡会重新实测并覆盖）</color>", GUILayout.Width(520));
             Settings.ShipProwUseLearned = GUILayout.Toggle(Settings.ShipProwUseLearned, "用学到的", GUILayout.Width(90));
             if (Settings.ProwLearned && GUILayout.Button("忘掉", GUILayout.Width(60)))
             { Settings.ProwLearned = false; Settings.ProwLearnedFrom = ""; Log("[挂点] 已忘掉学到的舰首挂点，退回公式。"); }
@@ -854,9 +855,12 @@ namespace KgdRetinue
         /// 归一化而不是绝对坐标：两条船长短不一，搬比例才对，搬坐标会落到船体外。
         /// </summary>
         public bool  ProwLearned;
-        public float ProwLearnNX;
-        public float ProwLearnNY;
-        public float ProwLearnNZ;
+        /// <summary>舰首比舷炮低多少，以「舷炮→船脊」的高度差为 1 单位。
+        /// 默认 0.784 = Dictator 原生 prow_01 实测：(-0.01-(-0.41))/(0.50-(-0.01))。
+        /// 也就是舰首炮基本贴龙骨线（-0.41 vs 龙骨 -0.44）。</summary>
+        public float ProwDropRatio = 0.784f;
+        /// <summary>从船体最前端往回收多少，占船长。默认 0.053 = Dictator 实测 (3.00-2.68)/5.99。</summary>
+        public float ProwZBackRatio = 0.053f;
         public string ProwLearnedFrom = "";
         /// <summary>关掉就退回公式（公式猜错过六版，只作退路）。</summary>
         public bool ShipProwUseLearned = true;
