@@ -420,6 +420,20 @@ namespace KgdRetinue
             if (GUILayout.Button("归零", GUILayout.Width(60)))
             { Settings.ShipProwOffsetPct = 0; Settings.ShipProwUpPct = 0; Log("[挂点] 微调已归零，回到算出来的位置。"); }
             GUILayout.EndHorizontal();
+            // 学到的舰首挂点 —— 这是整条链上唯一的地面真值，值得单独一行
+            GUILayout.BeginHorizontal();
+            if (Settings.ProwLearned)
+                GUILayout.Label("<color=#80ff80>已学到原生舰首挂点</color>　来源「" + Settings.ProwLearnedFrom
+                              + "」　归一化 y=" + Settings.ProwLearnNY.ToString("F3")
+                              + "  z=" + Settings.ProwLearnNZ.ToString("F3"), GUILayout.Width(520));
+            else
+                GUILayout.Label("<color=#ffcc66>还没学到原生舰首挂点</color>　"
+                              + "切一次 <b>大巡（Dictator）</b> 就会自动学到 —— 那条船的舰首挂点是美术摆的真值",
+                              GUILayout.Width(520));
+            Settings.ShipProwUseLearned = GUILayout.Toggle(Settings.ShipProwUseLearned, "用学到的", GUILayout.Width(90));
+            if (Settings.ProwLearned && GUILayout.Button("忘掉", GUILayout.Width(60)))
+            { Settings.ProwLearned = false; Settings.ProwLearnedFrom = ""; Log("[挂点] 已忘掉学到的舰首挂点，退回公式。"); }
+            GUILayout.EndHorizontal();
             GUILayout.Label("<color=#aaaaaa>0% = 用算出来的船艏位置。合成挂点挂在 StarshipView 下、旋转归零，"
                           + "坐标系的 +Z=船艏 有实据（StarshipFxHitMask 按 mesh.z 分前后舱室）。"
                           + "定位分三层：包围盒+舷炮中线 → 挂点跨度外推 → 借船脊原位；"
@@ -834,6 +848,19 @@ namespace KgdRetinue
         public int ShipProwUpPct = 0;
         /// <summary>连船底(Keel)挂点也合成。默认关 —— 见 ShipMountFallback 里的说明，
         /// 一件武器美术可以列多个 RequiredSlots，补了可能多长出一份挂在船腹下。</summary>
+        /// <summary>
+        /// 从**原生**舰首挂点学来的归一化位置（相对船体包围盒）。
+        /// Dictator 之类自带 Prow 挂点的船模一出现就会自动学，之后套用到 Gothic 这种缺挂点的船上。
+        /// 归一化而不是绝对坐标：两条船长短不一，搬比例才对，搬坐标会落到船体外。
+        /// </summary>
+        public bool  ProwLearned;
+        public float ProwLearnNX;
+        public float ProwLearnNY;
+        public float ProwLearnNZ;
+        public string ProwLearnedFrom = "";
+        /// <summary>关掉就退回公式（公式猜错过六版，只作退路）。</summary>
+        public bool ShipProwUseLearned = true;
+
         public bool ShipSynthKeel = false;
         // 卫兵杀敌同时也给卫队池加一份（不动玩家那份）
         public bool GuardKillFeedsOwnPool = true;

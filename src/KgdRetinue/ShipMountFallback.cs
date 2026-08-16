@@ -67,6 +67,62 @@ namespace KgdRetinue
 
         public static void ResetLog() { _logged = false; }
 
+        /// <summary>
+        /// 把一个**原生**舰首挂点换算成包围盒归一化坐标存进设置。
+        ///
+        /// 归一化用 (p - bb.min) / bb.size，三个分量都落在 [0,1]（挂点在盒外就会越界，允许）。
+        /// 为什么用包围盒归一而不是绝对坐标：Dictator 和 Gothic 船长/船高差一截，
+        /// 直接搬绝对坐标会落到船体外面；归一化把"舰首炮在船身多靠前、多靠上"这个
+        /// **比例**搬过去，这才是美术真正表达的东西。
+        ///
+        /// 只在数值明显变化时写盘 + 打日志，避免每次重建 view 都刷屏。
+        /// </summary>
+        private static void LearnFrom(Vector3 prowLocal, Bounds bb)
+        {
+            try
+            {
+                var st = Main.Settings; if (st == null) return;
+                float nx = (prowLocal.x - bb.min.x) / bb.size.x;
+                float ny = (prowLocal.y - bb.min.y) / bb.size.y;
+                float nz = (prowLocal.z - bb.min.z) / bb.size.z;
+                if (float.IsNaN(nx) || float.IsNaN(ny) || float.IsNaN(nz)) return;
+
+                bool changed = !st.ProwLearned
+                            || Mathf.Abs(st.ProwLearnNY - ny) > 0.002f
+                            || Mathf.Abs(st.ProwLearnNZ - nz) > 0.002f;
+                st.ProwLearnNX = nx; st.ProwLearnNY = ny; st.ProwLearnNZ = nz;
+                st.ProwLearned = true;
+                try
+                {
+                    var m = ShipModelCatalog.ByPrefab(StarshipViewTool.CurrentPrefab);
+                    st.ProwLearnedFrom = m != null ? m.Hull : (StarshipViewTool.CurrentPrefab ?? "?");
+                }
+                catch { st.ProwLearnedFrom = "?"; }
+
+                if (changed)
+                    Main.Log("[挂点] ★学到原生舰首挂点★ 来源「" + st.ProwLearnedFrom + "」"
+                           + "　局部坐标 " + prowLocal.ToString("F2")
+                           + "　包围盒 min" + bb.min.ToString("F2") + " 尺寸" + bb.size.ToString("F2")
+                           + "\n  归一化 (x " + nx.ToString("F3") + ", y " + ny.ToString("F3")
+                           + ", z " + nz.ToString("F3") + ")"
+                           + " —— 以后没有原生舰首挂点的船就按这个比例摆。"
+                           + "这是美术自己摆的位置，比任何公式都可信。");
+            }
+            catch (Exception e) { Main.LogError("[挂点] 学习失败: " + e.Message); }
+        }
+
+        /// <summary>把学来的归一化位置还原成这条船的局部坐标。没学过返回 false。</summary>
+        private static bool TryLearned(Bounds bb, out Vector3 p)
+        {
+            p = Vector3.zero;
+            var st = Main.Settings;
+            if (st == null || !st.ProwLearned || !st.ShipProwUseLearned) return false;
+            p = new Vector3(bb.min.x + st.ProwLearnNX * bb.size.x,
+                            bb.min.y + st.ProwLearnNY * bb.size.y,
+                            bb.min.z + st.ProwLearnNZ * bb.size.z);
+            return true;
+        }
+
         private static bool Resolve()
         {
             if (_resolved) return _tSlot != null && _tSlotEnum != null;
@@ -147,6 +203,7 @@ namespace KgdRetinue
             float pxSum = 0f, pySum = 0f, sxSum = 0f, sySum = 0f;
             int pN = 0, sN = 0;
             float zMin = float.MaxValue, zMax = float.MinValue;
+            Transform realProw = null;      // ★原生 Prow 挂点（不是我们合成的）—— 学习样本
             foreach (var s in list)
             {
                 var c = s as Component;
@@ -158,6 +215,8 @@ namespace KgdRetinue
 
                 Vector3 l = root.InverseTransformPoint(c.transform.position);
                 if (ty == "Dorsal") { dorsal = c.transform; dorsalLocalY = l.y; }
+                if (ty == "Prow" && !c.gameObject.name.StartsWith(TAG, StringComparison.Ordinal))
+                    realProw = c.transform;
                 if (l.z < zMin) zMin = l.z;
                 if (l.z > zMax) zMax = l.z;
                 if (ty == "Port")           { pxSum += l.x; pySum += l.y; pN++; }
@@ -186,11 +245,19 @@ namespace KgdRetinue
                              + "，与 StarshipFxHitMask 的约定不符";
             }
 
-            // ---- 算船艏位置（L1 → L2 → L3）----
+            // ---- 算船艏位置（L0.5 学来的 → L1 → L2 → L3）----
             Vector3 prowLocal; string how;
             float hullLenZ = 0f;
             Bounds bb; bool hasBounds = HullBoundsLocal(view, root, out bb);
             if (hasBounds) hullLenZ = bb.size.z;
+
+            // ★ 从原生 Prow 挂点学 ★
+            // 这条船自己就有 vanilla 摆好的舰首挂点（Dictator 有，Gothic 没有）时，
+            // 把它换算成**包围盒归一化坐标**存下来，下次遇到没有 Prow 的船就照搬。
+            // 这是唯一一份"美术自己认为舰首炮该在哪"的地面真值 ——
+            // 比任何"包围盒 max.z 往回收 N%"的公式都可信，那种公式我猜错了六版。
+            if (realProw != null && hasBounds && bb.size.x > 1e-4f && bb.size.y > 1e-4f && bb.size.z > 1e-4f)
+                LearnFrom(root.InverseTransformPoint(realProw.position), bb);
 
             // 船体中线 X：用左右舷挂点反推（它们本来就骑在中线两侧）
             float cx = (pN > 0 && sN > 0) ? (pxSum / pN + sxSum / sN) * 0.5f : (hasBounds ? bb.center.x : 0f);
@@ -233,15 +300,23 @@ namespace KgdRetinue
             else if (hasBounds)              cy = bb.center.y;
             else                             cy = 0f;
 
-            if (axisOk && hasBounds)
+            Vector3 learned;
+            if (axisOk && hasBounds && TryLearned(bb, out learned))
             {
-                // 只往回收 4%。回收量也被 v0.34.0 的日志考古钉死了：
-                //   4%  → z=3.49  ✓ 玩家判定正确（bb.max.z=3.76，船长 6.55）
-                //   12% → z=2.97  ✗
-                //   18% → z=2.58  ✗ 明显缩在船艏后面
-                // 早先注释说"4% 会让炮座悬空"，那是把 Keel 复制品看错了，见上面 cy 的说明。
+                // L0.5：用从原生 Prow 挂点学来的归一化位置。
+                // x 仍然取舷炮中线 —— 学来的 x 理论上也是 0，但中线是这条船自己的实测值，更稳。
+                prowLocal = new Vector3(cx, learned.y, learned.z);
+                how = "L0.5 学自「" + (Main.Settings.ProwLearnedFrom ?? "?") + "」的原生舰首挂点"
+                    + "　归一化(" + Main.Settings.ProwLearnNY.ToString("F3")
+                    + ", " + Main.Settings.ProwLearnNZ.ToString("F3") + ")";
+            }
+            else if (axisOk && hasBounds)
+            {
+                // 没学到过就退回公式。这个公式**猜错过六版**，只是"有总比没有强"，
+                // 别再花时间调它 —— 正解是让玩家在 Dictator 上过一次，把真值学下来。
                 prowLocal = new Vector3(cx, cy, bb.max.z - bb.size.z * 0.04f);
-                how = "L1 包围盒(" + bb.size.ToString("F1") + ") + 舷炮中线";
+                how = "L1 包围盒(" + bb.size.ToString("F1") + ") + 舷炮中线　"
+                    + "<未学到原生舰首挂点：切一次 Dictator（大巡）即可学到真值>";
             }
             else if (axisOk && zMax > zMin)
             {
