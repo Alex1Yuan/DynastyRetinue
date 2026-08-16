@@ -224,14 +224,47 @@ namespace KgdRetinue
                     body.TryInsertItem(aug, aslot);
                     if (aslot.MaybeItem == null)
                     {
-                        // 分开报原因 —— 之前统一写"层级不够"是我的猜测，不是实据。
-                        // AugmentSlot.IsItemSupported 只查槽位类型匹配（AugmentSlot.cs:66-73），
-                        // 真正拦下高阶植入物的应该是 CanBeEquippedBy。
-                        bool slotOk = false, unitOk = false;
-                        try { var probe2 = aug.CreateEntity(); slotOk = aslot.CanInsertItem(probe2); unitOk = probe2.CanBeEquippedBy(g); }
+                        // ★ 这里之前的分支判断是错的 ★
+                        // ItemSlot.CanInsertItem:159-177 本身就是
+                        //     IsPossibleInsertItems() && IsItemSupported(item) && item.CanBeEquippedBy(Owner)
+                        // 所以「资格不够」时 CanInsertItem 也是 false，旧代码却一律报
+                        // "槽位拒绝(类型不匹配或植入系统被禁用)" —— 层级门被伪装成了类型不匹配。
+                        // 全量审计就是被这条误导，得出"植入系统故障、改配置无效"的结论。
+                        // 现在**逐道门单独探**，把三种失败彻底分开：
+                        //     IsPossibleInsertItems  —— 槽位被锁（战斗中/回合制，IgnoreLock 没生效）
+                        //     IsItemSupported        —— 植入物的 AugmentSlot 与本槽蓝图不匹配，
+                        //                               或 body.Augments.Disabled（AugmentSlot.cs:66-73）
+                        //     CanBeEquippedBy        —— 资格：种族排除、或 EquipmentRestrictionAugmentTier
+                        //                               的**队伍全局剧情门** CurrentAvailableTier
+                        bool canInsert = false, supported = false, unitOk = false, slotUnlocked = false;
+                        try
+                        {
+                            var probe2 = aug.CreateEntity();
+                            try { slotUnlocked = aslot.IsPossibleInsertItems(); } catch { }
+                            try { supported = aslot.IsItemSupported(probe2); } catch { }
+                            try { unitOk = probe2.CanBeEquippedBy(g); } catch { }
+                            try { canInsert = aslot.CanInsertItem(probe2); } catch { }
+                        }
                         catch { }
-                        reason = slotOk ? (unitOk ? "槽位和资格都过了却没插进去(未知)" : "该单位不够格(CanBeEquippedBy 拒绝)")
-                                        : "槽位拒绝(类型不匹配或植入系统被禁用)";
+
+                        string tierInfo = "";
+                        try
+                        {
+                            var pam = Kingmaker.Game.Instance != null && Kingmaker.Game.Instance.Player != null
+                                    ? Kingmaker.Game.Instance.Player.PartyAugmentManager : null;
+                            if (pam != null) tierInfo = "  队伍植入层级=" + pam.CurrentAvailableTier;
+                        }
+                        catch { }
+
+                        bool augDisabled = false;
+                        try { augDisabled = body.Augments.Disabled; } catch { }
+
+                        if (!slotUnlocked)      reason = "植入位被锁(IsPossibleInsertItems=false，多半还在战斗/回合制)";
+                        else if (augDisabled)   reason = "该单位的植入系统被禁用(UnitAugments.Disabled)";
+                        else if (!supported)    reason = "槽位类型不匹配(这件植入物的 AugmentSlot 不是本槽)";
+                        else if (!unitOk)       reason = "资格不够(CanBeEquippedBy 拒绝：种族排除 或 剧情层级未解锁)" + tierInfo;
+                        else if (!canInsert)    reason = "CanInsertItem 拒绝但三道门单独都过了(未知)" + tierInfo;
+                        else                    reason = "三道门都过了却没插进去(TryInsertItem 内部拒绝)" + tierInfo;
                         return false;
                     }
                     aslot.ApplyInsertion();

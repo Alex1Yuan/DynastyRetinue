@@ -52,6 +52,8 @@
     <Reference Include="Owlcat.Runtime.UI"><HintPath>$(GameManaged)\Owlcat.Runtime.UI.dll</HintPath><Private>false</Private></Reference>
     <!-- 换船模需要：UnitEntityView 实现了 IResource，定义在这个程序集里 -->
     <Reference Include="Kingmaker.ResourceLinks.BaseInterfaces"><HintPath>$(GameManaged)\Kingmaker.ResourceLinks.BaseInterfaces.dll</HintPath><Private>false</Private></Reference>
+    <!-- UnitAugments.Disabled 的类型是 CountableFlag，读它必须引用这个程序集 -->
+    <Reference Include="Kingmaker.Utility.FlagCountable"><HintPath>$(GameManaged)\Kingmaker.Utility.FlagCountable.dll</HintPath><Private>false</Private></Reference>
     <!-- UnityModManager -->
     <Reference Include="UnityModManager"><HintPath>$(UmmDir)\UnityModManager.dll</HintPath><Private>false</Private></Reference>
   </ItemGroup>
