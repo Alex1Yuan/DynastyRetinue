@@ -1,150 +1,110 @@
-?                                                                      76f9b98e76854b459b50a73462429e2b 坚固盾牌 <ShieldCH04T2_Item> [Pattern]
-?                                                                      98b9d50803e64d13abdf8f0619421874 枪手盾牌 <ShieldCH04T2V2_Item> [Pattern]
-?                                                                      454f30f7edb84d229bade81be01fe108 梅拉贡盾牌 <FaithIsMyShield_Item> [Unique]
-?                                                                      ebd94bc4798a46e0b08ec63742eb6a7a 三重钢盾 <ScalesOfTheGreatSerpentShield_Item> [Unique]
-?                                                                      a2404ffa845f4541bc40d6926378908e 复仇烈焰 <MartyrdomShield_Item> [Unique]
-?                                                                      181743950e4f489698e78ff835d29710 尊贵特权 <KeyFigureShield_Item> [Unique]
-?                                                                      4a11c573494e449fb79cc9b273edf7b3 防御者 <PublicDefenderShield_Item> [Unique]
-?                                                                      1730cea08976423c92f2080847b78741 光辐盾牌 <GlareShield_Item> [Unique]
-?                                                                      5dd12973cef243a9b7e5f6645ba400f1 绝缘盾牌 <EnergyCapacitorShield_Item> [Unique]
-?                                                                      667427778eb743f2883b0e8915541ab6 高级盾牌 <ShieldCH05_Item> [Pattern]
-====================================================================================================
-76f9b98e76854b459b50a73462429e2b 坚固盾牌 <ShieldCH04T2_Item> [Pattern]
-   type=Shields.BlueprintItemShield rar=Pattern
-   EXCL ANY: AeldariArmourProficiency_Feature, DrukhariArmourProficiency_Feature, SpaceMarineEquipment_Feature, Pasqual_Background_Feature, ManipulusOccupation_Feature
-   FACT [艾达灵族装备] <AeldariArmourProficiency_Feature> :: 
-   FACT [黑暗灵族装备] <DrukhariArmourProficiency_Feature> :: 角色可以使用黑暗灵族武器。
-   FACT [星际战士装备] <SpaceMarineEquipment_Feature> :: 
-   FACT [技术神甫] <Pasqual_Background_Feature> :: 机械修会的成员，崇尚万机之神欧姆尼赛亚。技术神甫的使命是维护整个帝国最神圣、最先进的科技造物。正因如此，他们对人类的生存做出了不可替代的贡献。
-   FACT [操纵者] <ManipulusOccupation_Feature> :: 这名技术神甫腹部装有电激电池，蕴藏着赋予机械生命的源力。操纵者的机械触须能传导这种神圣能量，强化盟友，惩戒敌人。
-   FACT [坚固盾牌] <ShieldCH04T2_Feature> :: 装备者获得+2偏转与+%招架。
-   FACT [盾牌猛击] <ShieldAttack_Feature> :: 对单个目标造成点伤害。
-   FACT [盾牌猛击] <ShieldAttackAbility> :: 对单个目标造成点伤害。
-   FACT [坚定防御] <ShieldStalwartDefenseAbility> :: 装备者标记效果范围内的所有敌人，同时立刻结束回合。装备者的下个回合开始之前，当被标记的敌人首次攻击装备者时，针对此次攻击的格挡率提高15%。如果装备者通过这种方式格挡了攻击，则会立刻进行反击。
-   FACT [站住！] <ShieldAOO_Ability> :: 装备者攻击的目标需要进行敏捷抗性检定，若未能通过检定，则会陷入定身状态，效果持续至装备者的下个回合开始。此能力会替代借机攻击。
-====================================================================================================
-98b9d50803e64d13abdf8f0619421874 枪手盾牌 <ShieldCH04T2V2_Item> [Pattern]
-   type=Shields.BlueprintItemShield rar=Pattern
-   EXCL ANY: AeldariArmourProficiency_Feature, DrukhariArmourProficiency_Feature, SpaceMarineEquipment_Feature, Pasqual_Background_Feature, ManipulusOccupation_Feature
-   FACT [艾达灵族装备] <AeldariArmourProficiency_Feature> :: 
-   FACT [黑暗灵族装备] <DrukhariArmourProficiency_Feature> :: 角色可以使用黑暗灵族武器。
-   FACT [星际战士装备] <SpaceMarineEquipment_Feature> :: 
-   FACT [技术神甫] <Pasqual_Background_Feature> :: 机械修会的成员，崇尚万机之神欧姆尼赛亚。技术神甫的使命是维护整个帝国最神圣、最先进的科技造物。正因如此，他们对人类的生存做出了不可替代的贡献。
-   FACT [操纵者] <ManipulusOccupation_Feature> :: 这名技术神甫腹部装有电激电池，蕴藏着赋予机械生命的源力。操纵者的机械触须能传导这种神圣能量，强化盟友，惩戒敌人。
-   FACT [枪手盾牌] <ShieldCH04T2V2_Feature> :: 装备者获得+1偏转，重新装填霰弹枪不消耗行动点数。
-   FACT [盾牌猛击] <ShieldAttack_Feature> :: 对单个目标造成点伤害。
-   FACT [盾牌猛击] <ShieldAttackAbility> :: 对单个目标造成点伤害。
-   FACT [坚定防御] <ShieldStalwartDefenseAbility> :: 装备者标记效果范围内的所有敌人，同时立刻结束回合。装备者的下个回合开始之前，当被标记的敌人首次攻击装备者时，针对此次攻击的格挡率提高15%。如果装备者通过这种方式格挡了攻击，则会立刻进行反击。
-   FACT [站住！] <ShieldAOO_Ability> :: 装备者攻击的目标需要进行敏捷抗性检定，若未能通过检定，则会陷入定身状态，效果持续至装备者的下个回合开始。此能力会替代借机攻击。
-====================================================================================================
-454f30f7edb84d229bade81be01fe108 梅拉贡盾牌 <FaithIsMyShield_Item> [Unique]
-   type=Shields.BlueprintItemShield rar=Unique
-   EXCL ANY: AeldariArmourProficiency_Feature, DrukhariArmourProficiency_Feature, SpaceMarineEquipment_Feature, Pasqual_Background_Feature, ManipulusOccupation_Feature
-   FACT [艾达灵族装备] <AeldariArmourProficiency_Feature> :: 
-   FACT [黑暗灵族装备] <DrukhariArmourProficiency_Feature> :: 角色可以使用黑暗灵族武器。
-   FACT [星际战士装备] <SpaceMarineEquipment_Feature> :: 
-   FACT [技术神甫] <Pasqual_Background_Feature> :: 机械修会的成员，崇尚万机之神欧姆尼赛亚。技术神甫的使命是维护整个帝国最神圣、最先进的科技造物。正因如此，他们对人类的生存做出了不可替代的贡献。
-   FACT [操纵者] <ManipulusOccupation_Feature> :: 这名技术神甫腹部装有电激电池，蕴藏着赋予机械生命的源力。操纵者的机械触须能传导这种神圣能量，强化盟友，惩戒敌人。
-   FACT [梅拉贡盾牌] <FaithIsMyShield_Feature> :: 装备者受到的伤害降低%，对异形与恶魔造成的伤害提高%。
-   FACT [盾牌猛击] <ShieldAttack_Feature> :: 对单个目标造成点伤害。
-   FACT [盾牌猛击] <ShieldAttackAbility> :: 对单个目标造成点伤害。
-   FACT [坚定防御] <ShieldStalwartDefenseAbility> :: 装备者标记效果范围内的所有敌人，同时立刻结束回合。装备者的下个回合开始之前，当被标记的敌人首次攻击装备者时，针对此次攻击的格挡率提高15%。如果装备者通过这种方式格挡了攻击，则会立刻进行反击。
-   FACT [站住！] <ShieldAOO_Ability> :: 装备者攻击的目标需要进行敏捷抗性检定，若未能通过检定，则会陷入定身状态，效果持续至装备者的下个回合开始。此能力会替代借机攻击。
-====================================================================================================
-ebd94bc4798a46e0b08ec63742eb6a7a 三重钢盾 <ScalesOfTheGreatSerpentShield_Item> [Unique]
-   type=Shields.BlueprintItemShield rar=Unique
-   EXCL ANY: AeldariArmourProficiency_Feature, DrukhariArmourProficiency_Feature, SpaceMarineEquipment_Feature, Pasqual_Background_Feature, ManipulusOccupation_Feature
-   FACT [艾达灵族装备] <AeldariArmourProficiency_Feature> :: 
-   FACT [黑暗灵族装备] <DrukhariArmourProficiency_Feature> :: 角色可以使用黑暗灵族武器。
-   FACT [星际战士装备] <SpaceMarineEquipment_Feature> :: 
-   FACT [技术神甫] <Pasqual_Background_Feature> :: 机械修会的成员，崇尚万机之神欧姆尼赛亚。技术神甫的使命是维护整个帝国最神圣、最先进的科技造物。正因如此，他们对人类的生存做出了不可替代的贡献。
-   FACT [操纵者] <ManipulusOccupation_Feature> :: 这名技术神甫腹部装有电激电池，蕴藏着赋予机械生命的源力。操纵者的机械触须能传导这种神圣能量，强化盟友，惩戒敌人。
-   FACT [三重钢盾] <ScalesOfTheGreatSerpentShield_Feature> :: 这种盾牌共有三面。 装备者会根据所有使用三重钢盾的邻近盟友数量获得加成效果： - 1名盟友：+2偏转，+10%格挡 - 2名盟友：获得战斗大师天赋，+10%格挡，承受的范围攻击伤害降低30%
-   FACT [盾牌猛击] <ShieldAttack_Feature> :: 对单个目标造成点伤害。
-   FACT [盾牌猛击] <ShieldAttackAbility> :: 对单个目标造成点伤害。
-   FACT [坚定防御] <ShieldStalwartDefenseAbility> :: 装备者标记效果范围内的所有敌人，同时立刻结束回合。装备者的下个回合开始之前，当被标记的敌人首次攻击装备者时，针对此次攻击的格挡率提高15%。如果装备者通过这种方式格挡了攻击，则会立刻进行反击。
-   FACT [站住！] <ShieldAOO_Ability> :: 装备者攻击的目标需要进行敏捷抗性检定，若未能通过检定，则会陷入定身状态，效果持续至装备者的下个回合开始。此能力会替代借机攻击。
-====================================================================================================
-a2404ffa845f4541bc40d6926378908e 复仇烈焰 <MartyrdomShield_Item> [Unique]
-   type=Shields.BlueprintItemShield rar=Unique
-   EXCL ANY: AeldariArmourProficiency_Feature, DrukhariArmourProficiency_Feature, SpaceMarineEquipment_Feature, Pasqual_Background_Feature, ManipulusOccupation_Feature
-   FACT [艾达灵族装备] <AeldariArmourProficiency_Feature> :: 
-   FACT [黑暗灵族装备] <DrukhariArmourProficiency_Feature> :: 角色可以使用黑暗灵族武器。
-   FACT [星际战士装备] <SpaceMarineEquipment_Feature> :: 
-   FACT [技术神甫] <Pasqual_Background_Feature> :: 机械修会的成员，崇尚万机之神欧姆尼赛亚。技术神甫的使命是维护整个帝国最神圣、最先进的科技造物。正因如此，他们对人类的生存做出了不可替代的贡献。
-   FACT [操纵者] <ManipulusOccupation_Feature> :: 这名技术神甫腹部装有电激电池，蕴藏着赋予机械生命的源力。操纵者的机械触须能传导这种神圣能量，强化盟友，惩戒敌人。
-   FACT [复仇烈焰] <MartyrdomShield_Feature> :: 战斗开始时，装备者承受1级燃烧效果，此燃烧效果即便在通过抗性检定后也无法移除。 装备者的回合结束时，对周围所有邻近生物造成燃烧等级的伤害。如果目标生物是异形或恶魔，还会额外造成点火焰伤害，此次火焰伤害拥有5%护甲穿透。
-   FACT [盾牌猛击] <ShieldAttack_Feature> :: 对单个目标造成点伤害。
-   FACT [盾牌猛击] <ShieldAttackAbility> :: 对单个目标造成点伤害。
-   FACT [坚定防御] <ShieldStalwartDefenseAbility> :: 装备者标记效果范围内的所有敌人，同时立刻结束回合。装备者的下个回合开始之前，当被标记的敌人首次攻击装备者时，针对此次攻击的格挡率提高15%。如果装备者通过这种方式格挡了攻击，则会立刻进行反击。
-   FACT [站住！] <ShieldAOO_Ability> :: 装备者攻击的目标需要进行敏捷抗性检定，若未能通过检定，则会陷入定身状态，效果持续至装备者的下个回合开始。此能力会替代借机攻击。
-====================================================================================================
-181743950e4f489698e78ff835d29710 尊贵特权 <KeyFigureShield_Item> [Unique]
-   type=Shields.BlueprintItemShield rar=Unique
-   EXCL ANY: AeldariArmourProficiency_Feature, DrukhariArmourProficiency_Feature, SpaceMarineEquipment_Feature, Pasqual_Background_Feature, ManipulusOccupation_Feature
-   FACT [艾达灵族装备] <AeldariArmourProficiency_Feature> :: 
-   FACT [黑暗灵族装备] <DrukhariArmourProficiency_Feature> :: 角色可以使用黑暗灵族武器。
-   FACT [星际战士装备] <SpaceMarineEquipment_Feature> :: 
-   FACT [技术神甫] <Pasqual_Background_Feature> :: 机械修会的成员，崇尚万机之神欧姆尼赛亚。技术神甫的使命是维护整个帝国最神圣、最先进的科技造物。正因如此，他们对人类的生存做出了不可替代的贡献。
-   FACT [操纵者] <ManipulusOccupation_Feature> :: 这名技术神甫腹部装有电激电池，蕴藏着赋予机械生命的源力。操纵者的机械触须能传导这种神圣能量，强化盟友，惩戒敌人。
-   FACT [尊贵特权] <KeyFigureShield_Feature> :: 当装备者离开战斗策略区域后，会继续保留该片区域的效果，直到装备者进入另一片战斗策略区域为止。
-   FACT [盾牌猛击] <ShieldAttack_Feature> :: 对单个目标造成点伤害。
-   FACT [盾牌猛击] <ShieldAttackAbility> :: 对单个目标造成点伤害。
-   FACT [坚定防御] <ShieldStalwartDefenseAbility> :: 装备者标记效果范围内的所有敌人，同时立刻结束回合。装备者的下个回合开始之前，当被标记的敌人首次攻击装备者时，针对此次攻击的格挡率提高15%。如果装备者通过这种方式格挡了攻击，则会立刻进行反击。
-   FACT [站住！] <ShieldAOO_Ability> :: 装备者攻击的目标需要进行敏捷抗性检定，若未能通过检定，则会陷入定身状态，效果持续至装备者的下个回合开始。此能力会替代借机攻击。
-====================================================================================================
-4a11c573494e449fb79cc9b273edf7b3 防御者 <PublicDefenderShield_Item> [Unique]
-   type=Shields.BlueprintItemShield rar=Unique
-   EXCL ANY: AeldariArmourProficiency_Feature, DrukhariArmourProficiency_Feature, SpaceMarineEquipment_Feature, Pasqual_Background_Feature, ManipulusOccupation_Feature
-   FACT [艾达灵族装备] <AeldariArmourProficiency_Feature> :: 
-   FACT [黑暗灵族装备] <DrukhariArmourProficiency_Feature> :: 角色可以使用黑暗灵族武器。
-   FACT [星际战士装备] <SpaceMarineEquipment_Feature> :: 
-   FACT [技术神甫] <Pasqual_Background_Feature> :: 机械修会的成员，崇尚万机之神欧姆尼赛亚。技术神甫的使命是维护整个帝国最神圣、最先进的科技造物。正因如此，他们对人类的生存做出了不可替代的贡献。
-   FACT [操纵者] <ManipulusOccupation_Feature> :: 这名技术神甫腹部装有电激电池，蕴藏着赋予机械生命的源力。操纵者的机械触须能传导这种神圣能量，强化盟友，惩戒敌人。
-   FACT [防御者] <PublicDefenderShield_Feature> :: 装备者的回合结束时，为每位邻近盟友提供点临时生命值。 每当邻近盟友受到伤害时，此次伤害的%改为由装备者承担。
-   FACT [盾牌猛击] <ShieldAttack_Feature> :: 对单个目标造成点伤害。
-   FACT [盾牌猛击] <ShieldAttackAbility> :: 对单个目标造成点伤害。
-   FACT [坚定防御] <ShieldStalwartDefenseAbility> :: 装备者标记效果范围内的所有敌人，同时立刻结束回合。装备者的下个回合开始之前，当被标记的敌人首次攻击装备者时，针对此次攻击的格挡率提高15%。如果装备者通过这种方式格挡了攻击，则会立刻进行反击。
-   FACT [站住！] <ShieldAOO_Ability> :: 装备者攻击的目标需要进行敏捷抗性检定，若未能通过检定，则会陷入定身状态，效果持续至装备者的下个回合开始。此能力会替代借机攻击。
-====================================================================================================
-1730cea08976423c92f2080847b78741 光辐盾牌 <GlareShield_Item> [Unique]
-   type=Shields.BlueprintItemShield rar=Unique
-   EXCL ANY: AeldariArmourProficiency_Feature, DrukhariArmourProficiency_Feature, SpaceMarineEquipment_Feature, Pasqual_Background_Feature, ManipulusOccupation_Feature
-   FACT [艾达灵族装备] <AeldariArmourProficiency_Feature> :: 
-   FACT [黑暗灵族装备] <DrukhariArmourProficiency_Feature> :: 角色可以使用黑暗灵族武器。
-   FACT [星际战士装备] <SpaceMarineEquipment_Feature> :: 
-   FACT [技术神甫] <Pasqual_Background_Feature> :: 机械修会的成员，崇尚万机之神欧姆尼赛亚。技术神甫的使命是维护整个帝国最神圣、最先进的科技造物。正因如此，他们对人类的生存做出了不可替代的贡献。
-   FACT [操纵者] <ManipulusOccupation_Feature> :: 这名技术神甫腹部装有电激电池，蕴藏着赋予机械生命的源力。操纵者的机械触须能传导这种神圣能量，强化盟友，惩戒敌人。
-   FACT [光辐盾牌] <GlareShield_Feature> :: 每当装备者格挡攻击时，攻击者都需要进行敏捷抗性检定，若未能通过检定，则会陷入致盲状态，持续一轮。
-   FACT [盾牌猛击] <ShieldAttack_Feature> :: 对单个目标造成点伤害。
-   FACT [盾牌猛击] <ShieldAttackAbility> :: 对单个目标造成点伤害。
-   FACT [坚定防御] <ShieldStalwartDefenseAbility> :: 装备者标记效果范围内的所有敌人，同时立刻结束回合。装备者的下个回合开始之前，当被标记的敌人首次攻击装备者时，针对此次攻击的格挡率提高15%。如果装备者通过这种方式格挡了攻击，则会立刻进行反击。
-   FACT [站住！] <ShieldAOO_Ability> :: 装备者攻击的目标需要进行敏捷抗性检定，若未能通过检定，则会陷入定身状态，效果持续至装备者的下个回合开始。此能力会替代借机攻击。
-====================================================================================================
-5dd12973cef243a9b7e5f6645ba400f1 绝缘盾牌 <EnergyCapacitorShield_Item> [Unique]
-   type=Shields.BlueprintItemShield rar=Unique
-   EXCL ANY: AeldariArmourProficiency_Feature, DrukhariArmourProficiency_Feature, SpaceMarineEquipment_Feature, Pasqual_Background_Feature, ManipulusOccupation_Feature
-   FACT [艾达灵族装备] <AeldariArmourProficiency_Feature> :: 
-   FACT [黑暗灵族装备] <DrukhariArmourProficiency_Feature> :: 角色可以使用黑暗灵族武器。
-   FACT [星际战士装备] <SpaceMarineEquipment_Feature> :: 
-   FACT [技术神甫] <Pasqual_Background_Feature> :: 机械修会的成员，崇尚万机之神欧姆尼赛亚。技术神甫的使命是维护整个帝国最神圣、最先进的科技造物。正因如此，他们对人类的生存做出了不可替代的贡献。
-   FACT [操纵者] <ManipulusOccupation_Feature> :: 这名技术神甫腹部装有电激电池，蕴藏着赋予机械生命的源力。操纵者的机械触须能传导这种神圣能量，强化盟友，惩戒敌人。
-   FACT [绝缘盾牌] <EnergyCapacitorShield_Feature> :: 装备者获得+1偏转与+%招架，承受的能量、火焰、电击伤害降低35%。
-   FACT [盾牌猛击] <ShieldAttack_Feature> :: 对单个目标造成点伤害。
-   FACT [盾牌猛击] <ShieldAttackAbility> :: 对单个目标造成点伤害。
-   FACT [坚定防御] <ShieldStalwartDefenseAbility> :: 装备者标记效果范围内的所有敌人，同时立刻结束回合。装备者的下个回合开始之前，当被标记的敌人首次攻击装备者时，针对此次攻击的格挡率提高15%。如果装备者通过这种方式格挡了攻击，则会立刻进行反击。
-   FACT [站住！] <ShieldAOO_Ability> :: 装备者攻击的目标需要进行敏捷抗性检定，若未能通过检定，则会陷入定身状态，效果持续至装备者的下个回合开始。此能力会替代借机攻击。
-====================================================================================================
-667427778eb743f2883b0e8915541ab6 高级盾牌 <ShieldCH05_Item> [Pattern]
-   type=Shields.BlueprintItemShield rar=Pattern
-   EXCL ANY: AeldariArmourProficiency_Feature, DrukhariArmourProficiency_Feature, SpaceMarineEquipment_Feature, Pasqual_Background_Feature, ManipulusOccupation_Feature
-   FACT [艾达灵族装备] <AeldariArmourProficiency_Feature> :: 
-   FACT [黑暗灵族装备] <DrukhariArmourProficiency_Feature> :: 角色可以使用黑暗灵族武器。
-   FACT [星际战士装备] <SpaceMarineEquipment_Feature> :: 
-   FACT [技术神甫] <Pasqual_Background_Feature> :: 机械修会的成员，崇尚万机之神欧姆尼赛亚。技术神甫的使命是维护整个帝国最神圣、最先进的科技造物。正因如此，他们对人类的生存做出了不可替代的贡献。
-   FACT [操纵者] <ManipulusOccupation_Feature> :: 这名技术神甫腹部装有电激电池，蕴藏着赋予机械生命的源力。操纵者的机械触须能传导这种神圣能量，强化盟友，惩戒敌人。
-   FACT [盾牌猛击] <ShieldAttack_Feature> :: 对单个目标造成点伤害。
-   FACT [] <ShieldCH05_Feature> :: 装备者获得+2偏转与+%招架。
-   FACT [盾牌猛击] <ShieldAttackAbility> :: 对单个目标造成点伤害。
-   FACT [坚定防御] <ShieldStalwartDefenseAbility> :: 装备者标记效果范围内的所有敌人，同时立刻结束回合。装备者的下个回合开始之前，当被标记的敌人首次攻击装备者时，针对此次攻击的格挡率提高15%。如果装备者通过这种方式格挡了攻击，则会立刻进行反击。
-   FACT [站住！] <ShieldAOO_Ability> :: 装备者攻击的目标需要进行敏捷抗性检定，若未能通过检定，则会陷入定身状态，效果持续至装备者的下个回合开始。此能力会替代借机攻击。
+================================================================================
+坚固盾牌 76f9b98e76854b459b50a73462429e2b 坚固盾牌[Pattern]<ShieldCH04T2_Item>BlueprintItemShield len=2042 proto=5c014d74868641c3b40ff65fc0b7d6f7
+  STR: [' 1c5f4edca9f64fe0911bc946e0b4ea4a', ' 22fb38fc07f948d383774862347e5cfe', ' 27aa9039b55f42968d1891fc21fc7654', ' 590cb5c394ee4b5eb213121c96063dec c7a53b43ac5f4f11a1aef612dd3f4f71 affa5fdded7e404b910b990f5d344a8c 777d9f9c570443b59120e78f2d9dd515 b901e045ca514d53bae43f4a9ecdf0b4', ' 5c014d74868641c3b40ff65fc0b7d6f7', ' 5c014d74868641c3b40ff65fc0b7d6f7:$ReapplyFactsFromItem$78af3e88-3132-438d-80ac-38a1e73266a6', ' 5c014d74868641c3b40ff65fc0b7d6f7?$AddFactToEquipmentWielder$44ceab54-e8cf-47f4-920f-b79429d169c4 442c6212b43347fb80c511b7415d1a59F0H', ' 5c014d74868641c3b40ff65fc0b7d6f7B$EquipmentRestrictionHasFacts$72d5e037-0af1-488b-a698-5d47ce25469c', ' 5c014d74868641c3b40ff65fc0b7d6f7D$AdditionalDescriptionComponent$266b6128-4e40-4310-9f00-35272dbd17f0', ' c26c1a7993ee4461be423cc96f885810', ' f6a60b4556214528b0ce295c4f69306e e7acbb04cada484ea19890b89863d2ff', ':$ReapplyFactsFromItem$78af3e88-3132-438d-80ac-38a1e73266a6', '?$AddFactToEquipmentWielder$def3cf9a-79f9-49bf-9bc7-83228bef1025', 'B$EquipmentRestrictionHasFacts$72d5e037-0af1-488b-a698-5d47ce25469c', 'D$AdditionalDescriptionComponent$266b6128-4e40-4310-9f00-35272dbd17f0', 'Foley_WP_M_Shield_Equip_Play', 'Foley_WP_M_Shield_Remove_Play', 'HitMainMuffle', 'ProjectileType', 'Shield', 'ShieldCH04T2_Item 76f9b98e76854b459b50a73462429e2b', 'Straight', 'UI_INV_PowerArmour_Equip_Play', 'UI_INV_PowerArmour_Put_Play', 'UI_INV_PowerArmour_Take_Play', 'm_BlockChance', 'm_CargoVolumePercent', 'm_Description9$AddStringToFactName$acb00e6e-1845-48b5-965d-e9c01f88a16a', 'm_DisplayName', 'm_Icon', 'm_Rarity m_VisualParameters.m_WeaponModel', '~?$AddFactToEquipmentWielder$44ceab54-e8cf-47f4-920f-b79429d169c4', '~?$AddFactToEquipmentWielder$def3cf9a-79f9-49bf-9bc7-83228bef1025']
+   -> 5c014d74868641c3b40ff65fc0b7d6f7 盾牌[Common]<ShieldPrototype_Item>BlueprintItemShield
+   -> 5c014d74868641c3b40ff65fc0b7d6f7 盾牌[Common]<ShieldPrototype_Item>BlueprintItemShield
+   -> 590cb5c394ee4b5eb213121c96063dec 艾达灵族装备[]<AeldariArmourProficiency_Feature>BlueprintFeature
+   -> c7a53b43ac5f4f11a1aef612dd3f4f71 黑暗灵族装备[]<DrukhariArmourProficiency_Feature>BlueprintFeature
+   -> affa5fdded7e404b910b990f5d344a8c 星际战士装备[]<SpaceMarineEquipment_Feature>BlueprintFeature
+   -> 777d9f9c570443b59120e78f2d9dd515 技术神甫[]<Pasqual_Background_Feature>BlueprintFeature
+   -> b901e045ca514d53bae43f4a9ecdf0b4 操纵者[]<ManipulusOccupation_Feature>BlueprintFeature
+   -> 27aa9039b55f42968d1891fc21fc7654 坚固盾牌[]<ShieldCH04T2_Feature>BlueprintFeature
+   -> 5c014d74868641c3b40ff65fc0b7d6f7 盾牌[Common]<ShieldPrototype_Item>BlueprintItemShield
+   -> 5c014d74868641c3b40ff65fc0b7d6f7 盾牌[Common]<ShieldPrototype_Item>BlueprintItemShield
+   -> 442c6212b43347fb80c511b7415d1a59 盾牌猛击[]<ShieldAttack_Feature>BlueprintFeature
+   -> 5c014d74868641c3b40ff65fc0b7d6f7 盾牌[Common]<ShieldPrototype_Item>BlueprintItemShield
+   -> 1c5f4edca9f64fe0911bc946e0b4ea4a 盾牌猛击[]<ShieldAttackAbility>BlueprintAbility
+   -> f6a60b4556214528b0ce295c4f69306e 坚定防御[]<ShieldStalwartDefenseAbility>BlueprintAbility
+   -> e7acbb04cada484ea19890b89863d2ff <ShieldStalwartDefenseBuff_FXSettings>
+   -> 22fb38fc07f948d383774862347e5cfe 站住！[]<ShieldAOO_Ability>BlueprintAbility
+   -> c26c1a7993ee4461be423cc96f885810 近战[Common]<ShieldWeaponHidden_Item>BlueprintItemWeapon
+================================================================================
+枪手盾牌 98b9d50803e64d13abdf8f0619421874 枪手盾牌[Pattern]<ShieldCH04T2V2_Item>BlueprintItemShield len=2092 proto=5c014d74868641c3b40ff65fc0b7d6f7
+  STR: [' 02a2a3b719e741078726dd466fa8cd80', ' 1c5f4edca9f64fe0911bc946e0b4ea4a', ' 22fb38fc07f948d383774862347e5cfe', ' 590cb5c394ee4b5eb213121c96063dec c7a53b43ac5f4f11a1aef612dd3f4f71 affa5fdded7e404b910b990f5d344a8c 777d9f9c570443b59120e78f2d9dd515 b901e045ca514d53bae43f4a9ecdf0b4', ' 5c014d74868641c3b40ff65fc0b7d6f7', ' 5c014d74868641c3b40ff65fc0b7d6f7:$ReapplyFactsFromItem$78af3e88-3132-438d-80ac-38a1e73266a6', ' 5c014d74868641c3b40ff65fc0b7d6f7?$AddFactToEquipmentWielder$44ceab54-e8cf-47f4-920f-b79429d169c4 442c6212b43347fb80c511b7415d1a59F0H', ' 5c014d74868641c3b40ff65fc0b7d6f7B$EquipmentRestrictionHasFacts$72d5e037-0af1-488b-a698-5d47ce25469c', ' 5c014d74868641c3b40ff65fc0b7d6f7D$AdditionalDescriptionComponent$266b6128-4e40-4310-9f00-35272dbd17f0', ' 81c57fa965fa47df875a1adb078f7216', ' c26c1a7993ee4461be423cc96f885810', ' f6a60b4556214528b0ce295c4f69306e e7acbb04cada484ea19890b89863d2ff', ' m_VisualParameters.m_WeaponModel?$AddFactToEquipmentWielder$3666ec90-76ae-4ab0-932e-a8a78cc2eb4d', ':$ReapplyFactsFromItem$78af3e88-3132-438d-80ac-38a1e73266a6', 'B$EquipmentRestrictionHasFacts$72d5e037-0af1-488b-a698-5d47ce25469c', 'D$AdditionalDescriptionComponent$266b6128-4e40-4310-9f00-35272dbd17f0', 'Foley_WP_M_Shield_Equip_Play', 'Foley_WP_M_Shield_Remove_Play', 'HitMainMuffle', 'ProjectileType', 'Shield', 'ShieldCH04T2V2_Item 98b9d50803e64d13abdf8f0619421874', 'Straight', 'UI_INV_PowerArmour_Equip_Play', 'UI_INV_PowerArmour_Put_Play', 'UI_INV_PowerArmour_Take_Play', 'm_BlockChance9$AddStringToFactName$317c1fb3-132d-459d-9537-8eeeec0f6b7c', 'm_CargoVolumePercent', 'm_Description', 'm_DisplayName', 'm_Enchantments', 'm_Icon', 'm_Rarity', '~?$AddFactToEquipmentWielder$3666ec90-76ae-4ab0-932e-a8a78cc2eb4d', '~?$AddFactToEquipmentWielder$44ceab54-e8cf-47f4-920f-b79429d169c4']
+   -> 5c014d74868641c3b40ff65fc0b7d6f7 盾牌[Common]<ShieldPrototype_Item>BlueprintItemShield
+   -> 5c014d74868641c3b40ff65fc0b7d6f7 盾牌[Common]<ShieldPrototype_Item>BlueprintItemShield
+   -> 590cb5c394ee4b5eb213121c96063dec 艾达灵族装备[]<AeldariArmourProficiency_Feature>BlueprintFeature
+   -> c7a53b43ac5f4f11a1aef612dd3f4f71 黑暗灵族装备[]<DrukhariArmourProficiency_Feature>BlueprintFeature
+   -> affa5fdded7e404b910b990f5d344a8c 星际战士装备[]<SpaceMarineEquipment_Feature>BlueprintFeature
+   -> 777d9f9c570443b59120e78f2d9dd515 技术神甫[]<Pasqual_Background_Feature>BlueprintFeature
+   -> b901e045ca514d53bae43f4a9ecdf0b4 操纵者[]<ManipulusOccupation_Feature>BlueprintFeature
+   -> 81c57fa965fa47df875a1adb078f7216 枪手盾牌[]<ShieldCH04T2V2_Feature>BlueprintFeature
+   -> 5c014d74868641c3b40ff65fc0b7d6f7 盾牌[Common]<ShieldPrototype_Item>BlueprintItemShield
+   -> 5c014d74868641c3b40ff65fc0b7d6f7 盾牌[Common]<ShieldPrototype_Item>BlueprintItemShield
+   -> 442c6212b43347fb80c511b7415d1a59 盾牌猛击[]<ShieldAttack_Feature>BlueprintFeature
+   -> 5c014d74868641c3b40ff65fc0b7d6f7 盾牌[Common]<ShieldPrototype_Item>BlueprintItemShield
+   -> 1c5f4edca9f64fe0911bc946e0b4ea4a 盾牌猛击[]<ShieldAttackAbility>BlueprintAbility
+   -> f6a60b4556214528b0ce295c4f69306e 坚定防御[]<ShieldStalwartDefenseAbility>BlueprintAbility
+   -> e7acbb04cada484ea19890b89863d2ff <ShieldStalwartDefenseBuff_FXSettings>
+   -> 22fb38fc07f948d383774862347e5cfe 站住！[]<ShieldAOO_Ability>BlueprintAbility
+   -> c26c1a7993ee4461be423cc96f885810 近战[Common]<ShieldWeaponHidden_Item>BlueprintItemWeapon
+   -> 02a2a3b719e741078726dd466fa8cd80 ?[]<PowerShield00_Enchantments>BlueprintEquipmentEnchantment
+================================================================================
+血腥礼赞 0adaa28e654e4fd6a74830eed3f63390 血腥礼赞[Unique]<ArgentaBolterUnique_Item>BlueprintItemWeapon len=1932 proto=2e6f4680bfcc45349d02830f518e04a3
+  STR: [' 19673fbc918241c6add6710025f67058', ' 1cdd00b349324e7f958a8cb1dfcde2fe 51440c65ca9048d9bc2765dcbaf9f83f', ' 2e6f4680bfcc45349d02830f518e04a3', ' 2e6f4680bfcc45349d02830f518e04a3B$EquipmentRestrictionHasFacts$3d1fa9ef-3699-4b2c-b42d-ca5928bc2186', ' 2e6f4680bfcc45349d02830f518e04a3B$EquipmentRestrictionHasFacts$a28a350e-ded9-48f8-9f67-109e0c60feb6', ' 950565a69d144391897cdc0024747755 c7a53b43ac5f4f11a1aef612dd3f4f71 590cb5c394ee4b5eb213121c96063dec', ' 98f4a31b68e446ad9c63411c7b349146 51440c65ca9048d9bc2765dcbaf9f83f', ' a489b6d823ef4b86b431aa1d42e385c7 51440c65ca9048d9bc2765dcbaf9f83f', ' b7c0d4663e9c4c01b6a5622aeaf1079eG5', '&Foley_WP_R_2HAssault_EquipGeneric_Play(Foley_WP_R_2HAssault_UnEquipGeneric_Play', ':$ReapplyFactsFromItem$369dea8d-b1a3-411c-a222-836d55368707', 'ArgentaBolterUnique_Item 0adaa28e654e4fd6a74830eed3f63390', 'Author:$ReapplyFactsFromItem$369dea8d-b1a3-411c-a222-836d55368707', 'B$EquipmentRestrictionHasFacts$3d1fa9ef-3699-4b2c-b42d-ca5928bc2186', 'B$EquipmentRestrictionHasFacts$a28a350e-ded9-48f8-9f67-109e0c60feb6', 'ProjectileType', 'RateOfFire', 'UI_INV_Rifle_Equip_Play', 'UI_INV_Rifle_Put_Play', 'UI_INV_Rifle_Take_Play', 'WarhammerDamage', 'WarhammerMaxDamage?$AddFactToEquipmentWielder$ef3306b1-4240-4204-aeee-1985bc021c92', 'WarhammerPenetrationB$EquipmentRestrictionHasFacts$4f7fb606-db01-4790-b62e-1d981d9605c4 m_VisualParameters.m_WeaponModel', 'WarhammerRecoil', 'm_CargoVolumePercent', 'm_Description', 'm_DisplayName', 'm_Icon', 'm_Rarity', '~?$AddFactToEquipmentWielder$ef3306b1-4240-4204-aeee-1985bc021c92']
+   -> 2e6f4680bfcc45349d02830f518e04a3 爆矢枪[Common]<Bolter_Item>BlueprintItemWeapon
+   -> 2e6f4680bfcc45349d02830f518e04a3 爆矢枪[Common]<Bolter_Item>BlueprintItemWeapon
+   -> 19673fbc918241c6add6710025f67058 爆矢武器专精[]<BolterWeaponProficiency>BlueprintFeature
+   -> b7c0d4663e9c4c01b6a5622aeaf1079e 血腥礼赞[]<ArgentaBolterUnique_Feature>BlueprintFeature
+   -> 2e6f4680bfcc45349d02830f518e04a3 爆矢枪[Common]<Bolter_Item>BlueprintItemWeapon
+   -> 950565a69d144391897cdc0024747755 星际战士装备[]<SpaceMarineEquipment_Proficiency>BlueprintFeature
+   -> c7a53b43ac5f4f11a1aef612dd3f4f71 黑暗灵族装备[]<DrukhariArmourProficiency_Feature>BlueprintFeature
+   -> 590cb5c394ee4b5eb213121c96063dec 艾达灵族装备[]<AeldariArmourProficiency_Feature>BlueprintFeature
+   -> a489b6d823ef4b86b431aa1d42e385c7 单发射击[]<SingleShot_Ability>BlueprintAbility
+   -> 51440c65ca9048d9bc2765dcbaf9f83f <Bolter_BoltShot_AbilityFXSettings>
+   -> 1cdd00b349324e7f958a8cb1dfcde2fe 连发射击[]<BurstFire_Ability>BlueprintAbility
+   -> 51440c65ca9048d9bc2765dcbaf9f83f <Bolter_BoltShot_AbilityFXSettings>
+   -> 98f4a31b68e446ad9c63411c7b349146 重新装填[]<ReloadAbility>BlueprintAbility
+   -> 51440c65ca9048d9bc2765dcbaf9f83f <Bolter_BoltShot_AbilityFXSettings>
+================================================================================
+泪如泉涌 1ba5fc1726374b2a856b53ca172a3460 泪如泉涌[Pattern]<BolterCH05Unique_Item>BlueprintItemWeapon len=1774 proto=5a086adc8f024026a236e8e33fcc17bf
+  STR: [' 19673fbc918241c6add6710025f67058', ' 1cdd00b349324e7f958a8cb1dfcde2fe 51440c65ca9048d9bc2765dcbaf9f83f', ' 5a086adc8f024026a236e8e33fcc17bf', ' 5a086adc8f024026a236e8e33fcc17bfB$EquipmentRestrictionHasFacts$3d1fa9ef-3699-4b2c-b42d-ca5928bc2186', ' 5a086adc8f024026a236e8e33fcc17bfB$EquipmentRestrictionHasFacts$a28a350e-ded9-48f8-9f67-109e0c60feb6', ' 950565a69d144391897cdc0024747755 c7a53b43ac5f4f11a1aef612dd3f4f71 590cb5c394ee4b5eb213121c96063dec', ' 98f4a31b68e446ad9c63411c7b349146 51440c65ca9048d9bc2765dcbaf9f83f', ' a489b6d823ef4b86b431aa1d42e385c7 51440c65ca9048d9bc2765dcbaf9f83f', ' c31185d9515d4727aae60696c6fa96b9G5', '&Foley_WP_R_2HAssault_EquipGeneric_Play(Foley_WP_R_2HAssault_UnEquipGeneric_Play', 'Author', 'B$EquipmentRestrictionHasFacts$3d1fa9ef-3699-4b2c-b42d-ca5928bc2186', 'B$EquipmentRestrictionHasFacts$a28a350e-ded9-48f8-9f67-109e0c60feb6', 'BolterCH05Unique_Item 1ba5fc1726374b2a856b53ca172a3460', 'ProjectileType', 'UI_INV_Rifle_Equip_Play', 'UI_INV_Rifle_Put_Play', 'UI_INV_Rifle_Take_Play', 'WarhammerDamage', 'WarhammerMaxDamage', 'WarhammerMinimalStrength', 'WarhammerPenetration?$AddFactToEquipmentWielder$c7a254ac-7e06-417a-ac94-f7ed8d574fa0 m_VisualParameters.m_WeaponModelB$EquipmentRestrictionHasFacts$70011572-d227-4a5a-9fde-8ed63a82f256', 'm_CargoVolumePercent', 'm_Description', 'm_DisplayName', 'm_Icon', '~?$AddFactToEquipmentWielder$c7a254ac-7e06-417a-ac94-f7ed8d574fa0']
+   -> 5a086adc8f024026a236e8e33fcc17bf 改造过的爆矢枪[Pattern]<BolterT1_Item>BlueprintItemWeapon
+   -> c31185d9515d4727aae60696c6fa96b9 泪如泉涌[]<BolterCH05Unique_Feature>BlueprintFeature
+   -> 5a086adc8f024026a236e8e33fcc17bf 改造过的爆矢枪[Pattern]<BolterT1_Item>BlueprintItemWeapon
+   -> 950565a69d144391897cdc0024747755 星际战士装备[]<SpaceMarineEquipment_Proficiency>BlueprintFeature
+   -> c7a53b43ac5f4f11a1aef612dd3f4f71 黑暗灵族装备[]<DrukhariArmourProficiency_Feature>BlueprintFeature
+   -> 590cb5c394ee4b5eb213121c96063dec 艾达灵族装备[]<AeldariArmourProficiency_Feature>BlueprintFeature
+   -> 5a086adc8f024026a236e8e33fcc17bf 改造过的爆矢枪[Pattern]<BolterT1_Item>BlueprintItemWeapon
+   -> 19673fbc918241c6add6710025f67058 爆矢武器专精[]<BolterWeaponProficiency>BlueprintFeature
+   -> a489b6d823ef4b86b431aa1d42e385c7 单发射击[]<SingleShot_Ability>BlueprintAbility
+   -> 51440c65ca9048d9bc2765dcbaf9f83f <Bolter_BoltShot_AbilityFXSettings>
+   -> 1cdd00b349324e7f958a8cb1dfcde2fe 连发射击[]<BurstFire_Ability>BlueprintAbility
+   -> 51440c65ca9048d9bc2765dcbaf9f83f <Bolter_BoltShot_AbilityFXSettings>
+   -> 98f4a31b68e446ad9c63411c7b349146 重新装填[]<ReloadAbility>BlueprintAbility
+   -> 51440c65ca9048d9bc2765dcbaf9f83f <Bolter_BoltShot_AbilityFXSettings>
+================================================================================
+改良重型爆矢枪 dec66b3861c64c088c5f38fd49024d44 改良重型爆矢枪[Unique]<SarragusHeavyBolter_Item>BlueprintItemWeapon len=2199 proto=b11dc12ae9e943c29cce0aa7d52bf980
+  STR: [' 14c404c9b52f4bb59292143179dd0a2aF0H', ' 19673fbc918241c6add6710025f67058', ' 1cdd00b349324e7f958a8cb1dfcde2fe 86dda65e384f4ecc9bc2cdf3e6ad06e7', ' 26376b596c474d67849613617ced7b04(', ' 98f4a31b68e446ad9c63411c7b349146 86dda65e384f4ecc9bc2cdf3e6ad06e7', ' a489b6d823ef4b86b431aa1d42e385c7 86dda65e384f4ecc9bc2cdf3e6ad06e7', ' b11dc12ae9e943c29cce0aa7d52bf980', ' b11dc12ae9e943c29cce0aa7d52bf980B$EquipmentRestrictionHasFacts$4cff4881-a425-4fea-b7ae-bc56505d6458', ' b11dc12ae9e943c29cce0aa7d52bf980B$EquipmentRestrictionHasFacts$bd713c34-73ad-4374-9986-f50283f73023', ' c7a53b43ac5f4f11a1aef612dd3f4f71 590cb5c394ee4b5eb213121c96063dec', '&Foley_WP_R_2HAssault_EquipGeneric_Play(Foley_WP_R_2HAssault_UnEquipGeneric_Play', ':$ReapplyFactsFromItem$a02fea8c-fc71-4ad1-bf19-0331f19b569e', '>$EquipmentRestrictionStat$a229337d-0b03-4d5b-9b99-6b9109b968fb', 'Author', 'B$EquipmentRestrictionHasFacts$4cff4881-a425-4fea-b7ae-bc56505d6458', 'B$EquipmentRestrictionHasFacts$bd713c34-73ad-4374-9986-f50283f73023', 'Bullet', 'CanBeUsedInGame', 'ProjectileType', 'RateOfFire', 'SarragusHeavyBolter_Item dec66b3861c64c088c5f38fd49024d44', 'UI_INV_Rifle_Equip_Play', 'UI_INV_Rifle_Put_Play', 'UI_INV_Rifle_Take_Play', 'WarhammerDamage', 'WarhammerMaxAmmo', 'WarhammerMaxDamage', 'WarhammerMaxDistance', 'WarhammerMinimalStrength', 'WarhammerPenetration', 'WarhammerRecoil', 'm_CargoVolumePercent', 'm_Description', 'm_DisplayName', 'm_FlavorText>$EquipmentRestrictionStat$a229337d-0b03-4d5b-9b99-6b9109b968fbB$EquipmentRestrictionHasFacts$ad23ea83-6c57-4021-8aca-ab445dcfc042', 'm_Icon', 'm_IsNotable m_VisualParameters.m_WeaponModel', 'm_Rarity?$AddFactToEquipmentWielder$1649323f-2d6d-4613-a414-ae4795d73142:$ReapplyFactsFromItem$a02fea8c-fc71-4ad1-bf19-0331f19b569e', '~?$AddFactToEquipmentWielder$1649323f-2d6d-4613-a414-ae4795d73142']
+   -> b11dc12ae9e943c29cce0aa7d52bf980 重型爆矢枪[Common]<HeavyBolter_Item>BlueprintItemWeapon
+   -> 26376b596c474d67849613617ced7b04 重型武器专精[]<HeavyWeaponProficiency_Feature>BlueprintFeature
+   -> 14c404c9b52f4bb59292143179dd0a2a ?[]<SarragusHeavyBolter_Feature>BlueprintFeature
+   -> b11dc12ae9e943c29cce0aa7d52bf980 重型爆矢枪[Common]<HeavyBolter_Item>BlueprintItemWeapon
+   -> c7a53b43ac5f4f11a1aef612dd3f4f71 黑暗灵族装备[]<DrukhariArmourProficiency_Feature>BlueprintFeature
+   -> 590cb5c394ee4b5eb213121c96063dec 艾达灵族装备[]<AeldariArmourProficiency_Feature>BlueprintFeature
+   -> b11dc12ae9e943c29cce0aa7d52bf980 重型爆矢枪[Common]<HeavyBolter_Item>BlueprintItemWeapon
+   -> 19673fbc918241c6add6710025f67058 爆矢武器专精[]<BolterWeaponProficiency>BlueprintFeature
+   -> a489b6d823ef4b86b431aa1d42e385c7 单发射击[]<SingleShot_Ability>BlueprintAbility
+   -> 86dda65e384f4ecc9bc2cdf3e6ad06e7 <HeavyBolter_BoltShot_AbilityFXSettings>
+   -> 1cdd00b349324e7f958a8cb1dfcde2fe 连发射击[]<BurstFire_Ability>BlueprintAbility
+   -> 86dda65e384f4ecc9bc2cdf3e6ad06e7 <HeavyBolter_BoltShot_AbilityFXSettings>
+   -> 98f4a31b68e446ad9c63411c7b349146 重新装填[]<ReloadAbility>BlueprintAbility
+   -> 86dda65e384f4ecc9bc2cdf3e6ad06e7 <HeavyBolter_BoltShot_AbilityFXSettings>
+================================================================================
+命运之星Fury eb8c58901bb049ec9ad3775c31eeabfe 命运之星[Unique]<SororitasPowerArmourFury_Item>BlueprintItemArmor len=838 proto=None
+  STR: [' 5069a24051354e50a663da0125e19b02 b6962fcc54054af98961dd9a6c0f9e18', ' bcd09a8bce3f46d3bf9d27eec78b14d7G5', ' befc6d221bed4b019245ff828822c3eb', ' d118fac453a9433d9365b640e438e5c7', ' e6f169f451d143718f57715b248b51e4', 'ArmorPlateMediumMovement', 'B$EquipmentRestrictionHasFacts$55eaaaeb-1f84-4cc6-b85d-65846fef5493', 'SororitasPowerArmourFury_Item eb8c58901bb049ec9ad3775c31eeabfe', 'TargetType', 'UI_INV_PowerArmour_Equip_Play', 'UI_INV_PowerArmour_Put_Play', 'UI_INV_PowerArmour_Take_Play', '~?$AddFactToEquipmentWielder$d2c514ff-d88e-491a-95d3-05993629c67a', '~?$AddFactToEquipmentWielder$e1abfa55-700c-4ea8-8a1e-48840bb0c9a1']
+   -> e6f169f451d143718f57715b248b51e4 ?[]<SororitasPowerArmour_Spec_Feature>BlueprintFeature
+   -> bcd09a8bce3f46d3bf9d27eec78b14d7 ?[]<SororitasPowerArmourFury_Feature>BlueprintFeature
+   -> 5069a24051354e50a663da0125e19b02 动力装甲专精[]<PowerArmourProficiency>BlueprintFeature
+   -> b6962fcc54054af98961dd9a6c0f9e18 战斗修女[]<AdeptaSororitas_Occupation__NoKEE>BlueprintFeature
+   -> d118fac453a9433d9365b640e438e5c7 <KEE_PowerArmorAdeptasSororitas_T2>
+   -> befc6d221bed4b019245ff828822c3eb ?[]<PowerArmour_ArmorType>BlueprintArmorType
+================================================================================
+命运之星Fire 9dec89a18f9a4175852ffa669fc05f6d 命运之星[Unique]<SororitasPowerArmourFire_Item>BlueprintItemArmor len=874 proto=None
+  STR: [' 0143242d24154c6da193f165382f03e4', ' 5069a24051354e50a663da0125e19b02 b6962fcc54054af98961dd9a6c0f9e18', ' b45da71823f74fff9dcfb98d5ca20a23G5', ' befc6d221bed4b019245ff828822c3eb', ' e6f169f451d143718f57715b248b51e4', '$68f30953-97ac-495d-8d70-f5b481c6bf52', 'ArmorPlateMediumMovement', 'B$EquipmentRestrictionHasFacts$6c45d053-4df9-4aee-96bb-e349e754580a', 'SororitasPowerArmourFire_Item 9dec89a18f9a4175852ffa669fc05f6d', 'TargetType', 'UI_INV_PowerArmour_Equip_Play', 'UI_INV_PowerArmour_Put_Play', 'UI_INV_PowerArmour_Take_Play', '~?$AddFactToEquipmentWielder$d2c514ff-d88e-491a-95d3-05993629c67a', '~?$AddFactToEquipmentWielder$e1abfa55-700c-4ea8-8a1e-48840bb0c9a1']
+   -> e6f169f451d143718f57715b248b51e4 ?[]<SororitasPowerArmour_Spec_Feature>BlueprintFeature
+   -> b45da71823f74fff9dcfb98d5ca20a23 ?[]<SororitasPowerArmourFire_Feature>BlueprintFeature
+   -> 5069a24051354e50a663da0125e19b02 动力装甲专精[]<PowerArmourProficiency>BlueprintFeature
+   -> b6962fcc54054af98961dd9a6c0f9e18 战斗修女[]<AdeptaSororitas_Occupation__NoKEE>BlueprintFeature
+   -> 0143242d24154c6da193f165382f03e4 <KEE_PowerArmorAdeptasSororitas_T3>
+   -> befc6d221bed4b019245ff828822c3eb ?[]<PowerArmour_ArmorType>BlueprintArmorType

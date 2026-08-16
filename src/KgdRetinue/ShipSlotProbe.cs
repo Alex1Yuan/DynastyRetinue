@@ -1,0 +1,258 @@
+using System;
+using System.Collections.Generic;
+using System.Reflection;
+using System.Text;
+using UnityEngine;
+
+namespace KgdRetinue
+{
+    /// <summary>
+    /// 船模挂点诊断。
+    ///
+    /// 为什么需要：换船模之后**光矛的开火点跑到虚空里**，而舷炮正常。
+    /// 机制（StarshipView 已反编译确认）：
+    ///     List&lt;StarshipItemSlot&gt; list = ItemSlots.FindAll(x =&gt; x.Type == requiredSlots.SlotType);
+    ///     ...
+    ///     Object.Instantiate(prefab, item3.transform.position, ..., item3.transform);
+    /// 武器美术是挂到**船体 prefab 上那个 StarshipItemSlot 的 transform** 下面的。
+    /// 挂点由美术在每个船模上手工摆放，不同船模的槽位类型集合**不一样**。
+    /// 匹配不到 ⇒ list 为空 ⇒ 美术没挂上去 ⇒ 开火点退回原点。
+    ///
+    /// 所以要修必须先知道：**当前船模到底有哪些槽位类型**、我们的武器又需要哪些。
+    /// 这个类就是把这两张表打进日志，避免靠猜。
+    /// </summary>
+    public static class ShipSlotProbe
+    {
+        private const BindingFlags BF = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
+
+        /// <summary>把当前玩家舰的船体挂点 + 已装武器的需求槽位打进日志。</summary>
+        public static void Dump()
+        {
+            try
+            {
+                var ship = StarshipViewTool.PlayerShip;
+                if (ship == null) { Main.LogError("[挂点] 拿不到玩家座舰。"); return; }
+
+                Main.Log("======== 船模挂点诊断 ========");
+                // 先把最基本的三件事打出来 —— 上一轮就是因为缺这个，
+                // 分不清"补丁没生效"还是"分档/船模压根没换过"
+                Main.Log("  分档(Size)   = " + ship.Size);
+                Main.Log("  自定义prefab = " + (string.IsNullOrEmpty(StarshipViewTool.CurrentPrefab)
+                                                ? "(无，用的原版模型)" : StarshipViewTool.CurrentPrefab));
+                Main.Log("  护盾扇区上限 = " + DumpShields(ship));
+                Main.Log("  装甲(各面)   = " + DumpArmour(ship));
+                var model = ShipModelCatalog.ByPrefab(StarshipViewTool.CurrentPrefab);
+                Main.Log("  当前船模: " + (model != null ? model.ToString() : "原版模型")
+                         + "   分档: " + ship.Size);
+
+                // ---- 1. 船体 prefab 上实际有哪些 StarshipItemSlot ----
+                object view = null;
+                try { view = ship.GetType().GetProperty("View", BF).GetValue(ship, null); } catch { }
+                if (view == null)
+                {
+                    Main.LogError("  拿不到 View —— 船现在没在场景里显示。"
+                                  + "★挂点诊断必须在【太空战里】点★（改装界面那个是 ShipDollRoom 的复制体，"
+                                  + "身上没有 StarshipView，也没有武器挂点）。上面几行数值仍然有效。");
+                    return;
+                }
+
+                var comp = FindStarshipView(view as Component);
+                if (comp == null) { Main.LogError("  这个 View 上找不到 StarshipView 组件。"); return; }
+
+                var slotsField = comp.GetType().GetField("ItemSlots", BF)
+                              ?? comp.GetType().GetProperty("ItemSlots", BF) as MemberInfo as FieldInfo;
+                object slotsObj = null;
+                try
+                {
+                    var f = comp.GetType().GetField("ItemSlots", BF);
+                    if (f != null) slotsObj = f.GetValue(comp);
+                    else
+                    {
+                        var p = comp.GetType().GetProperty("ItemSlots", BF);
+                        if (p != null) slotsObj = p.GetValue(comp, null);
+                    }
+                }
+                catch { }
+
+                var counts = new Dictionary<string, int>();
+                int total = 0;
+                var en = slotsObj as System.Collections.IEnumerable;
+                if (en != null)
+                {
+                    foreach (var s in en)
+                    {
+                        if (s == null) continue;
+                        total++;
+                        string ty = "?";
+                        try
+                        {
+                            var tf = s.GetType().GetField("Type", BF);
+                            var tv = tf != null ? tf.GetValue(s)
+                                   : s.GetType().GetProperty("Type", BF).GetValue(s, null);
+                            ty = tv != null ? tv.ToString() : "?";
+                        }
+                        catch { }
+                        int c; counts.TryGetValue(ty, out c); counts[ty] = c + 1;
+                    }
+                }
+                var sb = new StringBuilder();
+                foreach (var kv in counts) sb.Append(kv.Key).Append("×").Append(kv.Value).Append("  ");
+                Main.Log("  船体挂点（StarshipItemSlot）共 " + total + " 个: "
+                         + (sb.Length > 0 ? sb.ToString() : "（一个都没有）"));
+
+                // ---- 2. 已装的武器各自需要什么槽位 ----
+                Main.Log("  --- 已装武器 ---");
+                DumpWeapons(ship, counts);
+                Main.Log("======== 诊断结束 ========");
+                Main.Log("  判读：某件武器需要的槽位类型如果不在上面那张挂点表里，"
+                         + "它的美术就挂不上去，开火点会退回原点（表现为「在虚空里开火」）。");
+            }
+            catch (Exception e) { Main.LogError("[挂点] 诊断失败: " + e); }
+        }
+
+        /// <summary>四个扇区的护盾上限，用来验证 GetMax 的 Postfix 有没有生效。</summary>
+        private static string DumpShields(object ship)
+        {
+            try
+            {
+                var part = GetPart(ship, "PartStarshipShields");
+                if (part == null) return "(读不到 PartStarshipShields)";
+                var sb = new StringBuilder();
+                foreach (var sec in new[] { "Fore", "Port", "Starboard", "Aft" })
+                {
+                    object v = null;
+                    try
+                    {
+                        var m = part.GetType().GetMethod("GetShields", new[] { typeof(Kingmaker.SpaceCombat.StarshipLogic.Parts.StarshipSectorShieldsType) });
+                        var en = Enum.Parse(typeof(Kingmaker.SpaceCombat.StarshipLogic.Parts.StarshipSectorShieldsType), sec);
+                        var s = m.Invoke(part, new[] { en });
+                        v = Get(s, "Max");
+                    }
+                    catch { }
+                    sb.Append(sec).Append("=").Append(v == null ? "?" : v.ToString()).Append("  ");
+                }
+                return sb.ToString();
+            }
+            catch (Exception e) { return "(异常 " + e.Message + ")"; }
+        }
+
+        /// <summary>四个方向的装甲，用来验证 GetLocationDeflection 的 Postfix 有没有生效。</summary>
+        private static string DumpArmour(object ship)
+        {
+            try
+            {
+                var hull = GetPart(ship, "PartStarshipHull");
+                if (hull == null) return "(读不到 PartStarshipHull)";
+                var m = hull.GetType().GetMethod("GetLocationDeflection");
+                if (m == null) return "(找不到 GetLocationDeflection)";
+                var et = m.GetParameters()[0].ParameterType;
+                var sb = new StringBuilder();
+                foreach (var loc in new[] { "Fore", "Port", "Starboard", "Aft" })
+                {
+                    object v = null;
+                    try { v = m.Invoke(hull, new[] { Enum.Parse(et, loc) }); } catch { }
+                    sb.Append(loc).Append("=").Append(v == null ? "?" : v.ToString()).Append("  ");
+                }
+                return sb.ToString();
+            }
+            catch (Exception e) { return "(异常 " + e.Message + ")"; }
+        }
+
+        private static Component FindStarshipView(Component view)
+        {
+            if (view == null) return null;
+            try
+            {
+                foreach (var c in view.GetComponentsInChildren<Component>(true))
+                    if (c != null && c.GetType().Name == "StarshipView") return c;
+            }
+            catch { }
+            return null;
+        }
+
+        private static void DumpWeapons(object ship, Dictionary<string, int> have)
+        {
+            try
+            {
+                var hull = Get(ship, "Hull") ?? GetPart(ship, "PartStarshipHull");
+                var slots = Get(hull, "HullSlots");
+                var weapons = Get(slots, "WeaponSlots") as System.Collections.IEnumerable;
+                if (weapons == null) { Main.Log("    （读不到 WeaponSlots）"); return; }
+
+                foreach (var ws in weapons)
+                {
+                    if (ws == null) continue;
+                    string slotType = "?", wname = "(空)", wtype = "?";
+                    try
+                    {
+                        var bpSlot = Get(ws, "Blueprint") ?? Get(ws, "SlotData");
+                        var t = Get(bpSlot, "Type"); if (t != null) slotType = t.ToString();
+                        var item = Get(ws, "MaybeItem");
+                        if (item != null)
+                        {
+                            var bp = Get(item, "Blueprint");
+                            var n = Get(bp, "Name"); if (n != null) wname = n.ToString();
+                            var wt = Get(bp, "WeaponType"); if (wt != null) wtype = wt.ToString();
+                        }
+                    }
+                    catch { }
+                    bool ok = have.ContainsKey(slotType);
+                    Main.Log("    槽位 " + slotType.PadRight(11) + " 武器 " + wname
+                             + "  [" + wtype + "]   挂点: " + (ok ? "有 ✓" : "★没有 —— 开火点会跑到虚空★"));
+                }
+            }
+            catch (Exception e) { Main.LogError("    读武器失败: " + e.Message); }
+        }
+
+        private static object GetPart(object entity, string typeName)
+        {
+            // ★ 不要去枚举 Entity.Parts ★
+            // 它是 PartsManager，不是 IEnumerable —— 上一版在这里当集合遍历，
+            // 结果永远拿不到，日志里那两条「读不到 PartStarshipHull」是这个 bug，
+            // 不是船上真没有这个 Part。StarshipEntity 上有现成的强类型属性，直接用。
+            string prop = typeName == "PartStarshipHull" ? "Hull"
+                        : typeName == "PartStarshipShields" ? "Shields"
+                        : null;
+            if (prop != null)
+            {
+                try
+                {
+                    var p = entity.GetType().GetProperty(prop, BF);
+                    var v = p != null ? p.GetValue(entity, null) : null;
+                    if (v != null) return v;
+                }
+                catch { }
+            }
+
+            // 退路：PartsManager 上找 GetAll()/Parts 之类能枚举的东西
+            try
+            {
+                var pm = Get(entity, "Parts");
+                if (pm != null)
+                {
+                    var en = pm as System.Collections.IEnumerable;
+                    if (en == null)
+                    {
+                        var m = pm.GetType().GetMethod("GetAll", System.Type.EmptyTypes);
+                        if (m != null) en = m.Invoke(pm, null) as System.Collections.IEnumerable;
+                        if (en == null) en = Get(pm, "Parts") as System.Collections.IEnumerable;
+                    }
+                    if (en != null)
+                        foreach (var p in en) if (p != null && p.GetType().Name == typeName) return p;
+                }
+            }
+            catch { }
+            return null;
+        }
+
+        private static object Get(object o, string name)
+        {
+            if (o == null) return null;
+            var t = o.GetType();
+            var p = t.GetProperty(name, BF);
+            if (p != null) return p.GetValue(o, null);
+            var f = t.GetField(name, BF);
+            return f != null ? f.GetValue(o) : null;
+        }
+    }
+}

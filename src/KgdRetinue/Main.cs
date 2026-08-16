@@ -31,6 +31,12 @@ namespace KgdRetinue
 
             RetinueLifecycle.Subscribe();
 
+            // ★必须在载入时装，不能懒装★
+            // m_CustomPrefabGuid 进存档，冷启动读档根本不会走 Apply()；
+            // 而 DisableSizeScaling 是 view 上的运行时 bool、不持久化。
+            // 懒装 = 每次重开游戏读档，换过模的船都会被 GetSizeScale() 放大 1.5152 倍。
+            StarshipViewTool.Install();
+
             Log("loaded.  版本 " + (modEntry.Info != null ? modEntry.Info.Version : "?"));
             return true;
         }
@@ -147,10 +153,21 @@ namespace KgdRetinue
                 RecruitWindow.Shutdown();   // 连宿主 GameObject 一起销毁，不留残留
                 UI.RetinueUI.Shutdown();    // 新的 uGUI 窗口：销毁 Canvas 根
                 UnitPortraits.Cleanup();    // 把 hold 住的立绘资源还回去
+                ShipModelBundleHold.Cleanup();  // 把 hold 住的船模 bundle 还回去
                 // 刻意不自动遣散：卫兵现在是持久实体，误触开关不该清掉满级卫队。
                 // 遣散必须由玩家显式点按钮。
                 int n = RetinueRegistry.Count;
                 if (n > 0) Log("注意：仍有 " + n + " 名卫兵留在存档中。禁用 mod 或 DLC 前请先点【遣散全部】。");
+                // ★不自动还原船模★：m_CustomPrefabGuid / m_Size 都进存档且是单向的，
+                // 但"禁用开关"不等于"要卸载 mod"，静默改玩家的船不合适。
+                // 只提醒；真要还原请点【还原原版船模】（StarshipViewTool.RevertAll）。
+                try
+                {
+                    if (StarshipViewTool.CurrentPrefab != null)
+                        Log("注意：座舰仍是自定义船模 + 自定义分档，两者都在存档里。"
+                          + "彻底卸载 mod 前请先点【还原原版船模】再存盘，否则船会永久保持现在的样子。");
+                }
+                catch { }
             }
             return true;
         }
@@ -278,15 +295,85 @@ namespace KgdRetinue
             GUILayout.Label("<color=#aaaaaa>护卫舰/袭击舰无加成，保持原版手感。数值是「额外」次数：+1 = 两打。</color>");
 
             GUILayout.BeginHorizontal();
-            GUILayout.Label("换船（测试用，立即生效）", GUILayout.Width(160));
-            if (GUILayout.Button("护卫舰", GUILayout.Width(80)))   StarshipTool.SetSize(Kingmaker.Enums.Size.Frigate_1x2);
-            if (GUILayout.Button("巡洋舰", GUILayout.Width(80)))   StarshipTool.SetSize(Kingmaker.Enums.Size.Cruiser_2x4);
-            if (GUILayout.Button("大巡洋舰", GUILayout.Width(90)))  StarshipTool.SetSize(Kingmaker.Enums.Size.GrandCruiser_3x6);
+            GUILayout.Label("换船（默认：巡洋/大巡都用 Gothic）", GUILayout.Width(210));
+            if (GUILayout.Button("护卫舰", GUILayout.Width(80)))   StarshipViewTool.ApplyTierDefault(Kingmaker.Enums.Size.Frigate_1x2);
+            if (GUILayout.Button("巡洋舰", GUILayout.Width(80)))   StarshipViewTool.ApplyTierDefault(Kingmaker.Enums.Size.Cruiser_2x4);
+            if (GUILayout.Button("大巡洋舰", GUILayout.Width(90)))  StarshipViewTool.ApplyTierDefault(Kingmaker.Enums.Size.GrandCruiser_3x6);
             GUILayout.EndHorizontal();
             Settings.ShipSwitchInCombat = GUILayout.Toggle(Settings.ShipSwitchInCombat, "允许战斗中换船（有风险：格子占位会变，寻路网格未必跟着重算）");
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("护盾上限 +%  巡洋", GUILayout.Width(130));
+            Settings.ShipCruiserShieldPct = (int)GUILayout.HorizontalSlider(Settings.ShipCruiserShieldPct, 0f, 200f, GUILayout.Width(140));
+            GUILayout.Label(Settings.ShipCruiserShieldPct + "%", GUILayout.Width(46));
+            GUILayout.Label("大巡", GUILayout.Width(40));
+            Settings.ShipGrandShieldPct = (int)GUILayout.HorizontalSlider(Settings.ShipGrandShieldPct, 0f, 300f, GUILayout.Width(140));
+            GUILayout.Label(Settings.ShipGrandShieldPct + "%", GUILayout.Width(46));
+            GUILayout.EndHorizontal();
+            GUILayout.Label("<color=#aaaaaa>只对玩家座舰生效（GetMax 是全舰船共用的，不加判据会把敌舰护盾也翻倍）。</color>");
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("装甲减伤 +%  巡洋", GUILayout.Width(130));
+            Settings.ShipCruiserArmourPct = (int)GUILayout.HorizontalSlider(Settings.ShipCruiserArmourPct, 0f, 200f, GUILayout.Width(140));
+            GUILayout.Label(Settings.ShipCruiserArmourPct + "%", GUILayout.Width(46));
+            GUILayout.Label("大巡", GUILayout.Width(40));
+            Settings.ShipGrandArmourPct = (int)GUILayout.HorizontalSlider(Settings.ShipGrandArmourPct, 0f, 300f, GUILayout.Width(140));
+            GUILayout.Label(Settings.ShipGrandArmourPct + "%", GUILayout.Width(46));
+            GUILayout.EndHorizontal();
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("撞角行程 +%  巡洋", GUILayout.Width(130));
+            Settings.ShipCruiserRamPct = (int)GUILayout.HorizontalSlider(Settings.ShipCruiserRamPct, 0f, 400f, GUILayout.Width(140));
+            GUILayout.Label(Settings.ShipCruiserRamPct + "%", GUILayout.Width(46));
+            GUILayout.Label("大巡", GUILayout.Width(40));
+            Settings.ShipGrandRamPct = (int)GUILayout.HorizontalSlider(Settings.ShipGrandRamPct, 0f, 400f, GUILayout.Width(140));
+            GUILayout.Label(Settings.ShipGrandRamPct + "%", GUILayout.Width(46));
+            GUILayout.EndHorizontal();
+            GUILayout.Label("<color=#aaaaaa>撞角没有可乘的「基础距离」常量（行程来自寻路），"
+                          + "所以按「速度 × 百分比」折算成额外格数。机动性不动。</color>");
             GUILayout.Label("<color=#ffaa66>注意：舰船分档是 [JsonProperty]，会写进存档。"
                           + "它是 vanilla 枚举、不碰存档红线，卸载 mod 后存档照样能开，"
                           + "但船会保持在你切过去的那一档 —— 要还原就切回护卫舰再存一次。</color>");
+
+            // ---------- 换船模（真外观）----------
+            GUILayout.Space(6);
+            GUILayout.Label("<b>换船模</b>（真外观。点了会同时把分档设成对应档位）");
+            var _curPrefab = StarshipViewTool.CurrentPrefab;
+            var _curModel = string.IsNullOrEmpty(_curPrefab) ? null : ShipModelCatalog.ByPrefab(_curPrefab);
+            GUILayout.Label("当前：" + (_curModel != null ? _curModel.ToString() : "<color=#aaaaaa>原版模型</color>"));
+            foreach (var _tier in new[] { Kingmaker.Enums.Size.GrandCruiser_3x6,
+                                          Kingmaker.Enums.Size.Cruiser_2x4,
+                                          Kingmaker.Enums.Size.Frigate_1x2 })
+            {
+                // 大巡这一档把巡洋舰船模也列出来 —— 原版只有 2 个 3x6 船模（混沌战舰 / 帝国货船），
+                // 想要"帝国战舰造型的大巡"必须靠等比放大巡洋舰船模。
+                var _list = ShipModelCatalog.ForTier(_tier);
+                if (_tier == Kingmaker.Enums.Size.GrandCruiser_3x6)
+                {
+                    _list = new System.Collections.Generic.List<ShipModel>(_list);
+                    _list.AddRange(ShipModelCatalog.ForTier(Kingmaker.Enums.Size.Cruiser_2x4));
+                }
+                if (_list == null || _list.Count == 0) continue;
+                GUILayout.BeginHorizontal();
+                GUILayout.Label(_tier.ToString(), GUILayout.Width(130));
+                for (int _i = 0; _i < _list.Count; _i++)
+                {
+                    var _m = _list[_i];
+                    if (GUILayout.Button(_m.Hull, GUILayout.Width(190))) StarshipViewTool.ApplyModelAtTier(_m, _tier);
+                }
+                GUILayout.EndHorizontal();
+            }
+            if (GUILayout.Button("还原原版船模", GUILayout.Width(140))) StarshipViewTool.RevertAll();
+            if (GUILayout.Button("挂点诊断", GUILayout.Width(110))) ShipSlotProbe.Dump();
+            Settings.ShipStretchModel = GUILayout.Toggle(Settings.ShipStretchModel,
+                "船模档位低于分档时等比放大撑满（比如把 Gothic 巡洋舰当大巡用 ×1.52）");
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("改装界面船模缩放", GUILayout.Width(130));
+            Settings.ShipDollScale = (int)GUILayout.HorizontalSlider(Settings.ShipDollScale, 30f, 200f, GUILayout.Width(140));
+            GUILayout.Label(Settings.ShipDollScale + "%", GUILayout.Width(46));
+            GUILayout.EndHorizontal();
+            GUILayout.Label("<color=#aaaaaa>100% = 归一到原版护卫舰的观感。那个展示房间的机位/灯光/背景"
+                          + "全是按护卫舰构图的，换大船不归一就会撑出画面。只影响改装界面，战场模型不受影响。</color>");
+            GUILayout.Label("<color=#aaaaaa>视觉尺寸与格子占位是两条独立的路："
+                          + "分档决定占位/多打判据，prefab 决定外观，"
+                          + "DisableSizeScaling 让模型保持原生大小、不被再放大一次。</color>");
 
             // ---------- 规则 ----------
             GUILayout.Space(8);
@@ -529,6 +616,30 @@ namespace KgdRetinue
 
         /// <summary>允许在太空战**战斗中**切换舰船分档。默认关 —— 格子占位会变，寻路网格未必跟着重算。</summary>
         public bool ShipSwitchInCombat = false;
+
+        /// <summary>巡洋舰：护盾上限加成百分比（50 = ×1.5）。</summary>
+        public int ShipCruiserShieldPct = 50;
+        /// <summary>大巡洋舰：护盾上限加成百分比（100 = ×2）。</summary>
+        public int ShipGrandShieldPct = 100;
+
+        /// <summary>巡洋舰：装甲（减伤）加成百分比。</summary>
+        public int ShipCruiserArmourPct = 50;
+        /// <summary>大巡洋舰：装甲（减伤）加成百分比。</summary>
+        public int ShipGrandArmourPct = 100;
+
+        /// <summary>巡洋舰：撞角额外行程 = 速度 × 此百分比。机动性不动（大船本该更笨重）。</summary>
+        public int ShipCruiserRamPct = 100;
+        /// <summary>大巡洋舰：撞角额外行程 = 速度 × 此百分比。</summary>
+        public int ShipGrandRamPct = 200;
+
+        /// <summary>船模档位低于当前分档时等比放大撑满。
+        /// 用途：GrandCruiser_3x6 只有混沌战列巡洋舰和帝国运输舰两个模型，
+        /// 想要「帝国 Gothic 级的大巡」只能把巡洋舰船模放大。</summary>
+        public bool ShipStretchModel = true;
+
+        /// <summary>改装界面（ShipDollRoom）里船模的额外倍率，100 = 归一到原版护卫舰的观感。
+        /// 那个房间的机位是按护卫舰构图的，换大船必然撑出画面 —— 纯显示，随便调。</summary>
+        public int ShipDollScale = 100;
         // 卫兵杀敌同时也给卫队池加一份（不动玩家那份）
         public bool GuardKillFeedsOwnPool = true;
         // 每次区域加载按当前阶位补升级 —— 卫兵"跟久了自己成长"

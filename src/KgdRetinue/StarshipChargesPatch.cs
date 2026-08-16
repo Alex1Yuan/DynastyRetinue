@@ -3,6 +3,7 @@ using System.Reflection;
 using HarmonyLib;
 using Kingmaker;
 using Kingmaker.Enums;
+using Kingmaker.EntitySystem.Stats.Base;
 
 namespace KgdRetinue
 {
@@ -81,7 +82,7 @@ namespace KgdRetinue
 
         private static bool _logged;
         /// <summary>换船/重开战斗时把"只报一条"的闸复位，便于观察。</summary>
-        public static void ResetLog() { _logged = false; _rangeLogged = false; }
+        public static void ResetLog() { _logged = false; _rangeLogged = false; _shieldLogged = false; _armourLogged = false; _ramLogged = false; }
 
         // ---------------------------------------------------------------- 规则
 
@@ -211,6 +212,258 @@ namespace KgdRetinue
                              : Math.Max(0, Main.Settings.ShipGrandRangeProw);
         }
 
+        // ---------------------------------------------------------------- 护盾
+
+        /// <summary>
+        /// 护盾上限按分档翻倍。
+        ///
+        /// 落点：Kingmaker.SpaceCombat.StarshipLogic.Parts.StarshipSectorShields.GetMax()
+        ///     int num  = 该扇区基数（来自 VoidShieldGenerator.Fore/Port/Starboard/Aft）
+        ///     int num2 = Σ StarshipShieldEnhancement.bonusFlat
+        ///     int num3 = Σ StarshipShieldEnhancement.bonusPct
+        ///     return (num + num2) * (100 + num3) / 100;
+        /// 它是**唯一**的护盾上限来源 —— Max / Current / Damage 的 clamp 全走它。
+        ///
+        /// ★ 必须只对玩家舰生效 ★ GetMax 是所有舰船共用的，不加判据会把敌舰护盾也翻倍。
+        ///
+        /// ★ 存档 ★ 只改上限的计算，不写任何字段。
+        /// StarshipSectorShields.m_Damage 是 [JsonProperty]，而 Damage 的 setter 会
+        /// Clamp(value, 0, Max) —— 上限**变大**是安全的（旧伤害值仍在范围内）；
+        /// 若将来要往下调，得留意会不会把已有伤害截断。
+        /// </summary>
+        [HarmonyPatch]
+        public static class StarshipShieldPatch
+        {
+            private static System.Reflection.MethodBase TargetMethod()
+            {
+                var t = AccessTools.TypeByName("Kingmaker.SpaceCombat.StarshipLogic.Parts.StarshipSectorShields");
+                return t == null ? null : AccessTools.Method(t, "GetMax");
+            }
+
+            private static bool Prepare()
+            {
+                var m = TargetMethod();
+                if (m == null) Main.LogError("[舰船] 找不到 StarshipSectorShields.GetMax —— 护盾加成不可用。");
+                return m != null;
+            }
+
+            private static void Postfix(object __instance, ref int __result)
+            {
+                try
+                {
+                    if (!Main.Enabled || Main.Settings == null || !Main.Settings.ShipExtraShots) return;
+                    if (__result <= 0 || __instance == null) return;
+                    if (!IsPlayerShipShields(__instance)) return;   // ★ 敌舰不加 ★
+
+                    int pct = ShieldPct();
+                    if (pct <= 0) return;
+
+                    int before = __result;
+                    __result = __result * (100 + pct) / 100;
+
+                    if (!_shieldLogged)
+                    {
+                        _shieldLogged = true;
+                        Main.Log("[舰船] 护盾加成生效：扇区上限 " + before + " -> " + __result
+                                 + "（+" + pct + "%，分档 " + ShipSize() + "）。本次会话只报这一条。");
+                    }
+                }
+                catch (Exception e) { Main.LogError("[舰船] 护盾 Postfix 失败: " + e.Message); }
+            }
+
+            /// <summary>这组扇区护盾是不是玩家座舰的。m_Owner 是 PartStarshipShields，它的 Owner 才是船。</summary>
+            private static bool IsPlayerShipShields(object sectorShields)
+            {
+                try
+                {
+                    var part = Get(sectorShields, "m_Owner");
+                    if (part == null) return false;
+                    var owner = Get(part, "Owner");
+                    if (owner == null) return false;
+                    var ship = Game.Instance != null && Game.Instance.Player != null
+                             ? (object)Game.Instance.Player.PlayerShip : null;
+                    return ship != null && ReferenceEquals(owner, ship);
+                }
+                catch { return false; }
+            }
+        }
+
+        private static bool _shieldLogged;
+
+        /// <summary>当前分档的护盾加成百分比。护卫舰无加成。</summary>
+        private static int ShieldPct()
+        {
+            var sz = ShipSize();
+            if (sz == Size.Cruiser_2x4)      return Math.Max(0, Main.Settings.ShipCruiserShieldPct);
+            if (sz == Size.GrandCruiser_3x6) return Math.Max(0, Main.Settings.ShipGrandShieldPct);
+            return 0;
+        }
+
+        // ---------------------------------------------------------------- 装甲（减伤）
+
+        /// <summary>
+        /// 舰船装甲（减伤）按分档放大。
+        ///
+        /// ★ 落点选在源头，不在伤害规则上 ★
+        /// 一开始我打在 RuleStarshipCalculateDamageForTarget 的 ResultDeflection 上，
+        /// 那是**只改计算不改显示** —— 玩家会看到旧数字却少挨伤害，很难排查。
+        /// 真正的唯一源头是：
+        ///     Kingmaker.SpaceCombat.StarshipLogic.Parts.PartStarshipHull.GetLocationDeflection(hitLocation)
+        ///         => AggregateArmorSources(...)   // 装甲板 + StarshipArmorBonus + Stats
+        /// 而伤害规则的构造里就是
+        ///     OriginalDeflection = Target.Hull.GetLocationDeflection(ResultHitLocation);
+        /// 所以 Postfix 它，**显示和计算同时生效、永远一致**。
+        ///
+        /// ★ 只对玩家舰生效 ★ 这个方法所有舰船共用。
+        /// </summary>
+        [HarmonyPatch]
+        public static class StarshipArmourPatch
+        {
+            private static System.Reflection.MethodBase TargetMethod()
+            {
+                var t = AccessTools.TypeByName("Kingmaker.SpaceCombat.StarshipLogic.Parts.PartStarshipHull");
+                return t == null ? null : AccessTools.Method(t, "GetLocationDeflection");
+            }
+
+            private static bool Prepare()
+            {
+                var m = TargetMethod();
+                if (m == null) Main.LogError("[舰船] 找不到 PartStarshipHull.GetLocationDeflection —— 装甲加成不可用。");
+                return m != null;
+            }
+
+            private static void Postfix(object __instance, ref int __result)
+            {
+                try
+                {
+                    if (!Main.Enabled || Main.Settings == null || !Main.Settings.ShipExtraShots) return;
+                    if (__result <= 0 || __instance == null) return;
+
+                    var owner = Get(__instance, "Owner");
+                    var ship = Game.Instance != null && Game.Instance.Player != null
+                             ? (object)Game.Instance.Player.PlayerShip : null;
+                    if (ship == null || !ReferenceEquals(owner, ship)) return;
+
+                    int pct = ArmourPct();
+                    if (pct <= 0) return;
+
+                    int before = __result;
+                    __result = __result * (100 + pct) / 100;
+
+                    if (!_armourLogged)
+                    {
+                        _armourLogged = true;
+                        Main.Log("[舰船] 装甲加成生效：减伤 " + before + " -> " + __result
+                                 + "（+" + pct + "%，分档 " + ShipSize() + "）。"
+                                 + "落点在 GetLocationDeflection，所以界面上的数字也会跟着变。"
+                                 + "本次会话只报这一条。");
+                    }
+                }
+                catch (Exception e) { Main.LogError("[舰船] 装甲 Postfix 失败: " + e.Message); }
+            }
+        }
+
+        private static bool _armourLogged;
+
+        private static int ArmourPct()
+        {
+            var sz = ShipSize();
+            if (sz == Size.Cruiser_2x4)      return Math.Max(0, Main.Settings.ShipCruiserArmourPct);
+            if (sz == Size.GrandCruiser_3x6) return Math.Max(0, Main.Settings.ShipGrandArmourPct);
+            return 0;
+        }
+
+        // ---------------------------------------------------------------- 撞角距离
+
+        /// <summary>
+        /// 撞角行程按分档加长。
+        ///
+        /// 落点：AbilityCustomStarshipRam.BonusDistanceOnAttackAttempt(StarshipEntity owner)
+        ///     return bonusDistanceOnAttackAttempt + Σ(fact.RamDistanceBonus);
+        /// 这是 vanilla 自己用来给撞角加距离的口子（各种 fact 上的 RamDistanceBonus 都走它），
+        /// 真正的行程由寻路的 pathLen 决定，这个值是往上叠的**格数**。
+        ///
+        /// ★「+100%」的基准是什么 ★
+        /// 撞角没有一个叫"基础距离"的常量可以乘 —— 行程来自寻路。
+        /// 所以我用舰船的 **Speed 属性**（界面上那个"速度"，护卫舰是 12）当基准：
+        ///     额外格数 = Speed × pct / 100
+        /// 巡洋舰 +100% ≈ +12 格，大巡 +200% ≈ +24 格。
+        /// 这是我的解释，不是原版语义 —— 觉得不合适就调面板滑条。
+        ///
+        /// ★ 只对玩家舰生效 ★ 参数 owner 就是发起撞击的船，直接比对。
+        /// 机动性按用户要求**不动**（大船在设定里本来就该更笨重）。
+        /// </summary>
+        [HarmonyPatch]
+        public static class StarshipRamPatch
+        {
+            private static System.Reflection.MethodBase TargetMethod()
+            {
+                var t = AccessTools.TypeByName("Warhammer.SpaceCombat.StarshipLogic.Abilities.AbilityCustomStarshipRam");
+                return t == null ? null : AccessTools.Method(t, "BonusDistanceOnAttackAttempt");
+            }
+
+            private static bool Prepare()
+            {
+                var m = TargetMethod();
+                if (m == null) Main.LogError("[舰船] 找不到 AbilityCustomStarshipRam.BonusDistanceOnAttackAttempt —— 撞角加距不可用。");
+                return m != null;
+            }
+
+            private static void Postfix(object owner, ref int __result)
+            {
+                try
+                {
+                    if (!Main.Enabled || Main.Settings == null || !Main.Settings.ShipExtraShots) return;
+                    if (owner == null) return;
+
+                    var ship = Game.Instance != null && Game.Instance.Player != null
+                             ? (object)Game.Instance.Player.PlayerShip : null;
+                    if (ship == null || !ReferenceEquals(owner, ship)) return;
+
+                    int pct = RamPct();
+                    if (pct <= 0) return;
+
+                    int speed = 0;
+                    try
+                    {
+                        var stats = Get(owner, "Stats");
+                        var m = stats != null ? stats.GetType().GetMethod("GetStat", new[] { typeof(StatType) }) : null;
+                        if (m != null)
+                        {
+                            var v = m.Invoke(stats, new object[] { StatType.Speed });
+                            speed = Convert.ToInt32(Get(v, "Value") ?? v);
+                        }
+                    }
+                    catch { }
+                    if (speed <= 0) speed = 12;   // 读不到就按护卫舰基准，宁可保守
+
+                    int add = speed * pct / 100;
+                    if (add <= 0) return;
+                    int before = __result;
+                    __result = before + add;
+
+                    if (!_ramLogged)
+                    {
+                        _ramLogged = true;
+                        Main.Log("[舰船] 撞角加距生效：额外距离 " + before + " -> " + __result
+                                 + "（速度 " + speed + " × " + pct + "%，分档 " + ShipSize() + "）。"
+                                 + "本次会话只报这一条。");
+                    }
+                }
+                catch (Exception e) { Main.LogError("[舰船] 撞角 Postfix 失败: " + e.Message); }
+            }
+        }
+
+        private static bool _ramLogged;
+
+        private static int RamPct()
+        {
+            var sz = ShipSize();
+            if (sz == Size.Cruiser_2x4)      return Math.Max(0, Main.Settings.ShipCruiserRamPct);
+            if (sz == Size.GrandCruiser_3x6) return Math.Max(0, Main.Settings.ShipGrandRamPct);
+            return 0;
+        }
+
         // ---------------------------------------------------------------- 反射小工具
 
         /// <summary>
@@ -241,14 +494,31 @@ namespace KgdRetinue
 
         private const BindingFlags BF = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
 
+        /// <summary>
+        /// 按名字取成员。
+        ///
+        /// ★ 必须逐层走继承链、且只看当前层声明的成员 ★
+        /// 不加 DeclaredOnly 的话，基类和派生类都声明了同名成员（Owner 就是这种）时
+        /// GetProperty/GetField 会抛 AmbiguousMatchException —— 实测装甲 Postfix
+        /// 就是被这个异常整段吞掉的，表现为"补丁挂上了但一点效果没有"。
+        /// </summary>
         private static object Get(object o, string name)
         {
             if (o == null) return null;
-            var t = o.GetType();
-            var p = t.GetProperty(name, BF);
-            if (p != null) return p.GetValue(o, null);
-            var f = t.GetField(name, BF);
-            return f != null ? f.GetValue(o) : null;
+            const BindingFlags DECL = BindingFlags.Instance | BindingFlags.Public
+                                    | BindingFlags.NonPublic | BindingFlags.DeclaredOnly;
+            for (var t = o.GetType(); t != null; t = t.BaseType)
+            {
+                try
+                {
+                    var p = t.GetProperty(name, DECL);
+                    if (p != null && p.CanRead) return p.GetValue(o, null);
+                    var f = t.GetField(name, DECL);
+                    if (f != null) return f.GetValue(o);
+                }
+                catch { /* 这一层有问题就继续往上找 */ }
+            }
+            return null;
         }
 
         private static int GetInt(object o, string name)
@@ -257,13 +527,23 @@ namespace KgdRetinue
             return v is int ? (int)v : 0;
         }
 
+        /// <summary>同 Get：逐层 DeclaredOnly，避免同名成员的 AmbiguousMatchException。</summary>
         private static void SetInt(object o, string name, int val)
         {
-            var t = o.GetType();
-            var p = t.GetProperty(name, BF);
-            if (p != null && p.CanWrite) { p.SetValue(o, val, null); return; }
-            var f = t.GetField(name, BF);
-            if (f != null) f.SetValue(o, val);
+            if (o == null) return;
+            const BindingFlags DECL = BindingFlags.Instance | BindingFlags.Public
+                                    | BindingFlags.NonPublic | BindingFlags.DeclaredOnly;
+            for (var t = o.GetType(); t != null; t = t.BaseType)
+            {
+                try
+                {
+                    var p = t.GetProperty(name, DECL);
+                    if (p != null && p.CanWrite) { p.SetValue(o, val, null); return; }
+                    var f = t.GetField(name, DECL);
+                    if (f != null) { f.SetValue(o, val); return; }
+                }
+                catch { }
+            }
         }
     }
 }

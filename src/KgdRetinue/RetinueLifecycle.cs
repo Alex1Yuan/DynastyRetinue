@@ -85,6 +85,15 @@ namespace KgdRetinue
         public void OnAreaDidLoad()
         {
             if (!Main.Enabled) return;
+
+            // ★必须在任何早退之前★（下面有 list.Count == 0 就 return）。
+            // 存档里的 m_CustomPrefabGuid 可能已失效（退了 DLC / 换了机器）：
+            // 失效时 Instantiate 返回 null → CreateView 返回 null →
+            // Entity.AttachToViewOnLoad:393-397 把 IsInGame = false，整条船下线。
+            // 这里检出来就退回原版模型，把"整船消失"降级成"外观没换成"。
+            try { ShipModelBundleHold.ValidateAndRearm(StarshipViewTool.PlayerShip); }
+            catch (Exception e) { Main.LogError("[船模] 区域加载自检失败: " + e.Message); }
+
             try
             {
                 var list = RetinueRegistry.All();

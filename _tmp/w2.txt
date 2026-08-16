@@ -1,100 +1,22 @@
-##########################################################################################
-0adaa28e654e4fd6a74830eed3f63390 血腥礼赞 <ArgentaBolterUnique_Item> [Unique]
-   -> 2e6f4680bfcc45349d02830f518e04a3 爆矢枪 <Bolter_Item> [Common]
-   -> 19673fbc918241c6add6710025f67058 爆矢武器专精 <BolterWeaponProficiency>
-   -> b7c0d4663e9c4c01b6a5622aeaf1079e 血腥礼赞 <ArgentaBolterUnique_Feature>
-   -> 950565a69d144391897cdc0024747755 星际战士装备 <SpaceMarineEquipment_Proficiency>
-   -> c7a53b43ac5f4f11a1aef612dd3f4f71 黑暗灵族装备 <DrukhariArmourProficiency_Feature>
-   -> 590cb5c394ee4b5eb213121c96063dec 艾达灵族装备 <AeldariArmourProficiency_Feature>
-   -> a489b6d823ef4b86b431aa1d42e385c7 单发射击 <SingleShot_Ability>
-   -> 51440c65ca9048d9bc2765dcbaf9f83f <Bolter_BoltShot_AbilityFXSettings>
-   -> 1cdd00b349324e7f958a8cb1dfcde2fe 连发射击 <BurstFire_Ability>
-   -> 98f4a31b68e446ad9c63411c7b349146 重新装填 <ReloadAbility>
-  --- strings ---
-   *  2e6f4680bfcc45349d02830f518e04a3
-   * m_DisplayName
-   * m_Description
-   * RateOfFire
-   * WarhammerRecoil
-   * m_Rarity
-   * WarhammerDamage
-   * WarhammerMaxDamage?$AddFactToEquipmentWielder$ef3306b1-4240-4204-aeee-1985bc021c92
-   * WarhammerPenetrationB$EquipmentRestrictionHasFacts$4f7fb606-db01-4790-b62e-1d981d9605c4 m_VisualParameters.m_WeaponModel
-   * m_Icon
-   * m_CargoVolumePercent
-   * Author:$ReapplyFactsFromItem$369dea8d-b1a3-411c-a222-836d55368707
-   * B$EquipmentRestrictionHasFacts$a28a350e-ded9-48f8-9f67-109e0c60feb6
-   *  2e6f4680bfcc45349d02830f518e04a3B$EquipmentRestrictionHasFacts$a28a350e-ded9-48f8-9f67-109e0c60feb6
-   *  19673fbc918241c6add6710025f67058
-   * ~?$AddFactToEquipmentWielder$ef3306b1-4240-4204-aeee-1985bc021c92
-   *  b7c0d4663e9c4c01b6a5622aeaf1079eG5
-   * B$EquipmentRestrictionHasFacts$3d1fa9ef-3699-4b2c-b42d-ca5928bc2186
-   *  2e6f4680bfcc45349d02830f518e04a3B$EquipmentRestrictionHasFacts$3d1fa9ef-3699-4b2c-b42d-ca5928bc2186
-   *  950565a69d144391897cdc0024747755 c7a53b43ac5f4f11a1aef612dd3f4f71 590cb5c394ee4b5eb213121c96063dec
-   * :$ReapplyFactsFromItem$369dea8d-b1a3-411c-a222-836d55368707
-   * UI_INV_Rifle_Put_Play
-   * UI_INV_Rifle_Take_Play
-   * ProjectileType
-   * &Foley_WP_R_2HAssault_EquipGeneric_Play(Foley_WP_R_2HAssault_UnEquipGeneric_Play
-   * UI_INV_Rifle_Equip_Play
-   * UI_INV_Rifle_Put_Play
-   * UI_INV_Rifle_Take_Play
-   *  a489b6d823ef4b86b431aa1d42e385c7 51440c65ca9048d9bc2765dcbaf9f83f
-   *  1cdd00b349324e7f958a8cb1dfcde2fe 51440c65ca9048d9bc2765dcbaf9f83f
-   *  98f4a31b68e446ad9c63411c7b349146 51440c65ca9048d9bc2765dcbaf9f83f
-   * ArgentaBolterUnique_Item 0adaa28e654e4fd6a74830eed3f63390
-##########################################################################################
-594030b15093416c925dabc415eda101 高级重型伐木枪 <AdvancedHeavyStubber_Item> [Unique]
-   -> 053074cada484310a920573477ebc7ed 重型伐木枪 <HeavyStubber_Item> [Common]
-   -> dda482cc9bcb4f978d191b992c3e8885 (no-zh) <AdvancedHeavyStubber_Feature>
-   -> 26376b596c474d67849613617ced7b04 重型武器专精 <HeavyWeaponProficiency_Feature>
-   -> c7a53b43ac5f4f11a1aef612dd3f4f71 黑暗灵族装备 <DrukhariArmourProficiency_Feature>
-   -> 590cb5c394ee4b5eb213121c96063dec 艾达灵族装备 <AeldariArmourProficiency_Feature>
-   -> a489b6d823ef4b86b431aa1d42e385c7 单发射击 <SingleShot_Ability>
-   -> 38a747f2fafc4789ae7610c3b562bdbe <SolidProjectile_Shot_AbilityFXSettings>
-   -> 1cdd00b349324e7f958a8cb1dfcde2fe 连发射击 <BurstFire_Ability>
-   -> 98f4a31b68e446ad9c63411c7b349146 重新装填 <ReloadAbility>
-   -> 86dda65e384f4ecc9bc2cdf3e6ad06e7 <HeavyBolter_BoltShot_AbilityFXSettings>
-  --- strings ---
-   *  053074cada484310a920573477ebc7ed
-   * m_DisplayName
-   * m_Description
-   * m_Icon
-   * m_IsNotable m_VisualParameters.m_WeaponModel
-   * WarhammerDamage
-   * WarhammerMaxDamage
-   * WarhammerPenetration
-   * DodgePenetration
-   * WarhammerRecoil
-   * WarhammerMinimalStrength
-   * WarhammerMaxDistance
-   * RateOfFire
-   * CanBeUsedInGame
-   * WarhammerMaxAmmo
-   * m_CargoVolumePercent
-   * Author
-   * m_Rarity?$AddFactToEquipmentWielder$fe173d5d-5dcf-49ba-ac42-1a1dc987dcf8
-   * ~?$AddFactToEquipmentWielder$fe173d5d-5dcf-49ba-ac42-1a1dc987dcf8
-   *  dda482cc9bcb4f978d191b992c3e8885(
-   * >$EquipmentRestrictionStat$a229337d-0b03-4d5b-9b99-6b9109b968fb
-   *  053074cada484310a920573477ebc7ed>$EquipmentRestrictionStat$a229337d-0b03-4d5b-9b99-6b9109b968fb
-   *  26376b596c474d67849613617ced7b04
-   * B$EquipmentRestrictionHasFacts$17d1ad3e-c734-464d-b0a2-9496565cf210
-   *  053074cada484310a920573477ebc7edB$EquipmentRestrictionHasFacts$17d1ad3e-c734-464d-b0a2-9496565cf210
-   *  c7a53b43ac5f4f11a1aef612dd3f4f71 590cb5c394ee4b5eb213121c96063dec
-   * D$AdditionalDescriptionComponent$67bf926e-cc46-4b1d-bd90-36e551aa3700
-   *  053074cada484310a920573477ebc7edD$AdditionalDescriptionComponent$67bf926e-cc46-4b1d-bd90-36e551aa3700
-   * ~?$AddFactToEquipmentWielder$3284ff75-bfca-48af-bf36-ec10f8a23cd1
-   *  053074cada484310a920573477ebc7ed?$AddFactToEquipmentWielder$3284ff75-bfca-48af-bf36-ec10f8a23cd1 3af882215424458592fc0884ef0c82c4f
-   * UI_INV_Rifle_Put_Play
-   * UI_INV_Rifle_Take_Play
-   * Bullet
-   * ProjectileType
-   * &Foley_WP_R_2HAssault_EquipGeneric_Play(Foley_WP_R_2HAssault_UnEquipGeneric_Play
-   * UI_INV_Rifle_Equip_Play
-   * UI_INV_Rifle_Put_Play
-   * UI_INV_Rifle_Take_Play
-   *  a489b6d823ef4b86b431aa1d42e385c7 38a747f2fafc4789ae7610c3b562bdbe
-   *  1cdd00b349324e7f958a8cb1dfcde2fe 38a747f2fafc4789ae7610c3b562bdbe
-   *  98f4a31b68e446ad9c63411c7b349146 86dda65e384f4ecc9bc2cdf3e6ad06e7
-   * AdvancedHeavyStubber_Item 594030b15093416c925dabc415eda101
+guid                               name                                           stats
+0adaa28e654e4fd6a74830eed3f63390   血腥礼赞 [Unique] <ArgentaBolterUnique_Item>       2H=1 dmg=20-30 pen=20 dpen=0 hit=0 rec=30 dist=24 ammo=14 rof=4
+1ba5fc1726374b2a856b53ca172a3460   泪如泉涌 [Pattern] <BolterCH05Unique_Item>         2H=1 dmg=27-41 pen=25 dpen=0 hit=0 rec=25 dist=24 ammo=14 rof=4
+0f1194cdb530486f83be00c653ccab49   英勇不灭 [Pattern] <ArgentaStartBolter_Item>       2H=1 dmg=6-10 pen=15 dpen=0 hit=0 rec=40 dist=24 ammo=14 rof=4
+dec66b3861c64c088c5f38fd49024d44   改良重型爆矢枪 [Unique] <SarragusHeavyBolter_Item>    2H=1 dmg=12-18 pen=25 dpen=0 hit=0 rec=35 dist=24 ammo=60 rof=6
+b11dc12ae9e943c29cce0aa7d52bf980   重型爆矢枪 [Common] <HeavyBolter_Item>              2H=1 dmg=6-10 pen=25 dpen=0 hit=0 rec=40 dist=24 ammo=96 rof=8
+594030b15093416c925dabc415eda101   高级重型伐木枪 [Unique] <AdvancedHeavyStubber_Item>   2H=1 dmg=10-11 pen=20 dpen=0 hit=0 rec=50 dist=20 ammo=80 rof=10
+8c304b20633145f39577a392201d2047   自主攻击能量剑 [Unique] <AutoStriking_PowerSword_Item> 2H=0 dmg=26-39 pen=30 dpen=0 hit=0 rec=0 dist=1 ammo=-1 rof=0
+9c190bd2019742db8697ac91da1d985e   能量镐 [Common] <PowerPick_Item>                  2H=0 dmg=10-16 pen=45 dpen=0 hit=0 rec=0 dist=1 ammo=-1 rof=0
+8ca60374722b4eeea27d99c3b17fb09e   痛苦尖叫 [Unique] <BladeOfMalice_Item>             2H=0 dmg=21-31 pen=15 dpen=0 hit=0 rec=0 dist=1 ammo=-1 rof=0
+eaa742e43d8e48a3a450c4d59431b03e   哀恸之刃 [Unique] <DeathCultSwordCH2Unique_Item>   2H=0 dmg=14-18 pen=15 dpen=0 hit=0 rec=0 dist=1 ammo=-1 rof=0
+1c7a3dcf6afa4b48a7028642e596ab61   【瑞扎型】敌者之锤 [Pattern] <FoehammerT2CH3_Item>      2H=0 dmg=15-23 pen=15 dpen=0 hit=0 rec=0 dist=6 ammo=6 rof=1
+bb427b937c304ece913793a020aea87f   叛军狙击步枪 [Pattern] <SniperRifleT2_Item>          2H=1 dmg=18-25 pen=20 dpen=0 hit=30 rec=0 dist=30 ammo=5 rof=1
+e0e76a258d844385a16c9dc602caa316   碎骨霰弹枪 [Unique] <PistolShotgunCH04Unique_Item>  2H=0 dmg=27-40 pen=15 dpen=0 hit=0 rec=0 dist=6 ammo=8 rof=1
+a2ff030b0d264d1f9ea4ba4ac6a0b3b2   ?? <UNK>                                       (no weapon block)
+298bd4183b9048b296ae1367870be2bd   血色契约 [Unique] <DeathCultKnifeUnique_Item>      2H=0 dmg=9-10 pen=10 dpen=50 hit=0 rec=0 dist=1 ammo=-1 rof=0
+4127a489515c4b9b9181d9b61fd33ec7   反载具左轮手枪 [Unique] <AntiVechicle_StubRevolver_Item> 2H=0 dmg=20-33 pen=45 dpen=0 hit=0 rec=15 dist=12 ammo=6 rof=3
+7da9005aaf4d49969ff989cf0b1619cb   烈阳法杖 [Pattern] <SolarStaff_Item>               2H=1 dmg=16-21 pen=0 dpen=0 hit=0 rec=0 dist=1 ammo=-1 rof=0
+5f4091e7ebae4cfea6831d72db37ba33   吸血法杖 [Common] <BlooddrinkingStaff_Item>        2H=1 dmg=10-13 pen=0 dpen=0 hit=0 rec=0 dist=1 ammo=-1 rof=0
+2059b9aeefb24b1fb1072c08b9859439   致命信使 [Unique] <Repeater_Longlas_Item>          2H=1 dmg=22-32 pen=15 dpen=30 hit=25 rec=0 dist=36 ammo=10 rof=1
+76f9b98e76854b459b50a73462429e2b   坚固盾牌 [Pattern] <ShieldCH04T2_Item>             (no weapon block)
+98b9d50803e64d13abdf8f0619421874   枪手盾牌 [Pattern] <ShieldCH04T2V2_Item>           (no weapon block)

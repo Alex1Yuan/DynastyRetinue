@@ -1,7 +1,7 @@
 arch	elite	slot	cand	guid	zh	int	type	rar	lvl	restr
 近战 Melee	铁壁 · 先锋队长	0	0	8ca60374722b4eeea27d99c3b17fb09e	痛苦尖叫	BladeOfMalice_Item	Weapon	Unique	0	Stat152>=60 EXCL(SpaceMarineEquipment_Profi,DrukhariArmourProficiency_,AeldariArmourProficiency_F)
-近战 Melee	铁壁 · 先锋队长	0	1	eaa742e43d8e48a3a450c4d59431b03e	哀恸之刃	DeathCultSwordCH2Unique_Item	Weapon	Unique	0	EXCL(SpaceMarineEquipment_Profi,DrukhariArmourProficiency_,AeldariArmourProficiency_F)
-近战 Melee	铁壁 · 先锋队长	0	2	8c304b20633145f39577a392201d2047	自主攻击能量剑	AutoStriking_PowerSword_Item	Weapon	Unique	0	EXCL(SpaceMarineEquipment_Profi,DrukhariArmourProficiency_,AeldariArmourProficiency_F)
+近战 Melee	铁壁 · 先锋队长	0	1	8c304b20633145f39577a392201d2047	自主攻击能量剑	AutoStriking_PowerSword_Item	Weapon	Unique	0	EXCL(SpaceMarineEquipment_Profi,DrukhariArmourProficiency_,AeldariArmourProficiency_F)
+近战 Melee	铁壁 · 先锋队长	0	2	eaa742e43d8e48a3a450c4d59431b03e	哀恸之刃	DeathCultSwordCH2Unique_Item	Weapon	Unique	0	EXCL(SpaceMarineEquipment_Profi,DrukhariArmourProficiency_,AeldariArmourProficiency_F)
 近战 Melee	铁壁 · 先锋队长	1	0	e0e76a258d844385a16c9dc602caa316	碎骨霰弹枪	PistolShotgunCH04Unique_Item	Weapon	Unique	0	EXCL(SpaceMarineEquipment_Profi,DrukhariArmourProficiency_,AeldariArmourProficiency_F)
 近战 Melee	铁壁 · 先锋队长	2	0	c1c07d80309c47de99b055ba9eb43a07	雕血师	AetherRuneArmour_Item	Armor	Unique	0	REQ(PowerArmourProficiency) REQ(SpaceMarineEquipment_Featu)
 近战 Melee	铁壁 · 先锋队长	2	1	e84349dae8bb4a818fa4473ce32dcd9a	血腥报复	HolyPowerArmour_Item_Uralon	Armor	Unique	0	REQ(SpaceMarineEquipment_Featu) REQ(PowerArmourProficiency)
@@ -21,7 +21,8 @@ arch	elite	slot	cand	guid	zh	int	type	rar	lvl	restr
 近战 Melee	铁壁 · 先锋队长	9	0	7e2b91b8cc944f4c951fb2058fcb2f22	大脑逆变器 (MK“特工”)	Augment_Systems_05_Logic_Adept_Item	Augment	Pattern	0	EXCL(SpaceMarineEquipment_Featu,DrukhariArmourProficiency_,AeldariArmourProficiency_F,Navigator_Occupation_Featu)
 近战 Melee	铁壁 · 先锋队长	9	1	fa121ed0f18c4017a53c7adb6036a552	大脑逆变器 (MK-II)	Augment_Systems_05_Logic_MK_2_Item	Augment	Unique	0	EXCL(SpaceMarineEquipment_Featu,DrukhariArmourProficiency_,AeldariArmourProficiency_F,Navigator_Occupation_Featu) AugmentTier
 近战 Melee	铁壁 · 先锋队长	9	2	fe6060602c6d4b71be16808f05368242	大脑逆变器 (MK-I)	Augment_Systems_05_Logic_MK_1_Item	Augment	Pattern	0	EXCL(SpaceMarineEquipment_Featu,DrukhariArmourProficiency_,AeldariArmourProficiency_F,Navigator_Occupation_Featu)
-近战 Melee	磐石 · 首席战士	0	0	9c190bd2019742db8697ac91da1d985e	能量镐	PowerPick_Item	Weapon	Common	0	EXCL(SpaceMarineEquipment_Profi,DrukhariArmourProficiency_,AeldariArmourProficiency_F)
+近战 Melee	磐石 · 首席战士	0	0	8c304b20633145f39577a392201d2047	自主攻击能量剑	AutoStriking_PowerSword_Item	Weapon	Unique	0	EXCL(SpaceMarineEquipment_Profi,DrukhariArmourProficiency_,AeldariArmourProficiency_F)
+近战 Melee	磐石 · 首席战士	0	1	9c190bd2019742db8697ac91da1d985e	能量镐	PowerPick_Item	Weapon	Common	0	EXCL(SpaceMarineEquipment_Profi,DrukhariArmourProficiency_,AeldariArmourProficiency_F)
 近战 Melee	磐石 · 首席战士	1	0	1c7a3dcf6afa4b48a7028642e596ab61	【瑞扎型】敌者之锤	FoehammerT2CH3_Item	Weapon	Pattern	0	EXCL(SpaceMarineEquipment_Profi,DrukhariArmourProficiency_,AeldariArmourProficiency_F)
 近战 Melee	磐石 · 首席战士	2	0	bb427b937c304ece913793a020aea87f	叛军狙击步枪	SniperRifleT2_Item	Weapon	Pattern	0	EXCL(SpaceMarineEquipment_Profi,DrukhariArmourProficiency_,AeldariArmourProficiency_F)
 近战 Melee	磐石 · 首席战士	3	0	c1c07d80309c47de99b055ba9eb43a07	雕血师	AetherRuneArmour_Item	Armor	Unique	0	REQ(PowerArmourProficiency) REQ(SpaceMarineEquipment_Featu)
@@ -44,6 +45,9 @@ arch	elite	slot	cand	guid	zh	int	type	rar	lvl	restr
 狙击 Sniper	寂静之眼	0	4	d043a2289a1f45f784a415057c725cb5	赫卡顿之眼	AeldariScout_LongRifle_Item	Weapon	Unique	0	REQ(AeldariWeaponProficiency_F)
 狙击 Sniper	寂静之眼	1	0	e202201c375a45b697d7bba5ac68c6ee	弹道计算单筒镜	ManipulusHeadCh2_Item	EquipmentHead	Common	0	EXCL(SpaceMarineEquipment_Featu)
 狙击 Sniper	寂静之眼	2	0	c1c07d80309c47de99b055ba9eb43a07	雕血师	AetherRuneArmour_Item	Armor	Unique	0	REQ(PowerArmourProficiency) REQ(SpaceMarineEquipment_Featu)
+狙击 Sniper	寂静之眼	2	1	9c163228266c4cc892dfb98086d27b52	【源自方舟世界】艾达灵族守护者网格甲	AeldarGuardianMeshArmour_Item	Armor	Pattern	0	REQ(AeldariArmourProficiency_F)
+狙击 Sniper	寂静之眼	2	2	9c8d4a592a284b20a9e2fcf4673135e4	艾达灵族先知网格甲	AeldarFarseerMeshArmour_Item	Armor	Unique	0	REQ(AeldariArmourProficiency_F)
+狙击 Sniper	寂静之眼	2	3	51fad212bca146f889ae8d6e2be4d2fd	巫灵绝叫	DrukhariArmourUniqueCh4V1_Item	Armor	Unique	0	REQ(DrukhariArmourProficiency_)
 狙击 Sniper	寂静之眼	3	0	1b447777d38f43baa643fc2e915d6ef3	神射手护腕	StabilizerBracers_Item	EquipmentGloves	Common	0	EXCL(SpaceMarineEquipment_Featu)
 狙击 Sniper	寂静之眼	4	0	2c37192f73bf4b89abd89d12e4040d75	活力项饰	InvigoratingResolve_Item	EquipmentNeck	Common	0	
 狙击 Sniper	寂静之眼	5	0	50c5be09ff9942969db57298b1beb4cb	作战计划	BattlePlan_Item	EquipmentRing	Unique	0	
@@ -61,9 +65,9 @@ arch	elite	slot	cand	guid	zh	int	type	rar	lvl	restr
 狙击 Sniper	赏金 · 猎首	0	4	a223f91296d24d65a3390651c247ed83	流浪者之兆	JaeQuest_LongRifle_Item	Weapon	Common	0	REQ(AeldariWeaponProficiency_F)
 狙击 Sniper	赏金 · 猎首	1	0	e202201c375a45b697d7bba5ac68c6ee	弹道计算单筒镜	ManipulusHeadCh2_Item	EquipmentHead	Common	0	EXCL(SpaceMarineEquipment_Featu)
 狙击 Sniper	赏金 · 猎首	2	0	c1c07d80309c47de99b055ba9eb43a07	雕血师	AetherRuneArmour_Item	Armor	Unique	0	REQ(PowerArmourProficiency) REQ(SpaceMarineEquipment_Featu)
-狙击 Sniper	赏金 · 猎首	2	1	25bdbe6c879b4795b76dd5e2c13dddc9	附魔走私者护甲	ModifiedRibSuit_Item	Armor	Unique	0	EXCL(SpaceMarineEquipment_Featu,DrukhariArmourProficiency_,AeldariArmourProficiency_F) REQ(HeavyArmourProficiency_Fea)
-狙击 Sniper	赏金 · 猎首	2	2	0a50d9c3a4e84f29a0f78894a1150e49	肋骨套装	HeavyRibSuit_Item	Armor	Unique	0	EXCL(SpaceMarineEquipment_Featu,DrukhariArmourProficiency_,AeldariArmourProficiency_F) REQ(HeavyArmourProficiency_Fea)
-狙击 Sniper	赏金 · 猎首	2	3	daffadd94a844e919a34d08e54bf5ff1	【源自战争世界】远征板甲	CrusadePlateArmour_Item	Armor	Pattern	0	EXCL(SpaceMarineEquipment_Featu,AeldariArmourProficiency_F,DrukhariArmourProficiency_) REQ(HeavyArmourProficiency_Fea)
+狙击 Sniper	赏金 · 猎首	2	1	19df1ed2dd3a457682d1f78178912b3d	【源自狂风阴谋团】梦魇护甲	IncubusArmourOrigin1_Item	Armor	Pattern	0	REQ(DrukhariArmourProficiency_)
+狙击 Sniper	赏金 · 猎首	2	2	fab54297dc854f4aa917ce185b97062a	冷血	AeldariArmourUniqueCh2V2_Item	Armor	Unique	0	REQ(AeldariArmourProficiency_F)
+狙击 Sniper	赏金 · 猎首	2	3	8b7a450f05fe46bc99b776625291b14d	黎明之影护甲	AeldariArmourUniqueCh4V2_Item	Armor	Unique	0	REQ(AeldariArmourProficiency_F)
 狙击 Sniper	赏金 · 猎首	3	0	1b447777d38f43baa643fc2e915d6ef3	神射手护腕	StabilizerBracers_Item	EquipmentGloves	Common	0	EXCL(SpaceMarineEquipment_Featu)
 狙击 Sniper	赏金 · 猎首	4	0	2c37192f73bf4b89abd89d12e4040d75	活力项饰	InvigoratingResolve_Item	EquipmentNeck	Common	0	
 狙击 Sniper	赏金 · 猎首	5	0	50c5be09ff9942969db57298b1beb4cb	作战计划	BattlePlan_Item	EquipmentRing	Unique	0	

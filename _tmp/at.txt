@@ -1,30 +1,31 @@
-铁壁 · 先锋队长        7 件: AutoStriking_PowerSword_Item, PistolShotgunCH04Unique_Item, MarshallsArmouroftheKoronusExpanse_Item_Unlootable, InertiaBoots_Item, ReinforcedGloves_Item, PortativeManipulator_Item, IronCape_Item
-
-磐石 · 首席战士        9 件: PowerPick_Item, FoehammerT2CH3_Item, SniperRifleT2_Item, MarshallsArmouroftheKoronusExpanse_Item_Unlootable, BeaconBoots_Item, AugmentedlGloves_Item, ServoCollar_Item, Absorber_Item, PairHolster_Item
-
-（普通）             8 件: PowerAxeCH5Unique_Item, DaredevilAutopistol_Item, ArbitesArmour_Item, MilitantsHelmet_Item, CrusherBoots_Item, DeflectionGloves_Item, AmuletOfTheIndomitableSpirit_item, AssaultCloak_Item
-
-寂静之眼             9 件: LongRifleUniqueCh4V2_Item, EldarRangerArmour_Item, ManipulusHeadCh2_Item, SkirmisherBoots_Item, StabilizerBracers_Item, InvigoratingResolve_Item, BattlePlan_Item, CommandersChrono_Item, ShadowguideCloak_Item
-
-赏金 · 猎首          9 件: AeldariScout_LongRifle_Item, Synskin_Item, ManipulusHeadCh2_Item, SkirmisherBoots_Item, StabilizerBracers_Item, InvigoratingResolve_Item, CommandersChrono_Item, BattlePlan_Item, ShadowguideCloak_Item
-
-（普通）             8 件: LongRifleUniqueCh5_Item, NocturneShurikenPistol_Item, GreatKabaliteArmour_Item, AccuracyHitScanner_Item, TrackingBoots_Item, StabilizedBracers_Item, XenoToothPendant_Item, CamouflageRobe_Item
-
-怒火 · 首席连射        9 件: ArgentaBolterUnique_Item, ModifiedArtificerArmour_Item, PrecisionFocus_Item, SkirmisherBoots_Item, CompensatorGloves_Item, FuriousAmulet_Item, BeadOfMight_Item, TransonicEmitter_Item, TacticalBackpack_Item
-
-圣焰 · 净罪修女        10 件: BolterCH05Unique_Item, AdvancedHeavyStubber_Item, SororitasPowerArmourFury_Item, VulnerabilityVisor_Item, SororitasBoots_Item, CompensatorGloves_Item, BlessedBolterCasing_Item, StimulantInjector_Item, TomeOfCombatPrayers_Item, FireproofCape_Item
-
-（普通）             8 件: AutoCannon_Item, ImperialPride_Bolter_Item, HeavyVoidSuit_Item, Revitaliser_Item, ReinforcedBoots_Item, StabilizedGrips_Item, SealOfThePurifier_Item, BackpackWithTraumaticBullets_Item
-
-亚空间审判者           10 件: SolarStaff_Item, Repeater_Longlas_Item, Coil_Reactive_PowerArmor_Item, TacticalGoggles_Item, InertiaBoots_Item, EnhancementGloves_Item, InvigoratingResolve_Item, HandOfOffense_Item, NotesOnWeaknesses_Item, IronCape_Item
-
-火杖行刑者            10 件: SolarStaff_Item, DeathCultKnifeUnique_Item, AntiVechicle_StubRevolver_Item, Coil_Reactive_PowerArmor_Item, SanctifiedHelmet_Item, InertiaBoots_Item, EnhancementGloves_Item, HandOfOffense_Item, GrimoireOfVoid_Item, IronCape_Item
-
-（普通）             8 件: StaffOfTheRigheousPyre_Item, AssasinPistol_Item, PsykerTempestusCarapace_Item, NavigatorsDiadem_Item, PsykerBoots_Item, AbyssalConduit_Item, BurningFaithInsignia_Item, SingedCape_Item
-
-谕令 · 灵能军官        9 件: BlooddrinkingStaff_Item, ArmoredBodyglove_BoardedShip_Unlootable_Item, CommissarCap_Item, BootsOfDecay_Item, AbyssWeaverGloves_Item, StarmistScarf_Item, InquisitorGreaterRing_Item, CommandersNotes_Item, TacticianCloak_Item
-
-铁律 · 政委军官        11 件: AntiVechicle_StubRevolver_Item, ChainSword_CommissarSpecial_Item, BoltPistol_Item, EliteChainSword_Item, PurityOfHumanity_PowerArmor_Item, PeripheralVisor_Item, StabilizerBracers_Item, MedalOfInspiration_Item, BattlePlan_Item, CommandersChrono_Item, LeadersCloak_Item
-
-（普通）             8 件: BloodyMentorLaspistol_Item, NegotiatorPistol_Item, LastDitchArmour_Item, CommandersMonocle_Item, ImprovedLightweightBoots_Item, StabilizedGrips_Item, LeadingAquilaPendant_Item, Battle-scarredCape_Item
-
+cols ['分型', '精英', '名称', '等级', 'facts', '方案条目', '应生效', '已生效', '达成率', '等级没到', 'A未出现', 'B不可选', 'C没选上', '选择点', '自由选择', '方案', '单位', 'brain', '缺口', '属性', '装备']
+=== 近战 Melee | 铁壁 · 先锋队长 | TreasureWorld_Arbites_ShieldNShotgun
+    ATTR: 力量52 敏捷92 耐力90 智力25 感知97 意志27 魅力62 弹道79 武技83
+    GEAR: 7 件: AutoStriking_PowerSword_Item, PistolShotgunCH04Unique_Item, MarshallsArmouroftheKoronusExpanse_Item_Unlootable, InertiaBoots_Item, ReinforcedGloves_Item, PortativeManipulator_Item, IronCape_Item
+=== 近战 Melee | 磐石 · 首席战士 | VC2_Arbitres_Melee
+    ATTR: 力量59 敏捷63 耐力64 智力20 感知57 意志22 魅力22 弹道33 武技74
+    GEAR: 9 件: PowerPick_Item, FoehammerT2CH3_Item, SniperRifleT2_Item, MarshallsArmouroftheKoronusExpanse_Item_Unlootable, BeaconBoots_Item, AugmentedlGloves_Item, ServoCollar_Item, Absorber_Item, PairHolster_Item
+=== 狙击 Sniper | 寂静之眼 | Quetza_EldarRangerHard
+    ATTR: 力量27 敏捷53 耐力55 智力42 感知83 意志38 魅力27 弹道99 武技27
+    GEAR: 9 件: LongRifleUniqueCh4V2_Item, EldarRangerArmour_Item, ManipulusHeadCh2_Item, SkirmisherBoots_Item, StabilizerBracers_Item, InvigoratingResolve_Item, BattlePlan_Item, CommandersChrono_Item, ShadowguideCloak_Item
+=== 狙击 Sniper | 赏金 · 猎首 | FootfallAnverSniper_Ranged_Elite
+    ATTR: 力量42 敏捷69 耐力66 智力20 感知77 意志35 魅力15 弹道100 武技27
+    GEAR: 9 件: AeldariScout_LongRifle_Item, Synskin_Item, ManipulusHeadCh2_Item, SkirmisherBoots_Item, StabilizerBracers_Item, InvigoratingResolve_Item, CommandersChrono_Item, BattlePlan_Item, ShadowguideCloak_Item
+=== 连射 Suppress | 怒火 · 首席连射 | TaintedStreets_Arbites_SolomonSquad_V1
+    ATTR: 力量62 敏捷79 耐力66 智力18 感知77 意志35 魅力87 弹道90 武技49
+    GEAR: 9 件: ArgentaBolterUnique_Item, ModifiedArtificerArmour_Item, PrecisionFocus_Item, SkirmisherBoots_Item, CompensatorGloves_Item, FuriousAmulet_Item, BeadOfMight_Item, TransonicEmitter_Item, TacticalBackpack_Item
+=== 连射 Suppress | 圣焰 · 净罪修女 | DLC3_DL_Sororitas_Melta_Unit
+    ATTR: 力量47 敏捷97 耐力66 智力43 感知97 意志52 魅力27 弹道135 武技49
+    GEAR: 10 件: BolterCH05Unique_Item, AdvancedHeavyStubber_Item, SororitasPowerArmourFury_Item, VulnerabilityVisor_Item, SororitasBoots_Item, CompensatorGloves_Item, BlessedBolterCasing_Item, StimulantInjector_Item, TomeOfCombatPrayers_Item, FireproofCape_Item
+=== 灵能 Psy/Exec | 亚空间审判者 | Ch05Inquisitor_Psyker_unit
+    ATTR: 力量90 敏捷54 耐力71 智力49 感知84 意志84 魅力49 弹道59 武技60
+    GEAR: 10 件: SolarStaff_Item, Repeater_Longlas_Item, Coil_Reactive_PowerArmor_Item, TacticalGoggles_Item, InertiaBoots_Item, EnhancementGloves_Item, InvigoratingResolve_Item, HandOfOffense_Item, NotesOnWeaknesses_Item, IronCape_Item
+=== 灵能 Psy/Exec | 火杖行刑者 | Ch04Chorda_Pyromancer_unit
+    ATTR: 力量75 敏捷80 耐力71 智力49 感知84 意志75 魅力27 弹道49 武技85
+    GEAR: 10 件: SolarStaff_Item, DeathCultKnifeUnique_Item, AntiVechicle_StubRevolver_Item, Coil_Reactive_PowerArmor_Item, SanctifiedHelmet_Item, InertiaBoots_Item, EnhancementGloves_Item, HandOfOffense_Item, GrimoireOfVoid_Item, IronCape_Item
+=== 军官 Officer | 谕令 · 灵能军官 | VC2_Astropath
+    ATTR: 力量44 敏捷38 耐力89 智力37 感知27 意志87 魅力72 弹道38 武技49
+    GEAR: 9 件: BlooddrinkingStaff_Item, ArmoredBodyglove_BoardedShip_Unlootable_Item, CommissarCap_Item, BootsOfDecay_Item, AbyssWeaverGloves_Item, StarmistScarf_Item, InquisitorGreaterRing_Item, CommandersNotes_Item, TacticianCloak_Item
+=== 军官 Officer | 铁律 · 政委军官 | HumanCommissar_MeleeRanged_Prison_True
+    ATTR: 力量99 敏捷78 耐力75 智力42 感知42 意志42 魅力93 弹道103 武技64
+    GEAR: 11 件: AntiVechicle_StubRevolver_Item, ChainSword_CommissarSpecial_Item, BoltPistol_Item, EliteChainSword_Item, PurityOfHumanity_PowerArmor_Item, PeripheralVisor_Item, StabilizerBracers_Item, MedalOfInspiration_Item, BattlePlan_Item, CommandersChrono_Item, LeadersCloak_Item

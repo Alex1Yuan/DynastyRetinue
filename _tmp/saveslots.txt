@@ -1,0 +1,213 @@
+====================================================================================================
+### StartGame_Player_Unit   unit=3a849d3674644c0085d5099ccf6813df  颜威
+   set0.PrimaryHand    反载具左轮手枪[Unique]<AntiVechicle_StubRevolver_Item>
+   set0.SecondaryHand  血色契约[Unique]<DeathCultKnifeUnique_Item>
+   Head               乔伊斯之眼[Unique]<SanctifiedHelmet_Item>
+   Neck               卡西娅的礼物[Unique]<LoveAmulet_Item>
+   Gloves             行刑者臂铠[Unique]<EnhancementGloves_Item>
+   Feet               惯性之靴[Common]<InertiaBoots_Item>
+   Shoulders          马尔皮裹尸布[Common]<IronCape_Item>
+   Ring1              灵能猛袭之手[Common]<HandOfOffense_Item>
+   Ring2              虚空魔典[Unique]<GrimoireOfVoid_Item>
+   Armor              灵能者胸甲[Unique]<PsykerTempestusCarapace_Item>
+====================================================================================================
+### 2AlternateShip_FirestormClassFrigatePlayer_Starship   unit=2d9014f545b143418cb42cbf64dfd74f  炎帝号
+====================================================================================================
+### AbelardCompanion   unit=51604d37ac0e499da70e2c4a4f086066  
+   set0.PrimaryHand    自主攻击能量剑[Unique]<AutoStriking_PowerSword_Item>
+   set0.SecondaryHand  【瑞扎型】敌者之锤[Pattern]<FoehammerT2CH3_Item>
+   set1.PrimaryHand    崇高虔诚[Unique]<ThunderHammerCognatius_Item>
+   Head               决心头盔[Unique]<CalmingHelmet_Item>
+   Neck               遗忘恩典[Common]<ServoCollar_Item>
+   Gloves             痛苦欢宴[Common]<ReinforcedGloves_Item>
+   Feet               惯性之靴[Common]<InertiaBoots_Item>
+   Shoulders          马尔皮裹尸布[Common]<IronCape_Item>
+   Ring1              饮血戒指[Unique]<Absorber_Item>
+   Ring2              双重护套[Common]<PairHolster_Item>
+   Armor              【源自战争世界】暴风精锐坚甲[Pattern]<TempestusCarapaceOrigin2_Item>
+   Augment            总领的单筒望远镜[Unique]<Augment_Eye_Abelard_Item>
+====================================================================================================
+### IdiraCompanion   unit=948abdeffc744794589d6b3f59a1cd0f  
+   set0.PrimaryHand    死亡超然[Unique]<AstropathsStaff_Item>
+   set1.PrimaryHand    神射手步枪[Pattern]<HuntingSharpshooterRifle_Item>
+   Head               精确定位面甲[Unique]<HealthStatusVisor_Item>
+   Neck               黑暗活力宝石[Unique]<GemOfDarkVitalty_Item>
+   Gloves             亚空间传导手套[Common]<WarpConductorGloves_Item>
+   Feet               灵能者的鞋子[Unique]<PsykerBoots_Item>
+   Shoulders          焦痕披风[Unique]<SingedCape_Item>
+   Ring1              实验型灵能增强器[Unique]<ExperimentalPsyAmplifier_Item>
+   Ring2              亚空间回声手环[Common]<WarpReflexRing_Item>
+   Armor              暴风坚甲[Pattern]<TempestusCarapace_Item>
+   Augment            灰兜帽[Pattern]<Augment_Systems_Idira_Item>
+====================================================================================================
+### ArgentaCompanion   unit=ec7f34b2ef6d4624af3e5024f4fc8e6e  
+   set0.PrimaryHand    泪如泉涌[Pattern]<BolterCH05Unique_Item>
+   set1.PrimaryHand    高级重型伐木枪[Unique]<AdvancedHeavyStubber_Item>
+   Head               呢喃低语[Unique]<VulnerabilityVisor_Item>
+   Neck               受祝福的爆矢枪弹壳[Unique]<BlessedBolterCasing_Item>
+   Gloves             补偿器手套[Common]<CompensatorGloves_Item>
+   Feet               战斗修女之靴[Common]<SororitasBoots_Item>
+   Shoulders          防火斗篷[Common]<FireproofCape_Item>
+   Ring1              兴奋剂注射器[Unique]<StimulantInjector_Item>
+   Ring2              战祷之书[Unique]<TomeOfCombatPrayers_Item>
+   Armor              命运之星[Unique]<SororitasPowerArmourFire_Item>
+   Augment            聚焦发射器 (MK“士兵”)[Pattern]<Augment_Eye_01_Shoot_Soldier_Item>
+   Augment            武器优化仪 (MK-II)[Unique]<Augment_Torso_03_MK_2_Item>
+   Augment            公义之手[Pattern]<Augment_Arm_Dogmatic_Item>
+====================================================================================================
+### CassiaCompanion   unit=df918c2d635446e8ba6cba0123d2cb6e  
+   set0.PrimaryHand    星炬明光[Unique]<AstronomiconRegallia_Item>
+   set1.PrimaryHand    奥赛罗大族长之杖[Common]<StaffOfOrsellioNovator_Item>
+   Head               导航者单片眼镜[Common]<NavigatorsMonocle_Item>
+   Neck               活力项饰[Common]<InvigoratingResolve_Item>
+   Gloves             三重先驱护腕[Unique]<TheobaldsBracers_Item>
+   Feet               远征者之靴[Common]<SoftLeatherBoots_Item>
+   Shoulders          仁慈斗篷[Unique]<CloakofMercy_Item>
+   Ring1              审判庭的黑色图章[Common]<InquisitorGreaterRing_Item>
+   Ring2              指挥官笔记[Unique]<CommandersNotes_Item>
+   Armor              高阶织网者护甲[Unique]<EliteDeathCultArmour_Item>
+====================================================================================================
+### KibellahCompanion   unit=88d4190122cd4b6c9c91d7fef4066651  
+   set0.PrimaryHand    悯慈低语[Unique]<DeathCultSwordCH4Unique2_Item>
+   set0.SecondaryHand  报复颂唱[Unique]<DeathCultSwordCH4Unique1_Item>
+   set1.PrimaryHand    速射自动枪[Pattern]<AutogunRapid_Item>
+   Head               呢喃低语[Unique]<VulnerabilityVisor_Item>
+   Neck               殉道者骨符[Unique]<BloodTransfusor_Item>
+   Gloves             深红湮灭[Unique]<BloodGloves_Item>
+   Feet               战争狂人之靴[Common]<WarmongerBoots_Item>
+   Shoulders          刀锋舞者斗篷[Unique]<CapeOfDeath_Item>
+   Ring1              坚硬指虎[Unique]<KnuckleGuard_Item>
+   Ring2              解剖指南[Unique]<AnatomyBook_Item>
+   Armor              过往哀恸[Unique]<ReapersDeathCultArmour_Item>
+   Augment            大脑逆变器 (MK“战术家”)[Pattern]<Augment_Systems_05_Logic_Tactic_Item>
+====================================================================================================
+### PascalCompanion   unit=e1cfcddc1dc447278762a0725753c394  
+   set0.PrimaryHand    欧姆尼塞亚之斧[Common]<OmnissiahAxe_Item>
+   set0.SecondaryHand  中子星云[Unique]<PlasmaRifleUniqueCh3_Item>
+   Head               自动校准目镜[Unique]<PreciseGoggles_Item>
+   Neck               活力项饰[Common]<InvigoratingResolve_Item>
+   Gloves             等离子塑能者手套[Common]<PlasmashaperGloves_Item>
+   Feet               散兵战靴[Common]<SkirmisherBoots_Item>
+   Shoulders          幻影斗篷[Unique]<PhantomCloak_Item>
+   Ring1              坚甲碎片[Unique]<CarapaceFragment_Item>
+   Ring2              欧姆尼赛亚之触[Common]<ManipulusRingCh2P1_Item>
+   Armor              【源自战争世界】暴风精锐坚甲[Pattern]<TempestusCarapaceOrigin2_Item>
+   Augment            武器优化仪 (MK-II)[Unique]<Augment_Torso_03_MK_2_Item>
+   Augment            源力受祝仿生件[Unique]<Augment_Arm_03_MK_2_Item>
+   Augment            分析系统[Common]<Augment_ForgeWorld_AnalyticsSystem_Item>
+   Augment            生物力学骨骼链接[Unique]<Augment_Admech_Pasqal_PriestCore_Item>
+   Augment            蓄能节点[Unique]<Augment_Admech_Pasqal_CapacitoralMinoris_Item>
+   Augment            轴向加固[Unique]<Augment_Admech_Pasqal_Intensificator_Item>
+====================================================================================================
+### HeinrixCompanion   unit=70e4973d9cef400da93e0b5672dcd014  
+   set0.PrimaryHand    烈阳法杖[Pattern]<SolarStaff_Item>
+   set1.PrimaryHand    致命信使[Unique]<Repeater_Longlas_Item>
+   Head               战术护目镜[Unique]<TacticalGoggles_Item>
+   Neck               活力项饰[Common]<InvigoratingResolve_Item>
+   Gloves             行刑者臂铠[Unique]<EnhancementGloves_Item>
+   Feet               惯性之靴[Common]<InertiaBoots_Item>
+   Shoulders          马尔皮裹尸布[Common]<IronCape_Item>
+   Ring1              灵能猛袭之手[Common]<HandOfOffense_Item>
+   Ring2              弱点笔记[Unique]<NotesOnWeaknesses_Item>
+   Armor              高阶织网者护甲[Unique]<EliteDeathCultArmour_Item>
+====================================================================================================
+### JaeCompanion   unit=768a816a8b734882af399f8258ffcada  
+   set0.PrimaryHand    星镖手枪[Common]<ShurikenPistol_Item>
+   set0.SecondaryHand  毒晶手枪[Common]<SplinterPistol_Item>
+   set1.PrimaryHand    艾达灵族链锯剑[Pattern]<EldarChainSword_Item>
+   Shoulders          折光斗篷[Common]<CameleolineCloak_Item>
+   Armor              硬化护甲外衣[Common]<ArmoredBodyglove_Item>
+   Augment            供养之手[Pattern]<Augment_LeftArm_Jae_Item>
+====================================================================================================
+### EogannCompanion   unit=2e5e746cc6d043ab8d395c67d07ac56b  
+   set0.PrimaryHand    阿尔法电弧步枪[Unique]<ArcRifleT2_Item>
+   set0.SecondaryHand  残酷命运[Unique]<GovernorsSniperRifle_Item>
+   Head               弹道计算单筒镜[Common]<ManipulusHeadCh2_Item>
+   Neck               源力电容器[Common]<ManipulusNeckCh4_Item>
+   Gloves             偏转手套[Unique]<DeflectionGloves_Item>
+   Ring1              欧姆尼赛亚之触[Common]<ManipulusRingCh2P1_Item>
+   Ring2              “EF终极十八重悖论”认知仿真模拟器[Unique]<Cogni-Simulacrum_Item>
+   Augment            阵线支援俄歇矩阵[Pattern]<Augment_Eye_Eogann_T1_Item>
+   Augment            大脑逆变器 (MK“战术家”)[Pattern]<Augment_Systems_05_Logic_Tactic_Item>
+   Augment            电激集成网格[Unique]<Augment_Torso_Eogann_T2_Item>
+   Augment            改装磁轨长矛[Unique]<Augment_Arm_Manipulus_MagnaRailLance_T2_Item>
+   Augment            分析系统[Common]<Augment_ForgeWorld_AnalyticsSystem_Item>
+   Augment            神圣动能导管[Unique]<Augment_Admech_Eogann_ManipulusCore_T2_Item>
+   Augment            神圣瘴气净化导管[Unique]<Augment_Admech_Eogann_AirPurificationSystem_T2_Item>
+   Augment            高级电激囚笼[Unique]<Augment_Admech_Eogann_AbsorbatorMinoris_T2_Item>
+====================================================================================================
+### YrlietCompanion   unit=20c5ce9f1e2bcf9448a7a0fd0850f5d2  
+   set0.PrimaryHand    纱芮尔摇篮曲[Unique]<LongRifleUniqueCh3V1_Item>
+   set1.PrimaryHand    赫卡顿之眼[Unique]<AeldariScout_LongRifle_Item>
+   Head               审讯目镜[Unique]<InterrogationGoggles_Item>
+   Neck               伊莉耶特的护身符[Unique]<YrlietCharm_Item>
+   Gloves             灾亡手套[Common]<BulletHellGloves_Item>
+   Feet               追踪靴[Unique]<TrackingBoots_Item>
+   Shoulders          穿甲弹药背包[Unique]<BackpackWithTraumaticBullets_Item>
+   Ring1              衰竭圣典[Common]<WeaknessExpertsLitany_Item>
+   Ring2              艾达灵族游侠之视[Common]<EldarRangerSights_Item>
+   Armor              巫灵绝叫[Unique]<DrukhariArmourUniqueCh4V1_Item>
+====================================================================================================
+### Glaito_Cybermastiff_PetUnit   unit=c3128c02ae674a8cabe2dfff081449ad  
+   set0.PrimaryHand    生化獒犬利爪[Common]<Master_ArbitesCyberMastiff_Claws_Weapon>
+   PetProtocol        嗜血难当[Unique]<OutForBloodCyberMastiffStatProtocol_Item>
+====================================================================================================
+### SolomorneCompanion   unit=a699795d21f74159abb00f9a217fa97d  
+   set0.PrimaryHand    法务部敌者之锤[Common]<Solomorne_Foehammer_Item>
+   set0.SecondaryHand  梅拉贡盾牌[Unique]<FaithIsMyShield_Item>
+   set1.PrimaryHand    致命毒晶步枪[Unique]<DeadshotSplinterRifle_Item>
+   Head               梅拉贡头盔[Common]<MeragonHelmet_Item>
+   Neck               法尔斯托之泪[Unique]<AmuletOfEmperorBlessing_Item>
+   Gloves             神射手护腕[Common]<StabilizerBracers_Item>
+   Feet               梅拉贡之靴[Common]<MeragonBoots_Item>
+   Shoulders          暴风坚甲精英背包[Common]<TempestusCarapaceEliteBackPack_Item>
+   Ring1              监察官的双头鹰[Unique]<OverseersAquila_Item>
+   Ring2              审判庭的白色图章[Common]<InquisitorLesserRing_Item>
+   Armor              【源自巢都世界】虚空士兵护甲[Pattern]<VoidsmenArmour_Item>
+   Augment            主控链接目镜[Unique]<Augment_Eye_Solomorne_Item>
+   Augment            忏悔之手[Pattern]<Augment_LeftArm_Solomorne_Item>
+====================================================================================================
+### BoardedShip_Arbites_Stein_Pregen   unit=9f1b785d6baa4189a54f3596024a91f2  
+   set0.PrimaryHand    沉重大锤[Common]<Arbites_DominatorMaul_BoardedShip_Unlootable_Item>
+   set0.SecondaryHand  盾牌[Common]<Shield_BoardedShip_Unlootable_Item>
+   set1.PrimaryHand    高级法务部敌者之锤[Common]<Arbites_ShotPistol_BoardedShip_Unlootable_Item>
+   Armor              ?[Common]<Arbites_StandartArmour_BoardedShip_Unlootable_Item>
+====================================================================================================
+### BoardedShip_Arbites_Clayton_Pregen   unit=8f7692f2e46d4959b8501115905c2a34  
+   set0.PrimaryHand    正义怒火[Common]<Arbites_HeavyStubber_BoardedShip_Unlootable_Item>
+   set1.PrimaryHand    法务部霰弹枪[Pattern]<Arbites_Shotgun_BoardedShip_Unlootable_Item>
+   Armor              ?[Common]<Arbites_StandartArmour_BoardedShip_Unlootable_Item>
+====================================================================================================
+### BoardedShip_Arbites_Bryce_Pregen   unit=91cfd33f7d6144028d7211ef746f54cd  
+   set0.PrimaryHand    刑讯巨槌[Pattern]<Arbites_ExcruciatorMaul_BoardedShip_Unlootable_Item>
+   set0.SecondaryHand  盾牌[Common]<Shield_BoardedShip_Unlootable_Item>
+   set1.PrimaryHand    高级法务部敌者之锤[Common]<Arbites_ShotPistol_BoardedShip_Unlootable_Item>
+   Armor              ?[Common]<Arbites_BryceArmour_BoardedShip_Unlootable_Item>
+====================================================================================================
+### FW_Lizzy_Companion   unit=17134d4540dd445c95b995a00fef52e3  
+====================================================================================================
+### Master_ArbitesCyberMastiff_PetUnit   unit=fffed8b281aa45fc9926d62d7aaf94c9  
+   set0.PrimaryHand    生化獒犬利爪[Common]<Master_ArbitesCyberMastiff_Claws_Weapon>
+====================================================================================================
+### UlfarCompanion   unit=daaf3d6bae644af8a9128ea09044bb99  
+   set0.PrimaryHand    【梅佐阿型】阿斯塔特爆矢手枪[Common]<AstartesBoltPistolT2_Item>
+   set0.SecondaryHand  阿斯塔特战刀[Common]<AstartesCombatKnife_Item>
+   set1.PrimaryHand    阿斯塔特台风爆矢枪[Unique]<OneAndDoneAstartesBolter_Item>
+   Head               赤狼头骨[Common]<TankUlfarHelmet_Item>
+   Neck               血光飞溅[Common]<RubySplash_Item>
+   Gloves             血冰臂铠[Unique]<CompensatorAstartesGloves_Item>
+   Feet               破冰者战靴[Unique]<HeavyAstarterBoots_Item>
+   Shoulders          狼皮斗篷[Common]<WolfPeltCloak_Item>
+   Ring1              轻型机械手[Unique]<PortativeManipulator_Item>
+   Ring2              利刃之翼[Common]<SomeLoreWings_Item>
+   Armor              芬里斯之力战甲[Unique]<ThroatseekerAstartesPowerArmour_Item>
+====================================================================================================
+### Hope_Chorda_Companion   unit=cabf247f1fb3494289f48a48512132f3  
+   set0.PrimaryHand    【梅佐阿型】狱火手枪[Pattern]<InfernoPistolT2CH04_Item>
+   set0.SecondaryHand  【太阳型】等离子手枪[Pattern]<PlasmaPistolT2CH04_Item>
+   Neck               士兵的双头鹰吊坠[Unique]<SoldiersAquilaPendant_Item>
+   Gloves             指挥官手套[Unique]<TacticalGloves_Item>
+   Armor              决斗者制服[Unique]<FancyUniform_Item>
+====================================================================================================
+### ExhibitionCollapsing_LemanRussTank_Player   unit=a9a23f980ca64fb496f8387d4566fb40  
+   set0.PrimaryHand    主炮[Common]<ExhibitionCollapsing_LemanRuss_UnlimitedMainCannon>

@@ -1,0 +1,17 @@
+======================================================================
+血腥礼赞 ArgentaBolterUnique | 0adaa28e654e4fd6a74830eed3f63390 血腥礼赞 <ArgentaBolterUnique_Item> [Unique]
+  WSTAT: {'two': 1, 'dmg': 20, 'mx': 30, 'pen': 20, 'dpen': 0, 'hc': 0, 'rec': 30, 'dist': 24, 'ammo': 14, 'rof': 4}
+======================================================================
+高级重型伐木枪 AdvancedHeavyStubber | 594030b15093416c925dabc415eda101 高级重型伐木枪 <AdvancedHeavyStubber_Item> [Unique]
+  WSTAT: {'two': 1, 'dmg': 10, 'mx': 11, 'pen': 20, 'dpen': 0, 'hc': 0, 'rec': 50, 'dist': 20, 'ammo': 80, 'rof': 10}
+======================================================================
+政委帽 CommissarCap | 24a156a6132d46a982f2f3a7c794ecbd 政委帽 <CommissarCap_Item> [Unique]
+   TXT: 装备者获得+10{g|Encyclopedia:WarhammerFellowship}社交{/g}。此外，装备者与所有盟友的暴击率提高，等同于{unit_stat|WarhammerFellowship|bonus}%。{g|Encyclopedia:HitSequenceGlossary}{/g}
+======================================================================
+外围面甲 PeripheralVisor | c22406ff733b403ea8b4b4b78c47cda9 外围面甲 <PeripheralVisor_Item> [Unique]
+======================================================================
+坚固盾牌 ShieldCH04T2 | 76f9b98e76854b459b50a73462429e2b 坚固盾牌 <ShieldCH04T2_Item> [Pattern]
+======================================================================
+枪手盾牌 ShieldCH04T2V2 | 98b9d50803e64d13abdf8f0619421874 枪手盾牌 <ShieldCH04T2V2_Item> [Pattern]
+   TXT: 敌者之锤
+   TXT: 一把霰弹手枪。敌者之锤在海军军官中深受欢迎，这把可怕的武器可以吓破敌人的胆子。

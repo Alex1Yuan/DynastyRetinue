@@ -91,12 +91,35 @@ namespace KgdRetinue
 
         // ── 可用性预检（DLC 优雅降级）────────────────────────────────────────
         /// <summary>
+        /// 每个 guid 只真探一次，结果缓存。
+        /// ★为什么必须缓存★：ResourcesLibrary.LoadResource:456-500 的失败路径不对称 ——
+        /// 当 bundle 加载成功、但资产不是 UnitEntityView 时，`loaded.AssetId` 已被赋值、
+        /// `loaded.Unload()` 已经让 extra.RequestCount 减过一次；而这个失败条目仍然留在
+        /// s_LoadedResources 里且 RequestCounter++ 过，我们 FreeResourceRequest 把它打到 0 后，
+        /// 下一轮 CleanupLoadedCache 会再 Unload 一次 ⇒ **一增两减**。
+        /// 反复探同一个坏 guid 能把 extra 的 RequestCount 推到 0 → Bundle.Unload(true) → 全船隐形。
+        /// 缓存 + 上层白名单，双保险。
+        /// </summary>
+        private static readonly System.Collections.Generic.Dictionary<string, string> _probeCache
+            = new System.Collections.Generic.Dictionary<string, string>();
+
+        /// <summary>
         /// 目标 prefab 现在能不能用。可用返回 null，不可用返回中文原因。
         /// 只做只读判断 + 一次真实加载尝试；任何情况下都不抛。
         /// </summary>
         public static string WhyUnusable(string prefabAssetId)
         {
             if (string.IsNullOrEmpty(prefabAssetId)) return "guid 为空";
+            string cached;
+            if (_probeCache.TryGetValue(prefabAssetId, out cached)) return cached;
+            string r = WhyUnusableUncached(prefabAssetId);
+            // 只缓存"确定的"结果；服务没起来时不缓存，等进游戏后重试
+            if (r == null || !r.StartsWith("BundlesLoadService")) _probeCache[prefabAssetId] = r;
+            return r;
+        }
+
+        private static string WhyUnusableUncached(string prefabAssetId)
+        {
             try
             {
                 var svc = BundlesLoadService.Instance;
