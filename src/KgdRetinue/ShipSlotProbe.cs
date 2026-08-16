@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Text;
@@ -84,8 +84,10 @@ namespace KgdRetinue
                 Main.Log("  --- 已装武器 ---");
                 DumpWeapons(ship, counts);
                 Main.Log("======== 诊断结束 ========");
-                Main.Log("  判读：某件武器需要的槽位类型如果不在上面那张挂点表里，"
-                         + "它的美术就挂不上去，开火点会退回原点（表现为「在虚空里开火」）。");
+                Main.Log("  判读（两件事，别混）："
+                         + "\n    · 「挂点」= 船体上有没有这个类型的挂点。没有 ⇒ 美术挂不上去 ⇒ 开火点退回原点（在虚空开火）。"
+                         + "\n    · 「美术」= 这件武器自己有没有炮塔模型。无 StarshipEE ⇒ EquipWeapon 第一行就 return，"
+                         + "补再多挂点也不会出现炮 —— 这是武器数据本身的属性，换个存档换套武器就会变。");
             }
             catch (Exception e) { Main.LogError("[挂点] 诊断失败: " + e); }
         }
@@ -203,10 +205,66 @@ namespace KgdRetinue
                         ? "槽位类型读不出来，无法判断"
                         : (ok ? "有 ✓" : "★没有 —— 开火点会跑到虚空★");
                     Main.Log("    槽位 " + slotType.PadRight(11) + " 武器 " + wname
-                             + "  [" + wtype + "]   挂点: " + verdict);
+                             + "  [" + wtype + "]   挂点: " + verdict
+                             + "   美术: " + ArtReport(item));
                 }
             }
             catch (Exception e) { Main.LogError("    读武器失败: " + e.Message); }
+        }
+
+
+        /// <summary>
+        /// 这件武器**有没有美术可挂**。
+        ///
+        /// ★为什么必须单独查★ 之前所有诊断都在回答"挂点存不存在"，
+        /// 而 EquipWeapon 在碰挂点之前还有两条静默 return（StarshipView.cs:238-246）：
+        ///     if (weaponBP.StarshipEE == null) return;                       // 压根没有美术资产
+        ///     var d = weaponBP.StarshipEE.EEArtSlotsDescription;
+        ///     if (d == null || d.Count &lt;= 0) return;                         // 有资产但没挂件描述
+        /// 两条都不打日志、不抛异常。所以"挂点全 ✓ 却一门炮都看不见"完全可能，
+        /// 而且换个存档、换套武器就会变 —— 正是玩家实测到的现象。
+        ///
+        /// 顺带把每个挂件要求的槽位类型和 Prefab 是否为空一起打出来：
+        /// RequiredSlots 才是 FindAll 真正用的键，它和"武器装在哪个槽位"不一定一致。
+        /// </summary>
+        private static string ArtReport(object item)
+        {
+            try
+            {
+                var bp = Get(item, "Blueprint");
+                if (bp == null) return "读不到蓝图";
+                var see = Get(bp, "StarshipEE");
+                if (see == null)
+                    return "★无 StarshipEE —— 这件武器根本没有炮塔美术，"
+                         + "EquipWeapon 第一行就 return，和挂点无关★";
+
+                var list = Get(see, "EEArtSlotsDescription") as System.Collections.IEnumerable;
+                if (list == null) return "★EEArtSlotsDescription 为 null★";
+
+                int n = 0; var sb = new System.Text.StringBuilder();
+                foreach (var d in list)
+                {
+                    n++;
+                    if (d == null) { sb.Append(" [null]"); continue; }
+                    bool hasPrefab = Get(d, "Prefab") != null;
+                    var req = Get(d, "RequiredSlots") as System.Collections.IEnumerable;
+                    var types = new System.Text.StringBuilder();
+                    if (req != null)
+                        foreach (var r in req)
+                        {
+                            var t = Get(r, "SlotType");
+                            if (types.Length > 0) types.Append("/");
+                            types.Append(t == null ? "?" : t.ToString());
+                        }
+                    sb.Append(" [要求槽位 ").Append(types.Length > 0 ? types.ToString() : "（空）")
+                      .Append(hasPrefab ? "" : "　★Prefab 为空★").Append("]");
+                }
+                if (n == 0)
+                    return "★EEArtSlotsDescription 是空列表 —— 有资产但没有任何挂件，"
+                         + "EquipWeapon 第二个 if 就 return★";
+                return n + " 个挂件" + sb.ToString();
+            }
+            catch (Exception e) { return "查美术失败: " + e.Message; }
         }
 
         private static object GetPart(object entity, string typeName)
