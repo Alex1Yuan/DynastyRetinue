@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Reflection;
 using HarmonyLib;
 using Kingmaker;
@@ -117,13 +117,18 @@ namespace KgdRetinue
                 var room = CurrentRoom();
                 if (room == null || (room is UnityEngine.Object && !(UnityEngine.Object)room)) return;
 
-                var old = _avatarField.GetValue(room) as GameObject;
-                if (old == null) return;      // 界面没开 ⇒ 没有快照要重拍
-
                 var ship = Game.Instance != null && Game.Instance.Player != null
                          ? Game.Instance.Player.PlayerShip : null;
                 if (ship == null) return;
 
+                var old = _avatarField.GetValue(room) as GameObject;
+                if (old == null) return;      // 界面没开 ⇒ 没有快照要重拍
+
+                // BaseRenderer 不用在这里补：StarshipViewTool.HealBaseRenderer 本身就是
+                // ShipDollRoom.CreateSimpleAvatar 的 Prefix，下面 Invoke 会连它一起触发。
+                // （换过船模的船体原版没接这根线 —— 实测日志里换船后诊断报 "BaseRenderer: null"，
+                //   而 CreateSimpleAvatar 第三行就是 ....BaseRenderer.gameObject，
+                //   靠那个 Prefix 挡住才没 NRE。）
                 UnityEngine.Object.Destroy(old);
                 _avatarField.SetValue(room, null);
                 _create.Invoke(room, new object[] { ship });

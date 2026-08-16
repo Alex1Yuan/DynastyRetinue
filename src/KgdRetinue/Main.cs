@@ -863,8 +863,10 @@ namespace KgdRetinue
         /// 默认 0.784 = Dictator 原生 prow_01 实测：(-0.01-(-0.41))/(0.50-(-0.01))。
         /// 也就是舰首炮基本贴龙骨线（-0.41 vs 龙骨 -0.44）。</summary>
         public float ProwDropRatio = 0.784f;
-        /// <summary>从船体最前端往回收多少，占船长。默认 0.053 = Dictator 实测 (3.00-2.68)/5.99。</summary>
-        public float ProwZBackRatio = 0.053f;
+        /// <summary>从船体**实体**前端（命中遮罩 frontHitPositions 的最大 z）往回收多少，占船长。
+        /// 默认 0.043 = Dictator 实测 (2.94-2.68)/5.99。
+        /// 不用包围盒最前端：Gothic 的包围盒比实体船头多出 0.56，那是一根细撞角。</summary>
+        public float ProwZBackRatio = 0.043f;
         public string ProwLearnedFrom = "";
         /// <summary>关掉就退回公式（公式猜错过六版，只作退路）。</summary>
         public bool ShipProwUseLearned = true;

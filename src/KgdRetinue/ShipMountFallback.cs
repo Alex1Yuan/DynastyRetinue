@@ -89,7 +89,7 @@ namespace KgdRetinue
         /// 也就是说**舰首炮基本贴在龙骨线上**（-0.41 vs 龙骨 -0.44），
         /// 而我之前一直摆在舷炮中线，整整高了一层甲板 —— 这就是"炮浮在船艏上方"的全部原因。
         /// </summary>
-        private static void LearnFrom(Vector3 prowLocal, Bounds bb, float broadsideY, float dorsalY)
+        private static void LearnFrom(Vector3 prowLocal, Bounds bb, float frontZ, float broadsideY, float dorsalY)
         {
             try
             {
@@ -98,7 +98,7 @@ namespace KgdRetinue
                 if (Mathf.Abs(span) < 1e-3f || bb.size.z < 1e-3f) return;
 
                 float drop  = (broadsideY - prowLocal.y) / span;
-                float zback = (bb.max.z - prowLocal.z) / bb.size.z;
+                float zback = (frontZ - prowLocal.z) / bb.size.z;
                 if (float.IsNaN(drop) || float.IsNaN(zback)) return;
                 // 离谱值不学：挂点被父级变换坑了、或者这条船结构特殊
                 if (drop < -3f || drop > 5f || zback < -0.2f || zback > 0.6f)
@@ -135,7 +135,7 @@ namespace KgdRetinue
         /// 用学来的（或 Dictator 实测的默认）比例算这条船的舰首挂点。
         /// 拿不到舷炮/船脊这两个标尺就返回 false，交给上层退回公式。
         /// </summary>
-        private static bool TryLearned(Bounds bb, float broadsideY, float? dorsalY, out Vector3 p)
+        private static bool TryLearned(Bounds bb, float frontZ, float broadsideY, float? dorsalY, out Vector3 p)
         {
             p = Vector3.zero;
             var st = Main.Settings;
@@ -145,8 +145,45 @@ namespace KgdRetinue
             if (Mathf.Abs(span) < 1e-3f) return false;
             p = new Vector3(0f,
                             broadsideY - st.ProwDropRatio * span,
-                            bb.max.z - st.ProwZBackRatio * bb.size.z);
+                            frontZ - st.ProwZBackRatio * bb.size.z);
             return true;
+        }
+
+
+        /// <summary>
+        /// 船体**实体**前端的 z（StarshipView 局部空间）。拿不到返回 false。
+        ///
+        /// ★为什么不能用包围盒的 max.z★
+        /// Gothic 的包围盒最前端是 3.76，而 vanilla 自己从网格顶点烘焙的 frontHitPositions
+        /// 最前只到 3.20 —— 中间那 0.56 是**一根细撞角**，只有它一根戳在前面。
+        /// 拿包围盒当基准，炮就被推到撞角上（玩家实测："炮看起来在船首上"）。
+        /// Dictator 的船头是钝的，两个数几乎重合（3.00 vs 2.94），所以在它身上看不出区别 ——
+        /// 这正是"只在一条船上验证"会漏掉的那类差异。
+        ///
+        /// frontHitPositions 是 50 个采样点，细长突起本来就采不到几个，
+        /// 于是它天然表达的是"船头实体部分到哪儿为止"，正是我们要的基准。
+        /// （StarshipFxHitMask.cs:47 保证 front 里的点 z 恒 &gt; 0。）
+        /// </summary>
+        private static bool HullFrontZ(Component view, out float z)
+        {
+            z = 0f;
+            try
+            {
+                var mask = Get(view, "starshipFxHitMask");
+                if (mask == null) return false;
+                var en = Get(mask, "frontHitPositions") as IEnumerable;
+                if (en == null) return false;
+                float m = float.MinValue; int n = 0;
+                foreach (var o in en)
+                {
+                    if (!(o is Vector3)) continue;
+                    var v = (Vector3)o; n++;
+                    if (v.z > m) m = v.z;
+                }
+                if (n == 0) return false;
+                z = m; return true;
+            }
+            catch { return false; }
         }
 
         private static bool Resolve()
@@ -276,6 +313,9 @@ namespace KgdRetinue
             float hullLenZ = 0f;
             Bounds bb; bool hasBounds = HullBoundsLocal(view, root, out bb);
             if (hasBounds) hullLenZ = bb.size.z;
+            // 实体船头 z：优先用 vanilla 从网格烘的 frontHitPositions，拿不到才退回包围盒最前端
+            float frontZ; bool hasFront = HullFrontZ(view, out frontZ);
+            if (!hasFront) frontZ = hasBounds ? bb.max.z : 0f;
 
             // ★ 从原生 Prow 挂点学 ★
             // 这条船自己就有 vanilla 摆好的舰首挂点（Dictator 有，Gothic 没有）时，
@@ -286,7 +326,7 @@ namespace KgdRetinue
                       : (minBroadsideY.HasValue ? minBroadsideY.Value : 0f);
             bool hasBs = (pN > 0 && sN > 0) || minBroadsideY.HasValue;
             if (realProw != null && hasBounds && hasBs && dorsalLocalY.HasValue && bb.size.z > 1e-4f)
-                LearnFrom(root.InverseTransformPoint(realProw.position), bb, bsY, dorsalLocalY.Value);
+                LearnFrom(root.InverseTransformPoint(realProw.position), bb, frontZ, bsY, dorsalLocalY.Value);
 
             // 船体中线 X：用左右舷挂点反推（它们本来就骑在中线两侧）
             float cx = (pN > 0 && sN > 0) ? (pxSum / pN + sxSum / sN) * 0.5f : (hasBounds ? bb.center.x : 0f);
@@ -330,7 +370,7 @@ namespace KgdRetinue
             else                             cy = 0f;
 
             Vector3 learned;
-            if (axisOk && hasBounds && hasBs && TryLearned(bb, bsY, dorsalLocalY, out learned))
+            if (axisOk && hasBounds && hasBs && TryLearned(bb, frontZ, bsY, dorsalLocalY, out learned))
             {
                 // L0.5：按 Dictator 实测比例摆。x 仍取舷炮中线 —— 那是这条船自己的实测值。
                 prowLocal = new Vector3(cx, learned.y, learned.z);
@@ -338,13 +378,14 @@ namespace KgdRetinue
                         ? "学自「" + (Main.Settings.ProwLearnedFrom ?? "?") + "」"
                         : "Dictator 实测默认值")
                     + "　下沉 " + Main.Settings.ProwDropRatio.ToString("F3")
-                    + "　后收 " + Main.Settings.ProwZBackRatio.ToString("F3") + "）";
+                    + "　后收 " + Main.Settings.ProwZBackRatio.ToString("F3")
+                    + "　前端基准 " + frontZ.ToString("F2") + (hasFront ? "(命中遮罩)" : "(包围盒)") + "）";
             }
             else if (axisOk && hasBounds)
             {
                 // 没学到过就退回公式。这个公式**猜错过六版**，只是"有总比没有强"，
                 // 别再花时间调它 —— 正解是让玩家在 Dictator 上过一次，把真值学下来。
-                prowLocal = new Vector3(cx, cy, bb.max.z - bb.size.z * 0.04f);
+                prowLocal = new Vector3(cx, cy, frontZ - bb.size.z * 0.04f);
                 how = "L1 包围盒(" + bb.size.ToString("F1") + ") + 舷炮中线　"
                     + "<未学到原生舰首挂点：切一次 Dictator（大巡）即可学到真值>";
             }
