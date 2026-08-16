@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using Kingmaker;
 using Kingmaker.EntitySystem.Entities;
@@ -84,6 +84,11 @@ namespace KgdRetinue
 
         public void OnAreaDidLoad()
         {
+            // 自检：只在有 kgd_selftest.flag 时跑，一次会话一遍，纯只读。
+            // 放这里而不是 Main.Load —— 载入时蓝图缓存还没就绪，
+            // 那正是 v0.50.0 修的那个坑（早读一次就把分型表钉死在内置默认上）。
+            try { SelfCheck.RunOnce(); } catch { }
+
             if (!Main.Enabled) return;
 
             // ★必须在任何早退之前★（下面有 list.Count == 0 就 return）。
