@@ -86,13 +86,15 @@ namespace KgdRetinue
                 //   ★A 档升级★ 原为建卡池 ArbitesHelmetMale。
                 //   法务部全覆式暴动盔 + 红色目镜，正对"盾+霰弹枪"的镇暴装。
                 //   cue/dlg/bark 全 0，4 个佩戴单位也全 0，非建卡池。
-                { "4a02a1bee6f84892b3cb7a3f8c818c69", "942c9ad5ac1146dea04f03d2d35c6bdf" },
+                { "4a02a1bee6f84892b3cb7a3f8c818c69",
+                  "942c9ad5ac1146dea04f03d2d35c6bdf|53f44b5aa25442ed8bedd0015e33d25c|f0d5da655acb4b47846e52e8e97a5254" },
 
                 // 磐石·首席战士  VC2_Arbitres_Melee（男）-> ArbitratorBryce
                 //   ★A 档升级★ 原为建卡池 ArbitesMale。
                 //   这批法务部美术里**唯一不戴全盔**的（红带便帽+呼吸器，露脸），
                 //   和铁壁(Stein)、怒火自带的(Clayton)两张盔面拉开层次。cue=0。
-                { "30e6364a1d7a425b93d877122c6eed40", "a23953738df04e5b9f1d04a52aab3582" },
+                { "30e6364a1d7a425b93d877122c6eed40",
+                  "a23953738df04e5b9f1d04a52aab3582|f0d5da655acb4b47846e52e8e97a5254|1b9082909e854f6d97c366358a280102" },
 
                 // 寂静之眼  Quetza_EldarRangerHard（**女性艾达灵族**）-> Iremeryss_Portrait
                 //   自带 BCT_Eldar_Male_Guardian2：三条 SpriteLink 指向同一个 AssetId，
@@ -100,27 +102,31 @@ namespace KgdRetinue
                 //   且连性别都不对（男性 Guardian 配女性 Ranger）。
                 //   ★全库唯一「女性 + 灵族 + 三尺寸完整」的脸★（淡蓝灰皮、尖耳、蓝面纹）。
                 //   代价：C 档 cue=3（Vect 王座厅那场戏三句台词，dlg=0 bark=0，非反复互动对象）。
-                //   为什么退不到 A/B：建卡池 30 张全是帝国人类；A 档异形脸只有 8 张黑暗灵族 +
-                //   1 张 Medusae，其中 7 张戴盔戴面具，唯一素颜那张脸偏男性且仅 Small 尺寸。
+                //   备选是唯一的素颜黑暗灵族脸（A 档零引用，但仅 Small 尺寸、脸偏男性）。
                 //   ★Craftworld 灵族全库一张路人脸都没有★——367 个 sprite 里只有
                 //   Yrliet_* / Solitaire_*，不是"漏打包"，是根本没画。
-                { "aca1e823dbf64d6999d2132e3198dd5a", "c0021b321aec4686972310071c458105" },
+                { "aca1e823dbf64d6999d2132e3198dd5a",
+                  "c0021b321aec4686972310071c458105|d328a891cc7749f49e75b08b636f2ebd|75b9f146f87c4071bae52c06a13eed06" },
 
                 // 赏金·猎首  FootfallAnverSniper_Ranged_Elite（**女**，兜帽遮面）-> CriminalFemale
                 //   ★性别修正★ 原为 CriminalMale。短发+疤+义眼，赏金猎人调性一致。
-                //   B 档 cue=0，0 个单位佩戴。
-                { "53281ae602a34756a47c3e23f66c06cd", "12a70d4ed7204766b38e730fb84cd998" },
+                //   B 档 cue=0，0 个单位佩戴。备选是狙击瞄准型义眼的军队女性。
+                { "53281ae602a34756a47c3e23f66c06cd",
+                  "12a70d4ed7204766b38e730fb84cd998|ba1bdefff9f44351b0b7c139bf5b036f|86163d32b05d4b14a7fb674c92c7113d" },
 
                 // 圣焰·净罪修女  DLC3_DL_Sororitas_Melta_Unit（女）-> AdeptusMinistorumFemale
                 //   金发+额头虔信刻痕的教会系女性。全库唯一非同伴的教会女脸
                 //  （SisterArgenta 是阿尔金塔本人，cue=78，禁用）。B 档 cue=0。
-                { "2cf75c27e6d34681ab623101b0be1135", "e5fa9cc788be4459bc0b9c6a74968da6" },
+                //   备选是法务部女盔（全覆盔，遮脸所以不会和修女头盔打架）。
+                { "2cf75c27e6d34681ab623101b0be1135",
+                  "e5fa9cc788be4459bc0b9c6a74968da6|789d150f4e2b4f7da536980fcabdae31|222fb5f4775344c495cf14af52a66eec" },
 
                 // 亚空间审判者  Ch05Inquisitor_Psyker_unit（**女**，光头+下颌义体）-> PsykerFemale
                 //   ★性别修正★ 原为 AdeptusMinistorumMale。
                 //   苍白发青的皮肤、发白光的眼睛、近乎光头 —— 和模型 BCT_Inquisition_Mystic
                 //   是同一套设计语言。B 档 cue=0。
-                { "d1287134a3e64a4dbdae16b58d21bd8b", "3c1cff3901824c0298ba4abe1801c807" },
+                { "d1287134a3e64a4dbdae16b58d21bd8b",
+                  "3c1cff3901824c0298ba4abe1801c807|05aca1a00dd4450da436696868650518|ac7139caf2544bc29e19a8f031635e63" },
 
                 // 火杖行刑者  Ch04Chorda_Pyromancer_unit -> DecadenceFemale
                 //   ★vanilla 自己的数据打架★：蓝图 Gender=Male，模型却是 BCT_Female_Chorda_Psyker
@@ -128,15 +134,16 @@ namespace KgdRetinue
                 //   按**模型**为准取女性；苍白贵族女性，同时贴合 Chorda 王朝的宫廷背景。
                 //   自带立绘 JungleWorldRebelOfficerMelee 的 Small 指向不在 locationlist 的 id、
                 //   Half/Full 才是真 null —— 表现同样是占位符。B 档 cue=0。
-                //   想改回"性别模糊"的方案就换 PsykerMale 0114a2db302c45a9bc780593d0ec5134（兜帽+蓝光眼）。
-                { "638ab19bfae74bb99dacc93e7d6fe7f3", "db248f8c0357439bb49480e13a998e6a" },
+                //   备选 PsykerMale 是兜帽+蓝光眼、性别模糊，正好绕开那个数据矛盾。
+                { "638ab19bfae74bb99dacc93e7d6fe7f3",
+                  "db248f8c0357439bb49480e13a998e6a|0114a2db302c45a9bc780593d0ec5134|db208877d55c43bba8f1b59613a8e857" },
 
                 // 谕令·灵能军官  VC2_Astropath（男）-> ImperialNavyMale
                 //   帝国海军军官装，照顾"军官"身份。B 档 cue=0（3 个佩戴单位都是预设）。
-                //   备选 AdeptusMinistorumMale b8c150a212dc43b8ae2a580c0145fa20：
-                //   兜帽+金色呼吸面罩，其实更贴"星语者"，而且模型 BCT_Male_Astropath
-                //   是苍白光头、和海军那张黑发青年对不太上。两条都是 B 档 cue=0，看取舍。
-                { "bc5ca9badb2042b48afb13c1829619b3", "d03e6b0de6994d8f8b10a8ad16ebd94e" },
+                //   备选 AdeptusMinistorumMale：兜帽+金色呼吸面罩，其实更贴"星语者"，
+                //   而且模型 BCT_Male_Astropath 是苍白光头、和海军那张黑发青年对不太上。
+                { "bc5ca9badb2042b48afb13c1829619b3",
+                  "d03e6b0de6994d8f8b10a8ad16ebd94e|b8c150a212dc43b8ae2a580c0145fa20|3df3df7a73a544d79455a40e2dc1156a" },
 
                 // ---- 下面两个**不需要** override：单位自带立绘且图正常 ----
                 // 怒火·首席连射 -> 自带 ArbitratorClayton 1704807cd8944603b71331183ff36a1f
@@ -189,7 +196,7 @@ namespace KgdRetinue
                 {
                     string sub;
                     if (UnitPortraitOverride.TryGetValue(unitAssetId, out sub) && !string.IsNullOrEmpty(sub))
-                        s = FromPortraitBlueprint(sub, size);
+                        s = FromPortraitBlueprint(PickNonClashing(sub), size);
                 }
             }
             catch (Exception e) { Main.LogError("[立绘] 解析 " + unitAssetId + " 失败: " + e.Message); }
@@ -209,6 +216,76 @@ namespace KgdRetinue
         public static bool HasOwnPortrait(string unitAssetId)
         {
             return GetPortraitBlueprint(unitAssetId, ownOnly: true) != null;
+        }
+
+        /// <summary>
+        /// 从候选链里挑第一个**不和主控角色撞脸**的立绘。
+        ///
+        /// 为什么需要：借脸表用的是原版建卡池那 30 张，玩家捏主角时也从同一批里挑 ——
+        /// 恰好选中同一张，队伍框里就会出现两张一模一样的脸。
+        /// 链里的候选是按"越靠前越合适"排的，所以只在真撞了才往后退。
+        ///
+        /// ★ 必须比对**图的 AssetId**，不能比对蓝图 GUID ★
+        /// 全库 174 张可用立绘只对应 150 张不同的图，有 21 组是别名
+        ///（*Navigator 系列 / RTArbitres* / RogueTraderMale|Female* 等指向同一张图）。
+        /// 比 GUID 会漏掉"不同蓝图、同一张脸"这种撞法。
+        ///
+        /// 链里全部撞光时返回第一个 —— 与其显示空白，不如撞脸。
+        /// </summary>
+        private static string PickNonClashing(string chain)
+        {
+            if (string.IsNullOrEmpty(chain)) return chain;
+            if (chain.IndexOf('|') < 0) return chain;      // 单件，没得挑
+
+            var parts = chain.Split('|');
+            string mine = MainCharacterPortraitImageId();
+            if (string.IsNullOrEmpty(mine)) return parts[0].Trim();
+
+            for (int i = 0; i < parts.Length; i++)
+            {
+                string id = parts[i].Trim();
+                if (id.Length == 0) continue;
+                string img = ImageIdOf(id);
+                if (string.IsNullOrEmpty(img) || img != mine)
+                {
+                    if (i > 0) Main.Log("[立绘] " + parts[0].Trim().Substring(0, 8)
+                                        + " 与主控角色撞脸，改用候选 #" + (i + 1) + " " + id.Substring(0, 8));
+                    return id;
+                }
+            }
+            return parts[0].Trim();
+        }
+
+        /// <summary>主控角色立绘的**图** AssetId（Small）。取不到返回 null。</summary>
+        private static string MainCharacterPortraitImageId()
+        {
+            try
+            {
+                var g = Kingmaker.Game.Instance;
+                var pl = g != null ? g.Player : null;
+                var mc = pl != null ? pl.MainCharacterEntity : null;
+                if (mc == null) return null;
+                var pd = mc.Portrait;                 // PortraitData
+                if (pd == null) return null;
+                var link = pd.m_PortraitImage;
+                return link != null ? link.AssetId : null;
+            }
+            catch { return null; }
+        }
+
+        /// <summary>立绘蓝图 -> 它 Small 那张图的 AssetId。</summary>
+        private static string ImageIdOf(string portraitAssetId)
+        {
+            try
+            {
+                BlueprintPortrait p;
+                try { p = ResourcesLibrary.TryGetBlueprint<BlueprintPortrait>(portraitAssetId); }
+                catch { return null; }
+                if (p == null || p.Data == null) return null;
+                var link = p.Data.m_PortraitImage;
+                return link != null ? link.AssetId : null;
+            }
+            catch { return null; }
         }
 
         /// <summary>

@@ -188,6 +188,7 @@ namespace KgdRetinue.UI
                 BuildFrame(_root.transform);
 
                 _selected = -1;
+                RefreshProfitFactor();   // ★别漏★ 首次开窗原本只调 Rebuild*，状态条永远是空的
                 RebuildArchetypes();
                 RebuildUnits();
 
@@ -347,11 +348,15 @@ namespace KgdRetinue.UI
             trt.offsetMin = new Vector2(32f, -76f); trt.offsetMax = new Vector2(-180f, -20f);
 
             // 利润因子状态条 —— 招募名额由它解锁，所以放在标题正下方最显眼的位置
-            _pfLabel = MakeLabel(panel.transform, "", 17f, VanillaSkin.Gold, TextAlignmentOptions.Left);
+            // ★高度必须给够★ TMP 在 Ellipsis/Truncate 模式下，rect 高度小于所需行高时
+            // 会把**整个字符串清空**而不是截断。之前给 16px 配 17 号字，结果一片空白。
+            _pfLabel = MakeLabel(panel.transform, "", 16f, VanillaSkin.Gold, TextAlignmentOptions.Left);
+            _pfLabel.enableWordWrapping = false;
+            _pfLabel.overflowMode = TextOverflowModes.Overflow;
             RectTransform pfrt = (RectTransform)_pfLabel.transform;
             pfrt.anchorMin = new Vector2(0f, 1f); pfrt.anchorMax = new Vector2(1f, 1f);
             pfrt.pivot = new Vector2(0.5f, 1f);
-            pfrt.offsetMin = new Vector2(32f, -92f); pfrt.offsetMax = new Vector2(-180f, -76f);
+            pfrt.offsetMin = new Vector2(32f, -104f); pfrt.offsetMax = new Vector2(-40f, -74f);
 
             // 关闭按钮
             Button close = MakeButton(panel.transform, "关闭", 110f, 38f, Close);
