@@ -46,12 +46,11 @@ namespace KgdRetinue
                          + "   分档: " + ship.Size);
 
                 // ---- 1. 船体 prefab 上实际有哪些 StarshipItemSlot ----
-                object view = null;
-                try { view = ship.GetType().GetProperty("View", BF).GetValue(ship, null); } catch { }
+                object view = Get(ship, "View");
                 if (view == null)
                 {
                     Main.LogError("  拿不到 View —— 船现在没在场景里显示。"
-                                  + "★挂点诊断必须在【太空战里】点★（改装界面那个是 ShipDollRoom 的复制体，"
+                                  + "★挂点诊断要在【太空战里】点★（改装界面那个是 ShipDollRoom 的复制体，"
                                   + "身上没有 StarshipView，也没有武器挂点）。上面几行数值仍然有效。");
                     return;
                 }
@@ -59,20 +58,7 @@ namespace KgdRetinue
                 var comp = FindStarshipView(view as Component);
                 if (comp == null) { Main.LogError("  这个 View 上找不到 StarshipView 组件。"); return; }
 
-                var slotsField = comp.GetType().GetField("ItemSlots", BF)
-                              ?? comp.GetType().GetProperty("ItemSlots", BF) as MemberInfo as FieldInfo;
-                object slotsObj = null;
-                try
-                {
-                    var f = comp.GetType().GetField("ItemSlots", BF);
-                    if (f != null) slotsObj = f.GetValue(comp);
-                    else
-                    {
-                        var p = comp.GetType().GetProperty("ItemSlots", BF);
-                        if (p != null) slotsObj = p.GetValue(comp, null);
-                    }
-                }
-                catch { }
+                object slotsObj = Get(comp, "ItemSlots");
 
                 var counts = new Dictionary<string, int>();
                 int total = 0;
@@ -84,14 +70,8 @@ namespace KgdRetinue
                         if (s == null) continue;
                         total++;
                         string ty = "?";
-                        try
-                        {
-                            var tf = s.GetType().GetField("Type", BF);
-                            var tv = tf != null ? tf.GetValue(s)
-                                   : s.GetType().GetProperty("Type", BF).GetValue(s, null);
-                            ty = tv != null ? tv.ToString() : "?";
-                        }
-                        catch { }
+                        var tv = Get(s, "Type");
+                        if (tv != null) ty = tv.ToString();
                         int c; counts.TryGetValue(ty, out c); counts[ty] = c + 1;
                     }
                 }
@@ -215,13 +195,8 @@ namespace KgdRetinue
                         : null;
             if (prop != null)
             {
-                try
-                {
-                    var p = entity.GetType().GetProperty(prop, BF);
-                    var v = p != null ? p.GetValue(entity, null) : null;
-                    if (v != null) return v;
-                }
-                catch { }
+                var v = Get(entity, prop);
+                if (v != null) return v;
             }
 
             // 退路：PartsManager 上找 GetAll()/Parts 之类能枚举的东西
@@ -247,12 +222,26 @@ namespace KgdRetinue
 
         private static object Get(object o, string name)
         {
+            // ★ 必须逐层 DeclaredOnly ★
+            // 不带 DeclaredOnly 的 GetProperty/GetField，在基类和派生类都声明了同名成员时
+            // （Entity.View / Owner / Blueprint 全都是）会抛 AmbiguousMatchException。
+            // v0.20.0 的舰船补丁就是栽在这上面，这个文件里我又原样写了一遍 ——
+            // 结果 View 永远拿不到，诊断在哪点都是"拿不到 View"。
             if (o == null) return null;
-            var t = o.GetType();
-            var p = t.GetProperty(name, BF);
-            if (p != null) return p.GetValue(o, null);
-            var f = t.GetField(name, BF);
-            return f != null ? f.GetValue(o) : null;
+            const BindingFlags DECL = BindingFlags.Instance | BindingFlags.Public
+                                    | BindingFlags.NonPublic | BindingFlags.DeclaredOnly;
+            for (var t = o.GetType(); t != null; t = t.BaseType)
+            {
+                try
+                {
+                    var p = t.GetProperty(name, DECL);
+                    if (p != null && p.CanRead) return p.GetValue(o, null);
+                    var f = t.GetField(name, DECL);
+                    if (f != null) return f.GetValue(o);
+                }
+                catch { }
+            }
+            return null;
         }
     }
 }
