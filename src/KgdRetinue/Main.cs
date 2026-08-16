@@ -230,6 +230,25 @@ namespace KgdRetinue
         {
             // ---------- 卫队 ----------
             GUILayout.Label("<b>KgdRetinue v" + (ModEntry != null && ModEntry.Info != null ? ModEntry.Info.Version : "?") + "</b>");
+
+            // ★卸载须知放在第一屏★ 卫兵是持久实体、进 party.json，
+            // 不遣散就关 mod 会在存档里留下读不出来的引用。README 里写了，
+            // 但绝大多数玩家不会读 README —— 这条必须是打开面板第一眼就看见的东西。
+            // 只在**真的有卫兵或换过船**时才显示，避免变成人人无视的常驻噪音。
+            {
+                int _n = 0; bool _swapped = false;
+                try { _n = RetinueRegistry.Count; } catch { }
+                try { _swapped = !string.IsNullOrEmpty(StarshipViewTool.CurrentPrefab); } catch { }
+                if (_n > 0 || _swapped)
+                {
+                    var _w = new System.Text.StringBuilder();
+                    _w.AppendLine("<color=#ffcc66><b>卸载 / 禁用本 mod 或 DLC 之前，按顺序做完这几步：</b></color>");
+                    if (_n > 0)   _w.AppendLine("　1. 招募区点【遣散全部】（当前在册 " + _n + " 名，它们写在存档里）");
+                    if (_swapped) _w.AppendLine("　" + (_n > 0 ? "2" : "1") + ". 舰船区点【还原原版船模】");
+                    _w.Append("　" + ((_n > 0 ? 1 : 0) + (_swapped ? 1 : 0) + 1) + ". <b>存盘</b> —— 前面几步只在内存里，不存盘等于没做");
+                    GUILayout.Label(_w.ToString());
+                }
+            }
             GUILayout.Label("<b>卫队</b>   在册 " + RetinueRegistry.Count + "   " + RetinueRegistry.Describe());
             GUILayout.BeginHorizontal();
             if (GUILayout.Button("生成一个", GUILayout.Width(110))) RetinueTest.SpawnOne();
