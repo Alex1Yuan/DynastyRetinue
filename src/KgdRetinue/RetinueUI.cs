@@ -356,7 +356,7 @@ namespace KgdRetinue.UI
             RectTransform pfrt = (RectTransform)_pfLabel.transform;
             pfrt.anchorMin = new Vector2(0f, 1f); pfrt.anchorMax = new Vector2(1f, 1f);
             pfrt.pivot = new Vector2(0.5f, 1f);
-            pfrt.offsetMin = new Vector2(32f, -104f); pfrt.offsetMax = new Vector2(-40f, -74f);
+            pfrt.offsetMin = new Vector2(32f, -108f); pfrt.offsetMax = new Vector2(-40f, -78f);
 
             // 关闭按钮
             Button close = MakeButton(panel.transform, "关闭", 110f, 38f, Close);
@@ -371,7 +371,7 @@ namespace KgdRetinue.UI
             lrt.anchorMin = new Vector2(0f, 0f); lrt.anchorMax = new Vector2(0f, 1f);
             lrt.pivot = new Vector2(0f, 0.5f);
             lrt.offsetMin = new Vector2(28f, 28f);
-            lrt.offsetMax = new Vector2(28f + 320f, -92f);
+            lrt.offsetMax = new Vector2(28f + 320f, -116f);
             PaintPanel(left.AddComponent<Image>(), RowTex(), VanillaSkin.RowBg);
             MakeSectionLabel(left.transform, "分型");
             _archContent = MakeScrollArea(left.transform, 44f);
@@ -382,7 +382,7 @@ namespace KgdRetinue.UI
             rrt.anchorMin = new Vector2(0f, 0f); rrt.anchorMax = new Vector2(1f, 1f);
             rrt.pivot = new Vector2(0.5f, 0.5f);
             rrt.offsetMin = new Vector2(28f + 320f + 16f, 28f);
-            rrt.offsetMax = new Vector2(-28f, -92f);
+            rrt.offsetMax = new Vector2(-28f, -116f);
             PaintPanel(right.AddComponent<Image>(), RowTex(), VanillaSkin.RowBg);
             _titleRight = MakeSectionLabel(right.transform, "请先选择左侧分型");
             _unitContent = MakeScrollArea(right.transform, 44f);
@@ -437,7 +437,7 @@ namespace KgdRetinue.UI
             if (_titleRight != null) _titleRight.text = arch.Name + " — 可招募单位";
 
             // 第一行：普通卫兵
-            AddUnitRow(NormalUnitId(arch), "普通卫兵", "无限制", _selected, null);
+            AddUnitRow(NormalUnitId(arch), "普通卫兵", NormalSubtitle(), _selected, null);
 
             // 后续行：该分型下的精英
             if (arch.Elites != null)
@@ -462,6 +462,24 @@ namespace KgdRetinue.UI
             if (a != null && !string.IsNullOrEmpty(a.UnitId)) return a.UnitId;
             try { return Main.Settings != null ? Main.Settings.UnitAssetId : null; }
             catch { return null; }
+        }
+
+        /// <summary>普通卫兵那行的副标题：名额满了要说清楚是为什么，光把按钮变灰看不出原因。</summary>
+        private static string NormalSubtitle()
+        {
+            try
+            {
+                if (!CapReached()) return "无限制";
+                if (Main.Settings != null && Main.Settings.RecruitUsePfGate && !Main.Settings.NoPfGate())
+                {
+                    int next = ProfitFactorGate.NextThreshold();
+                    return next > 0
+                        ? "名额已满 — 利润因子到 " + next + " 解锁下一名"
+                        : "名额已满 — 已达上限 " + ProfitFactorGate.HardCap() + " 名";
+                }
+                return "名额已满 — 受职业阶位限制";
+            }
+            catch { return "无限制"; }
         }
 
         private static string EliteSubtitle(int archIndex, ChainProbe.EliteDef ed)
@@ -526,6 +544,10 @@ namespace KgdRetinue.UI
             hrt.pivot = new Vector2(1f, 0.5f);
             hrt.anchoredPosition = new Vector2(-12f, 0f);
 
+            // ★名额满了一律不能招，普通卫兵也一样★
+            // 原来只有精英行判了 NextElite，普通卫兵那行按钮永远是亮的 ——
+            // 点下去 SpawnOne 内部才拒绝，玩家只看到"点了没反应"。
+            bool full = CapReached();
             if (elite != null)
             {
                 bool ok = false;
@@ -535,7 +557,11 @@ namespace KgdRetinue.UI
                     ok = next != null && ReferenceEquals(next, elite);
                 }
                 catch { }
-                SetInteractable(hire, ok);
+                SetInteractable(hire, ok && !full);
+            }
+            else
+            {
+                SetInteractable(hire, !full);
             }
         }
 
@@ -548,9 +574,37 @@ namespace KgdRetinue.UI
                 Main.Log(g != null
                     ? "[招募] 成功: " + (elite != null ? elite.Name : "普通卫兵")
                     : "[招募] 未生成（数量上限或解锁条件，看日志）");
-                RebuildUnits();
+                // ★整窗刷新，不只是 RebuildUnits★
+                // 招完一个之后要变的东西有三处：名额计数、按钮灰不灰、精英排队状态。
+                // 原来只调 RebuildUnits，标题下那条状态永远停在招募前的数字。
+                Refresh();
             }
             catch (Exception e) { Main.LogError("[招募] 失败: " + e.Message); }
+        }
+
+        /// <summary>
+        /// 名额是否已满 —— UI 侧的判据，必须和 RetinueTest.SpawnOne 里那套**完全一致**，
+        /// 否则会出现"按钮亮着但点了没反应"，那比按钮变灰更难理解。
+        /// </summary>
+        private static bool CapReached()
+        {
+            try
+            {
+                if (Main.Settings == null) return false;
+                if (Main.Settings.NoCountCap()) return false;
+
+                int cap;
+                if (Main.Settings.RecruitUsePfGate && !Main.Settings.NoPfGate())
+                    cap = ProfitFactorGate.Unlocked();
+                else
+                {
+                    var g = Kingmaker.Game.Instance;
+                    var leader = g != null && g.Player != null ? g.Player.MainCharacterEntity : null;
+                    cap = Archetypes.GuardCountCap(Archetypes.PlayerTier(leader));
+                }
+                return RetinueRegistry.Count >= cap;
+            }
+            catch { return false; }
         }
 
         private static void OnEditGear(int archIndex, ChainProbe.EliteDef elite)
