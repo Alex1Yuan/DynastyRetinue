@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -115,6 +115,15 @@ namespace KgdRetinue.UI
             _header.overflowMode = TextOverflowModes.Overflow;   // 见 RetinueUI 里同款说明
 
             _content = RetinueUI.MakeScrollArea(panel.transform, 112f);
+            // ★给底部留位★ MakeScrollArea 默认把滚动区拉到面板底边上方 10px，
+            // 而按钮在 y=108、顾问答复在 y=24..96 —— 不留白就会叠在一起（玩家实测）。
+            // content.parent = Viewport，再上一层才是 Scroll 本体。
+            try
+            {
+                var scrollRT = (RectTransform)_content.parent.parent;
+                scrollRT.offsetMin = new Vector2(scrollRT.offsetMin.x, 160f);
+            }
+            catch (Exception e) { Main.LogError("[船坞UI] 调整滚动区底边失败: " + e.Message); }
 
             // 底部：还原 + 关闭
             _revertBtn = RetinueUI.MakeButton(panel.transform, "还原为原样", 300f, 40f, OnRevert);
@@ -203,6 +212,7 @@ namespace KgdRetinue.UI
 
             bool isCurrent = string.Equals(StarshipViewTool.CurrentPrefab, m.PrefabAssetId,
                                            StringComparison.OrdinalIgnoreCase);
+            bool supported = ShipDialog.IsSupported(m);
             int price = ShipDialog.PriceTo(m.Tier);
             bool afford = ShipDialog.Scrap() >= price;
 
@@ -218,7 +228,8 @@ namespace KgdRetinue.UI
                 (isCurrent ? "<color=#7ec87e>▶ </color>" : "") + m.Hull
                 + "　<size=14><color=#8d867a>" + m.Faction
                 + (m.DlcOnlyReferenced ? " · DLC" : "") + "</color></size>",
-                20f, usable ? VanillaSkin.Text : VanillaSkin.TextDim, TextAlignmentOptions.Left);
+                20f, (usable && supported) ? VanillaSkin.Text : VanillaSkin.TextDim,
+                TextAlignmentOptions.Left);
             var nrt = (RectTransform)name.transform;
             nrt.anchorMin = new Vector2(0f, 0f); nrt.anchorMax = new Vector2(1f, 1f);
             nrt.offsetMin = new Vector2(16f, 0f); nrt.offsetMax = new Vector2(-360f, 0f);
@@ -232,6 +243,20 @@ namespace KgdRetinue.UI
                 wrt.anchorMin = new Vector2(1f, 0f); wrt.anchorMax = new Vector2(1f, 1f);
                 wrt.pivot = new Vector2(1f, 0.5f);
                 wrt.sizeDelta = new Vector2(340f, 0f);
+                wrt.anchoredPosition = new Vector2(-16f, 0f);
+                w.overflowMode = TextOverflowModes.Overflow;
+                return;
+            }
+
+            if (!supported)
+            {
+                var w = RetinueUI.MakeLabelPublic(row.transform,
+                    "<color=#8d867a>" + ShipDialog.UnsupportedHint + "</color>",
+                    15f, VanillaSkin.TextDim, TextAlignmentOptions.Right);
+                var wrt = (RectTransform)w.transform;
+                wrt.anchorMin = new Vector2(1f, 0f); wrt.anchorMax = new Vector2(1f, 1f);
+                wrt.pivot = new Vector2(1f, 0.5f);
+                wrt.sizeDelta = new Vector2(360f, 0f);
                 wrt.anchoredPosition = new Vector2(-16f, 0f);
                 w.overflowMode = TextOverflowModes.Overflow;
                 return;

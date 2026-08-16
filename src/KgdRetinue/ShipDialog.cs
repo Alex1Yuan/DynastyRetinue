@@ -100,6 +100,39 @@ namespace KgdRetinue
             try { return Game.Instance.Player.Scrap; } catch { return 0; }
         }
 
+        // ---------------------------------------------------------------- 支持名单
+
+        /// <summary>
+        /// 这条船体是不是**校准过**的。
+        ///
+        /// 目录里那些船体（混沌战列巡洋舰、Universe 运输舰…）prefab 都能加载，
+        /// 但挂点集合、缩放基准、舰首位置全都没在它们身上验过 ——
+        /// 放出去只会让玩家撞上"炮飘在虚空/船大得离谱"这类我们已经花了很多轮才在
+        /// Gothic 和 Dictator 上摆平的问题。
+        ///
+        /// 所以默认只开放：**每档的默认船体**（巡洋=Gothic、大巡=Dictator），
+        /// 加上"还原为原样"回到玩家自己那条原生船。其余照常列出但不给按钮，
+        /// 写明"未调整好" —— 让玩家知道有这些船、也知道为什么点不了，
+        /// 比直接藏起来诚实。
+        ///
+        /// 想试的人可以在面板打开「解除船体限制」。
+        /// </summary>
+        public static bool IsSupported(ShipModel m)
+        {
+            if (m == null) return false;
+            if (Main.Settings != null && Main.Settings.ShipYardUnlockAll) return true;
+            if (m.Tier != Size.Cruiser_2x4 && m.Tier != Size.GrandCruiser_3x6) return false;
+            try
+            {
+                var def = ShipModelCatalog.DefaultFor(m.Tier);
+                return def != null && string.Equals(def.PrefabAssetId, m.PrefabAssetId,
+                                                    StringComparison.OrdinalIgnoreCase);
+            }
+            catch { return false; }
+        }
+
+        public const string UnsupportedHint = "未调整好（挂点与缩放未在这条船体上校准）";
+
         // ---------------------------------------------------------------- 成交
 
         /// <summary>换成指定船体（含它自己的档位）。返回给玩家看的一句话。</summary>
@@ -108,6 +141,10 @@ namespace KgdRetinue
             try
             {
                 if (m == null) return "船坞里没有这份图纸。";
+                // ★兜底放在这里而不是 UI 里★ 两个窗口共用这条路，
+                // 任何一边漏了判断都不会让未校准的船体真的换上去。
+                if (!IsSupported(m))
+                    return "这条船体船坞还没调校好，暂不承接。（" + UnsupportedHint + "）";
                 int price = PriceTo(m.Tier);
                 int have  = Scrap();
                 if (have < price)
