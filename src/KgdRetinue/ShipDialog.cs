@@ -74,10 +74,25 @@ namespace KgdRetinue
         /// 升到 target 还要补多少。**只补差价** —— 已经花过的不重复收。
         /// 巡洋(已付500) → 大巡(总价1000) = 500，正是玩家要的规则。
         /// </summary>
+        /// <summary>
+        /// 换到 target 档的**净费用**。可以是负数 —— 那就是退款。
+        ///
+        /// ★别 clamp 到 0★ v0.44.0 就是那么写的，于是大巡→巡洋算出 500-1000 = -500
+        /// 被吃成 0：免费降级但一分不退（玩家实测）。而升级只补差价的规则要成立，
+        /// 降级就必须对称地退差价，否则"升上去再降回来"会白吞 500。
+        /// </summary>
         public static int PriceTo(Size target)
         {
-            int p = TotalFor(target) - TotalFor(Current());
-            return p < 0 ? 0 : p;
+            return TotalFor(target) - TotalFor(Current());
+        }
+
+        /// <summary>净费用的人话说法。</summary>
+        public static string PriceLabel(Size target)
+        {
+            int p = PriceTo(target);
+            if (p > 0) return p + " 废料";
+            if (p < 0) return "退还 " + (-p) + " 废料";
+            return "无需补价";
         }
 
         /// <summary>还原到原本那档能退多少 —— 按当前档的总投入全额退。</summary>
@@ -195,9 +210,9 @@ namespace KgdRetinue
                 // 任何一边漏了判断都不会让未校准的船体真的换上去。
                 if (!IsSupported(tier, m))
                     return "这条船体船坞还没调校好，暂不承接。（" + UnsupportedHint + "）";
-                int price = PriceTo(tier);
+                int price = PriceTo(tier);          // 负数 = 该退给玩家
                 int have  = Scrap();
-                if (have < price)
+                if (price > 0 && have < price)
                     return "废料不够 —— 需要 " + price + "，账上只有 " + have + "。（一枚都没扣。）";
 
                 // ★先换船再扣钱★ 换船可能被拒（战斗中 StarshipTool.SetSize 会拒），
@@ -210,10 +225,19 @@ namespace KgdRetinue
                     try { Game.Instance.Player.Scrap.Spend(price); }
                     catch (Exception e) { Main.LogError("[船坞] ★船已改装但废料扣除失败★: " + e.Message); }
                 }
-                Main.Log("[船坞] 成交 -> " + m.Hull + " @ " + tier + "　花费 " + price + "　余额 " + Scrap());
+                else if (price < 0)
+                {
+                    // 降级退差价。和升级只补差价是同一条规则的两半 ——
+                    // 只做一半的话，"升上去再降回来"会白吞玩家 500。
+                    try { Game.Instance.Player.Scrap.Receive(-price); }
+                    catch (Exception e) { Main.LogError("[船坞] ★船已改装但退款失败★: " + e.Message); }
+                }
+                Main.Log("[船坞] 成交 -> " + m.Hull + " @ " + tier + "　净费用 " + price + "　余额 " + Scrap());
                 return "改装完成。您的座舰现在是一艘" + SizeName(tier)
                      + "（船体：" + m.Hull + "），"
-                     + (price > 0 ? "船坞收讫 " + price + " 单位废料。" : "本次无需补价。");
+                     + (price > 0 ? "船坞收讫 " + price + " 单位废料。"
+                      : price < 0 ? "船坞退还 " + (-price) + " 单位废料。"
+                                  : "本次无需补价。");
             }
             catch (Exception e) { Main.LogError("[船坞] 交易异常: " + e); return "船坞出了点岔子，交易未完成。"; }
         }

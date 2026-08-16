@@ -218,7 +218,7 @@ namespace KgdRetinue.UI
                                            StringComparison.OrdinalIgnoreCase);
             bool supported = o.Supported;
             int price = ShipDialog.PriceTo(o.Tier);
-            bool afford = ShipDialog.Scrap() >= price;
+            bool afford = price <= 0 || ShipDialog.Scrap() >= price;   // 负数是退款，永远点得动
 
             GameObject row = RetinueUI.NewUI("Row_" + m.Hull, _content);
             Image rbg = row.AddComponent<Image>();
@@ -279,7 +279,7 @@ namespace KgdRetinue.UI
             }
 
             var pl = RetinueUI.MakeLabelPublic(row.transform,
-                price == 0 ? "无需补价" : price + " 废料",
+                ShipDialog.PriceLabel(o.Tier),
                 18f, afford ? VanillaSkin.Text : VanillaSkin.TextDim, TextAlignmentOptions.Right);
             var prt = (RectTransform)pl.transform;
             prt.anchorMin = new Vector2(1f, 0f); prt.anchorMax = new Vector2(1f, 1f);

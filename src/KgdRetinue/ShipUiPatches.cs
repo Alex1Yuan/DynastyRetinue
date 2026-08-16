@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Text;
@@ -359,9 +359,12 @@ namespace KgdRetinue
                     var before = go.transform.localScale;
                     go.transform.localScale = before * fit * mult;
 
-                    if (!_logged)
+                    // ★去掉「本次会话只报这一条」★ 玩家实测："还原之后装配界面镜头缩得很近"，
+                    // 而这条日志被节流掉了 ⇒ 还原后到底按几档算的、before 是多少，全看不见。
+                    // 换船/还原都是低频，每次打一行不吵，却能一眼分辨是分档读错了、
+                    // 还是 before 本身就带着上一轮的缩放。
                     {
-                        _logged = true;
+
                         // 顺手把包围盒打出来，万一某个 prefab 的网格不守 1.5152 那套比例，
                         // 看这行就知道该往哪个方向调滑条，不用靠猜。
                         string bounds = "(测不到)";
@@ -376,7 +379,7 @@ namespace KgdRetinue
                             }
                         }
                         catch { }
-                        Main.Log("[船模] 改装界面缩放归一：" + before.x.ToString("F3")
+                        Main.Log("[船模] 改装界面缩放归一：原始 " + before.ToString("F3") + "　" + before.x.ToString("F3")
                                  + " -> " + go.transform.localScale.x.ToString("F3")
                                  + "（分档高于护卫舰 " + tiers + " 档 → ×" + fit.ToString("F3")
                                  + "，面板倍率 ×" + mult.ToString("F2") + "）  包围盒 " + bounds

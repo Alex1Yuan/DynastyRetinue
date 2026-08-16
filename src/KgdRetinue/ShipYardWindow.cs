@@ -140,7 +140,7 @@ namespace KgdRetinue
                 bool isCurrent = string.Equals(StarshipViewTool.CurrentPrefab, m.PrefabAssetId,
                                                StringComparison.OrdinalIgnoreCase);
                 int price = ShipDialog.PriceTo(o.Tier);
-                bool afford = ShipDialog.Scrap() >= price;
+                bool afford = price <= 0 || ShipDialog.Scrap() >= price;
 
                 GUILayout.BeginHorizontal();
                 GUILayout.Label((isCurrent ? "▶ " : "   ") + m.Hull
@@ -158,7 +158,7 @@ namespace KgdRetinue
                 }
                 else
                 {
-                    GUILayout.Label(price == 0 ? "无需补价" : price + " 废料", GUILayout.Width(110));
+                    GUILayout.Label(ShipDialog.PriceLabel(o.Tier), GUILayout.Width(110));
                     GUI.enabled = afford;
                     if (GUILayout.Button(afford ? "改装" : "废料不足", GUILayout.Width(90)))
                     {
