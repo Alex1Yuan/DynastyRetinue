@@ -41,8 +41,6 @@
             ],
             "e0e76a258d844385a16c9dc602caa316",
             [
-              "c1c07d80309c47de99b055ba9eb43a07",
-              "e84349dae8bb4a818fa4473ce32dcd9a",
               "8b13aef5103a4719980774c0d4a12506",
               "1fede9d9621f437c92832e239426bbcf"
             ],
@@ -67,7 +65,9 @@
               "7e2b91b8cc944f4c951fb2058fcb2f22",
               "fa121ed0f18c4017a53c7adb6036a552",
               "fe6060602c6d4b71be16808f05368242"
-            ]
+            ],
+            "6dea12d77d1f4cb6a5797439f4a2fb7c|68619c5a70e04c54b250e2307b548629|c22406ff733b403ea8b4b4b78c47cda9",
+            "66b4604570e9409792bce6d8d5e4a676|4733a2e3bce3437a890d98ed499570b4|ccc03cf23d0e4681a7bedf3d2c14f22c"
           ],
           "_unit注": "TreasureWorld_Arbites_ShieldNShotgun：自带真盾牌+盾击能力+法务部重甲，比原 pregen 更贴「铁壁」；0 个 ApplyCareerPath",
           "_armor注": "雕血师 85/12 击杀回血10% +30力量 — 换掉人类拥护者(效果要求队伍无异形,你有伊瑞莉特,条件不满足)"
@@ -537,7 +537,7 @@
       "gearT3": [
         "d891b6e2ca284b32aa5cfeafb07bdd29",
         "7f57ba5ee2cc4fc7bcdc9a9ededc1fb4",
-        "99d54e96fa724292890f41d29246159c",
+        "3f677383da874ab1ba5c8e106cfa9c72|ea60e97cfbe14231b8fdb8e1702b5f70|35844167264c40449ef10a89d7eb63d5|99d54e96fa724292890f41d29246159c",
         "3e4dbb7086c74e3fb6e80eded7945816",
         "470ac26be1d44baaa85bb01c45783ead",
         "26ee92e2e0884b5c9f535197f0790071",
