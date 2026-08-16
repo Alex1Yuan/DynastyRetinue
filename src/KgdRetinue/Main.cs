@@ -362,6 +362,7 @@ namespace KgdRetinue
             }
             if (GUILayout.Button("还原原版船模", GUILayout.Width(140))) StarshipViewTool.RevertAll();
             if (GUILayout.Button("挂点诊断", GUILayout.Width(110))) ShipSlotProbe.Dump();
+            if (GUILayout.Button("挂点几何诊断", GUILayout.Width(130))) ShipSlotGeometryProbe.Dump();
             Settings.ShipMountFallback = GUILayout.Toggle(Settings.ShipMountFallback,
                 "换船模后自动补上缺失的武器挂点（修「光矛/鱼雷在虚空开火」）");
             GUILayout.BeginHorizontal();
