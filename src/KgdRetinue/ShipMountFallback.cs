@@ -142,6 +142,7 @@ namespace KgdRetinue
             // ---- 现有挂点普查 ----
             var have = new System.Collections.Generic.HashSet<string>();
             Transform dorsal = null, anyT = null;
+            float? dorsalLocalY = null;
             float pxSum = 0f, pySum = 0f, sxSum = 0f, sySum = 0f;
             int pN = 0, sN = 0;
             float zMin = float.MaxValue, zMax = float.MinValue;
@@ -153,9 +154,9 @@ namespace KgdRetinue
                 string ty = v.ToString();
                 have.Add(ty);
                 if (anyT == null) anyT = c.transform;
-                if (ty == "Dorsal") dorsal = c.transform;
 
                 Vector3 l = root.InverseTransformPoint(c.transform.position);
+                if (ty == "Dorsal") { dorsal = c.transform; dorsalLocalY = l.y; }
                 if (l.z < zMin) zMin = l.z;
                 if (l.z > zMax) zMax = l.z;
                 if (ty == "Port")           { pxSum += l.x; pySum += l.y; pN++; }
@@ -188,15 +189,26 @@ namespace KgdRetinue
             Bounds bb; bool hasBounds = HullBoundsLocal(view, root, out bb);
             if (hasBounds) hullLenZ = bb.size.z;
 
-            // 船体中线：用左右舷挂点反推，而不是 b.center ——
-            // 高耸的舰桥/天线会把 center.y 拉高，炮口会顶到船体上方的空气里
+            // 船体中线 X：用左右舷挂点反推（它们本来就骑在中线两侧）
             float cx = (pN > 0 && sN > 0) ? (pxSum / pN + sxSum / sN) * 0.5f : (hasBounds ? bb.center.x : 0f);
-            float cy = (pN > 0 && sN > 0) ? (pySum / pN + sySum / sN) * 0.5f : (hasBounds ? bb.center.y : 0f);
+
+            // ★ 高度 Y 用**船脊挂点**，不是左右舷的平均高度 ★
+            // 左右舷炮组在船体腰线上，而船艏最前端往往只有一根细撞角 ——
+            // "腰线高度 + 最前端" 正好落在撞角上方的空隙里（Gothic 实测就是这样：
+            // 包围盒 (2.1, 2.5, 6.5)，算出来 y=0.05，炮飘在船头下方的虚空）。
+            // 船脊是美术手工摆在船体**顶部**的真实点，拿它当高度基准，
+            // 炮塔就落在上层船艏的建筑上，而不是空气里。
+            float cy;
+            if (dorsalLocalY.HasValue) cy = dorsalLocalY.Value;
+            else if (pN > 0 && sN > 0)  cy = (pySum / pN + sySum / sN) * 0.5f;
+            else                        cy = hasBounds ? bb.center.y : 0f;
 
             if (axisOk && hasBounds)
             {
-                prowLocal = new Vector3(cx, cy, bb.max.z - bb.size.z * 0.04f);
-                how = "L1 包围盒(" + bb.size.ToString("F1") + ") + 舷炮中线";
+                // 往回收 12% 而不是 4%：船艏最前端常常是细撞角/桅杆，
+                // 贴着 max.z 摆会挂在实体之外。收到实体船艏上更稳。
+                prowLocal = new Vector3(cx, cy, bb.max.z - bb.size.z * 0.12f);
+                how = "L1 包围盒(" + bb.size.ToString("F1") + ") + 船脊高度";
             }
             else if (axisOk && zMax > zMin)
             {
@@ -212,13 +224,16 @@ namespace KgdRetinue
                     + (axisOk ? "（拿不到船体包围盒）" : "（★轴向闸门未通过：" + axisWhy + "★）");
             }
 
-            // 面板微调：沿 root 的 +Z，以船体 z 向长度为单位。默认 0。
+            // 面板微调：沿 root 的 +Z / +Y，以船体对应方向的长度为单位。默认都是 0。
             int pct = Main.Settings.ShipProwOffsetPct;
             if (pct != 0)
             {
                 float unit = hullLenZ > 0f ? hullLenZ : (zMax > zMin ? zMax - zMin : 0f);
                 prowLocal.z += unit * pct / 100f;
             }
+            int upPct = Main.Settings.ShipProwUpPct;
+            if (upPct != 0 && hasBounds)
+                prowLocal.y += bb.size.y * upPct / 100f;
 
             int added = 0;
             var names = new System.Collections.Generic.List<string>();

@@ -392,9 +392,12 @@ namespace KgdRetinue
             Settings.ShipMountFallback = GUILayout.Toggle(Settings.ShipMountFallback,
                 "换船模后自动补上缺失的武器挂点（修「光矛/鱼雷在虚空开火」）");
             GUILayout.BeginHorizontal();
-            GUILayout.Label("舰首挂点前推", GUILayout.Width(130));
-            Settings.ShipProwOffsetPct = (int)GUILayout.HorizontalSlider(Settings.ShipProwOffsetPct, -50f, 50f, GUILayout.Width(140));
-            GUILayout.Label(Settings.ShipProwOffsetPct + "%", GUILayout.Width(46));
+            GUILayout.Label("舰首挂点前后", GUILayout.Width(100));
+            Settings.ShipProwOffsetPct = (int)GUILayout.HorizontalSlider(Settings.ShipProwOffsetPct, -50f, 50f, GUILayout.Width(130));
+            GUILayout.Label(Settings.ShipProwOffsetPct + "%", GUILayout.Width(42));
+            GUILayout.Label("上下", GUILayout.Width(40));
+            Settings.ShipProwUpPct = (int)GUILayout.HorizontalSlider(Settings.ShipProwUpPct, -60f, 60f, GUILayout.Width(130));
+            GUILayout.Label(Settings.ShipProwUpPct + "%", GUILayout.Width(42));
             GUILayout.EndHorizontal();
             GUILayout.Label("<color=#aaaaaa>0% = 用算出来的船艏位置。合成挂点挂在 StarshipView 下、旋转归零，"
                           + "坐标系的 +Z=船艏 有实据（StarshipFxHitMask 按 mesh.z 分前后舱室）。"
@@ -782,6 +785,8 @@ namespace KgdRetinue
         /// <summary>合成的 Prow 挂点相对船脊往前推多少（占船体最长边的百分比）。
         /// 默认 0 = 纯船脊位置 —— 船体 prefab 的朝向轴我没有实据，猜错会从船尾开火。</summary>
         public int ShipProwOffsetPct = 0;
+        /// <summary>合成的 Prow 挂点相对船脊高度再抬多少（占船体 y 向高度的百分比）。</summary>
+        public int ShipProwUpPct = 0;
         // 卫兵杀敌同时也给卫队池加一份（不动玩家那份）
         public bool GuardKillFeedsOwnPool = true;
         // 每次区域加载按当前阶位补升级 —— 卫兵"跟久了自己成长"
