@@ -71,8 +71,15 @@ namespace KgdRetinue
         }
         public static PlanAudit LastAudit = new PlanAudit();
 
-        public static ChainProbe.Archetype[] All
-        {
+        /// <summary>
+        /// 卫兵的人名池（archetypes.json 根级 guardNamePool，五条线共用）。
+        /// 招募时从里面挑一个**当前没人用**的，之后跟这名卫兵一辈子；
+        /// 晋升只换军衔前缀，人名不动。死了/遣散了这个名字就重新可用 ——
+        /// 那是刻意的：这个人没了，名字可以有新人继承。
+        /// </summary>
+        public static string[] GuardNamePool;
+
+        public static ChainProbe.Archetype[] All        {
             get
             {
                 if (!_tried) { _tried = true; _loaded = LoadTemplate(); }
@@ -99,6 +106,10 @@ namespace KgdRetinue
                 var root = Newtonsoft.Json.Linq.JObject.Parse(json);
                 var arr = root["archetypes"] as Newtonsoft.Json.Linq.JArray;
                 if (arr == null || arr.Count == 0) { Main.LogError("archetypes.json 里没有 archetypes 数组，回退默认。"); return null; }
+
+                // 卫兵的人名池（根级，五条线共用）。取不到就留空，ApplyName 会退回编号式命名。
+                try { GuardNamePool = ReadGuidList(root["guardNamePool"]); }
+                catch { GuardNamePool = null; }
 
                 var list = new List<ChainProbe.Archetype>();
                 foreach (var item in arr)

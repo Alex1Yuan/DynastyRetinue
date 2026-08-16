@@ -373,59 +373,100 @@ namespace KgdRetinue
                 return;
             }
 
-            // ---- 普通卫兵：按阶位取名字 ----
-            // 分型可以在 archetypes.json 里配 guardNames（三档，T1/T2/T3）；
-            // 没配就退回旧的「前缀·分型名 编号」。
-            string baseName = TierBaseName(arch, g);
+            // ---- 普通卫兵：<军衔>·<人名> ----
+            // 军衔按卫兵自己的等级取（archetypes.json 的 guardNames，三档）；
+            // 人名招募时从根级 guardNamePool 里挑一个当前没人用的，之后跟他一辈子。
+            // 晋升只换军衔 —— 「近卫兵·凯尔顿」升成「近卫长·凯尔顿」，还是同一个人。
+            // 死了或遣散了，那个人名重新可用：这个人没了，名字可以有新人继承。
+            string rank = TierRank(arch, g);
 
-            // ★升阶要换名，但编号必须保留★
-            // 旧实现是「有名字就直接 return」，那样卫兵会一辈子叫 T1 的称呼。
-            // 这里的判据：现有名字的**基名**是本分型三档中的某一档 ⇒ 是我们起的，
-            // 可以安全改写；否则认为玩家手动改过，一个字都不动。
             string cur = d.CustomName;
             if (!string.IsNullOrEmpty(cur))
             {
-                int num;
-                string curBase = SplitTrailingNumber(cur, out num);
-                if (curBase == baseName) return;                    // 已经是当前档，不动
-                if (IsOurGuardName(arch, curBase))
+                string curRank, person;
+                SplitRankPerson(cur, out curRank, out person);
+
+                if (curRank == rank) return;                        // 已经是当前军衔，不动
+                if (IsOurRank(arch, curRank) && !string.IsNullOrEmpty(person))
                 {
-                    string renamed = num > 0 ? baseName + " " + num : baseName;
+                    string renamed = rank + SEP + person;
                     d.SetName(renamed);
-                    Main.Log("  升阶改名: " + cur + " -> " + renamed);
+                    Main.Log("  晋升: " + cur + " -> " + renamed);
                     return;
                 }
-                return;                                             // 玩家自己改的，尊重它
+                // 认不出来的名字 —— 可能是玩家手动改的，也可能是旧版本的「前缀·分型 编号」。
+                // 旧版格式我们认得出（IsOurRank 会兜住 GuardNamePrefix），认不出的一律不动。
+                return;
             }
 
-            // 扫一遍已有编号取最大值。★按"是不是我们起的名"来认，不再按前缀匹配★
-            // 前缀匹配在换成 guardNames 之后就失效了（名字不再以 GuardNamePrefix 开头）。
-            int max = 0;
-            foreach (var other in RetinueRegistry.All())
-            {
-                if (ReferenceEquals(other, g)) continue;
-                string n = null;
-                try { var od = other.GetOptional<PartUnitDescription>(); if (od != null) n = od.CustomName; } catch { }
-                if (string.IsNullOrEmpty(n)) continue;
-                int v;
-                SplitTrailingNumber(n, out v);
-                if (v > max) max = v;
-            }
-
-            string name = baseName + " " + (max + 1);
+            string name = rank + SEP + PickPersonName(g);
             d.SetName(name);
             Main.Log("  改名: " + (g.Blueprint != null ? g.Blueprint.CharacterName : "?") + " -> " + name);
         }
 
-        /// <summary>该卫兵当前阶位对应的基名（不含编号）。</summary>
-        private static string TierBaseName(ChainProbe.Archetype arch, BaseUnitEntity g)
+        /// <summary>军衔和人名之间的分隔符。用「·」和精英名（如「铁壁 · 先锋队长」）保持一致观感。</summary>
+        private const string SEP = "·";
+
+        /// <summary>
+        /// 从池子里挑一个**当前没有别的卫兵在用**的人名。
+        /// 池子空或全被占：退回编号式，保证一定有个能区分的名字。
+        /// </summary>
+        private static string PickPersonName(BaseUnitEntity self)
         {
-            string an = (arch != null && !string.IsNullOrEmpty(arch.Name)) ? arch.Name : "";
+            var pool = Archetypes.GuardNamePool;
+
+            var used = new System.Collections.Generic.HashSet<string>();
+            int maxNum = 0;
+            foreach (var other in RetinueRegistry.All())
+            {
+                if (ReferenceEquals(other, self)) continue;
+                string n = null;
+                try { var od = other.GetOptional<PartUnitDescription>(); if (od != null) n = od.CustomName; } catch { }
+                if (string.IsNullOrEmpty(n)) continue;
+                string r, p;
+                SplitRankPerson(n, out r, out p);
+                if (!string.IsNullOrEmpty(p))
+                {
+                    used.Add(p);
+                    int v;
+                    SplitTrailingNumber(p, out v);
+                    if (v > maxNum) maxNum = v;
+                }
+            }
+
+            if (pool != null && pool.Length > 0)
+            {
+                // 从一个随机起点开始扫，避免每次都从池头拿、名字总是那几个
+                int start = 0;
+                try { start = UnityEngine.Random.Range(0, pool.Length); } catch { }
+                for (int i = 0; i < pool.Length; i++)
+                {
+                    var cand = pool[(start + i) % pool.Length];
+                    if (!string.IsNullOrEmpty(cand) && !used.Contains(cand)) return cand;
+                }
+            }
+            return (maxNum + 1).ToString();      // 池子用光了才退回编号
+        }
+
+        /// <summary>拆「军衔·人名」。没有分隔符时整串当军衔、人名为空。</summary>
+        private static void SplitRankPerson(string s, out string rank, out string person)
+        {
+            rank = s; person = null;
+            if (string.IsNullOrEmpty(s)) return;
+            int i = s.IndexOf(SEP, StringComparison.Ordinal);
+            if (i <= 0) return;
+            rank = s.Substring(0, i);
+            person = s.Substring(i + SEP.Length);
+        }
+
+        /// <summary>该卫兵当前阶位对应的军衔。</summary>
+        private static string TierRank(ChainProbe.Archetype arch, BaseUnitEntity g)
+        {
             try
             {
                 if (arch != null && arch.GuardNames != null && arch.GuardNames.Length > 0)
                 {
-                    // 阶位按**卫兵自己的等级**推，不是玩家的 —— 名字该跟着它自己的成长走
+                    // 阶位按**卫兵自己的等级**推，不是玩家的 —— 军衔该跟着他自己的成长走
                     int lv = g.Progression != null ? g.Progression.CharacterLevel : 1;
                     int t = lv >= 36 ? 3 : (lv >= 16 ? 2 : 1);
                     int idx = t - 1;
@@ -438,24 +479,25 @@ namespace KgdRetinue
 
             string prefix = Main.Settings.GuardNamePrefix;
             if (string.IsNullOrEmpty(prefix)) prefix = "卫兵";
-            return string.IsNullOrEmpty(an) ? prefix : prefix + "·" + an;
+            string an = (arch != null && !string.IsNullOrEmpty(arch.Name)) ? arch.Name : "";
+            return string.IsNullOrEmpty(an) ? prefix : prefix + SEP + an;
         }
 
-        /// <summary>这个基名是不是本分型三档里的某一档（或旧的前缀式命名）。</summary>
-        private static bool IsOurGuardName(ChainProbe.Archetype arch, string baseName)
+        /// <summary>这个军衔是不是本分型三档之一（或旧版的前缀式命名）。</summary>
+        private static bool IsOurRank(ChainProbe.Archetype arch, string rank)
         {
-            if (string.IsNullOrEmpty(baseName)) return false;
+            if (string.IsNullOrEmpty(rank)) return false;
             try
             {
                 if (arch != null && arch.GuardNames != null)
                     foreach (var s in arch.GuardNames)
-                        if (s == baseName) return true;
+                        if (s == rank) return true;
             }
             catch { }
             try
             {
                 string prefix = Main.Settings.GuardNamePrefix;
-                if (!string.IsNullOrEmpty(prefix) && baseName.StartsWith(prefix, StringComparison.Ordinal))
+                if (!string.IsNullOrEmpty(prefix) && rank.StartsWith(prefix, StringComparison.Ordinal))
                     return true;
             }
             catch { }
