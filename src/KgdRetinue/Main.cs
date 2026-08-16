@@ -867,6 +867,10 @@ namespace KgdRetinue
         /// 默认 0.043 = Dictator 实测 (2.94-2.68)/5.99。
         /// 不用包围盒最前端：Gothic 的包围盒比实体船头多出 0.56，那是一根细撞角。</summary>
         public float ProwZBackRatio = 0.043f;
+        /// <summary>撞角让位系数：舰首挂点再沿轴向退开「撞角外伸长度 × 本系数」。
+        /// 撞角外伸 = 包围盒最前 − 命中遮罩最前（Gothic 0.56 / Dictator 0.06）。
+        /// 1.0 = 完全让开撞角；0 = 不让。每条船自己量，不是固定偏移。</summary>
+        public float ProwRamClearance = 1.0f;
         public string ProwLearnedFrom = "";
         /// <summary>关掉就退回公式（公式猜错过六版，只作退路）。</summary>
         public bool ShipProwUseLearned = true;

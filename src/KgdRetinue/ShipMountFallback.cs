@@ -143,9 +143,20 @@ namespace KgdRetinue
             if (!dorsalY.HasValue) return false;
             float span = dorsalY.Value - broadsideY;
             if (Mathf.Abs(span) < 1e-3f) return false;
+            // ★撞角让位★ 再沿轴向退开"撞角外伸的长度"。
+            // 撞角外伸 = 包围盒最前 - 实体船头（命中遮罩最前）：
+            //     Gothic   3.76 - 3.20 = 0.56   ← 长撞角，退得多
+            //     Dictator 3.00 - 2.94 = 0.06   ← 钝头，几乎不退
+            // 这个量是**每条船自己量出来的**，不是我又定一个魔法数：
+            // 撞角越长的船，炮越往后让，正好是玩家要的"离撞角有一些距离"。
+            //
+            // 自检：套回 Dictator 得 2.94 - 0.26 - 0.06 = 2.62，
+            // 而它原生 prow_01 在 2.68 —— 差 0.06。也就是说这条公式在
+            // **我们知道答案的那条船上几乎复现了答案**，不是无根据的偏移。
+            float ram = Mathf.Max(0f, bb.max.z - frontZ) * st.ProwRamClearance;
             p = new Vector3(0f,
                             broadsideY - st.ProwDropRatio * span,
-                            frontZ - st.ProwZBackRatio * bb.size.z);
+                            frontZ - st.ProwZBackRatio * bb.size.z - ram);
             return true;
         }
 
@@ -379,7 +390,8 @@ namespace KgdRetinue
                         : "Dictator 实测默认值")
                     + "　下沉 " + Main.Settings.ProwDropRatio.ToString("F3")
                     + "　后收 " + Main.Settings.ProwZBackRatio.ToString("F3")
-                    + "　前端基准 " + frontZ.ToString("F2") + (hasFront ? "(命中遮罩)" : "(包围盒)") + "）";
+                    + "　前端基准 " + frontZ.ToString("F2") + (hasFront ? "(命中遮罩)" : "(包围盒)")
+                    + "　撞角让位 " + Mathf.Max(0f, bb.max.z - frontZ).ToString("F2") + "）";
             }
             else if (axisOk && hasBounds)
             {
