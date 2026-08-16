@@ -83,6 +83,20 @@ namespace KgdRetinue
             return _avatarField != null && _create != null;
         }
 
+        private static string _lastWhy;
+
+        /// <summary>
+        /// 记录"这次为什么没重拍"。原来四个 return 全是静默的，
+        /// 日志里「没重拍」和「重拍了」长得一模一样，排查时完全瞎。
+        /// 同一个原因只报一次，避免每帧刷屏。
+        /// </summary>
+        private static void Why(string reason)
+        {
+            if (reason == _lastWhy) return;
+            _lastWhy = reason;
+            Main.Log("[展示房间] 本次未重拍：" + reason);
+        }
+
         /// <summary>拿当前活着的 ShipDollRoom（没开界面返回 null）。</summary>
         private static object CurrentRoom()
         {
@@ -111,18 +125,19 @@ namespace KgdRetinue
         {
             try
             {
-                if (!Main.Enabled || Main.Settings == null || !Main.Settings.ShipDollResnap) return;
-                if (!Resolve()) return;
+                if (!Main.Enabled || Main.Settings == null || !Main.Settings.ShipDollResnap) { Why("开关关着"); return; }
+                if (!Resolve()) { Why("反射解析失败"); return; }
 
                 var room = CurrentRoom();
-                if (room == null || (room is UnityEngine.Object && !(UnityEngine.Object)room)) return;
+                if (room == null || (room is UnityEngine.Object && !(UnityEngine.Object)room))
+                { Why("拿不到 ShipDollRoom（改装界面没开？）"); return; }
 
                 var ship = Game.Instance != null && Game.Instance.Player != null
                          ? Game.Instance.Player.PlayerShip : null;
-                if (ship == null) return;
+                if (ship == null) { Why("拿不到玩家座舰"); return; }
 
                 var old = _avatarField.GetValue(room) as GameObject;
-                if (old == null) return;      // 界面没开 ⇒ 没有快照要重拍
+                if (old == null) { Why("m_SimpleAvatar 为空 —— 改装界面没开，没有快照要重拍"); return; }
 
                 // BaseRenderer 不用在这里补：StarshipViewTool.HealBaseRenderer 本身就是
                 // ShipDollRoom.CreateSimpleAvatar 的 Prefix，下面 Invoke 会连它一起触发。
@@ -132,6 +147,22 @@ namespace KgdRetinue
                 UnityEngine.Object.Destroy(old);
                 _avatarField.SetValue(room, null);
                 _create.Invoke(room, new object[] { ship });
+
+                // ★★★ 必须自己刷图层，否则重拍出来的船是隐形的 ★★★
+                // UpdateStarshipRenderers() 干两件事（ShipDollRoom.cs:99-120）：
+                //     obj.enabled = true;  obj.gameObject.layer = 15;   // 15 = DollRoom 层
+                // 而它**全树只有两个调用点**，都在 StarshipView.cs:118/137，
+                // 也就是 SetAllEquipment 的**末尾**。我们的重拍是那个方法的 Postfix + 延两帧，
+                // :118 早就跑完了 ⇒ 新 avatar 停在世界层、renderer 也没启用 ⇒ 改装界面一片空。
+                // 这个洞很隐蔽：旧快照是被 vanilla 刷过层的，所以"没重拍"反而看得见船，
+                // "重拍了"却什么都没有 —— 症状比不修还糟。
+                try
+                {
+                    var upd = AccessTools.Method(_roomType, "UpdateStarshipRenderers");
+                    if (upd != null) upd.Invoke(room, null);
+                    else Main.LogError("[展示房间] 找不到 UpdateStarshipRenderers —— 重拍出来的船可能不可见。");
+                }
+                catch (Exception e) { Main.LogError("[展示房间] 刷图层失败: " + e.Message); }
 
                 if (!_explained)
                 {
