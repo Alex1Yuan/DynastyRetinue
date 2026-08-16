@@ -857,6 +857,10 @@ namespace KgdRetinue
         /// <summary>换船模装好武器后，自动重拍改装界面里那条船。
         /// ShipDollRoom 的展示模型是一次性哑拷贝，不自动跟新武器美术。</summary>
         public bool ShipDollResnap = true;
+        /// <summary>在 NPC 对话里加「船坞改装」两条选项（用废料换巡洋 / 大巡）。</summary>
+        public bool ShipDialogEntry = true;
+        public int ShipPriceCruiser = 500;
+        public int ShipPriceGrand   = 1000;
 
         public bool  ProwLearned;
         /// <summary>舰首比舷炮低多少，以「舷炮→船脊」的高度差为 1 单位。

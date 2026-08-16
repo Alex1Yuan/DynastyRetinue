@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Reflection;
 using HarmonyLib;
@@ -30,6 +30,45 @@ namespace KgdRetinue
     /// </summary>
     public static class RecruitDialog
     {
+        /// <summary>
+        /// 一条注入式对话选项。v0.38.0 把这个类从"只有招募一条"泛化成多条 ——
+        /// 舰船升级要复用同一套机制，而这套机制里每个字段为什么要非空、
+        /// 为什么不能走原版 SelectAnswer，都是逐个崩溃换来的（见下面各处长注释）。
+        /// **复制一份等于让那些知识分叉**，所以宁可泛化也不复制。
+        /// </summary>
+        public sealed class Entry
+        {
+            public string Guid;
+            public string TextKey;
+            public string Text;
+            /// <summary>玩家选中后要做的事。★绝不能在 answer 的 OnSelect 里做★</summary>
+            public Action OnPicked;
+            /// <summary>返回 false 就不注入（面板开关）。</summary>
+            public Func<bool> Enabled;
+        }
+
+        private static readonly List<Entry> Entries = new List<Entry>();
+
+        /// <summary>把内置的几条注册进去。幂等，注册表按 guid 去重。</summary>
+        public static void EnsureBuiltins()
+        {
+            Register(new Entry {
+                Guid     = AnswerGuid,
+                TextKey  = TextKey,
+                Text     = TextValue,
+                Enabled  = delegate { return Main.Settings != null && Main.Settings.DialogRecruitEntry; },
+                OnPicked = delegate { Main.OpenRecruitUI(null); },
+            });
+            ShipDialog.RegisterAll();
+        }
+
+        public static void Register(Entry e)
+        {
+            if (e == null || string.IsNullOrEmpty(e.Guid)) return;
+            foreach (var x in Entries) if (x.Guid == e.Guid) return;
+            Entries.Add(e);
+        }
+
         /// <summary>固定 GUID —— 不随机生成，保证跨版本稳定、便于排查。</summary>
         public const string AnswerGuid = "kgd00001000010000100001000010001";
         /// <summary>本地化 key。文案不走反射写字段（LocalizedString 根本没有缓存字段，
@@ -80,28 +119,34 @@ namespace KgdRetinue
             // 形参名须与原方法一致（key / text）；out 在补丁里用 ref 接是 Harmony 的正确写法。
             private static bool Prefix(string key, ref string text, ref bool __result)
             {
-                if (key != TextKey) return true;
-                text = TextValue;
+                if (string.IsNullOrEmpty(key)) return true;
+                string val = null;
+                foreach (var e in Entries) if (e.TextKey == key) { val = e.Text; break; }
+                if (val == null) return true;
+                text = val;
                 __result = true;
                 return false;
             }
         }
 
-        private static BlueprintAnswer _answer;
+        private static readonly Dictionary<string, BlueprintAnswer> _answers =
+            new Dictionary<string, BlueprintAnswer>(StringComparer.Ordinal);
         private static readonly HashSet<string> _injected = new HashSet<string>(StringComparer.Ordinal);
 
         public static void ResetForNewArea() { _injected.Clear(); }
 
         /// <summary>构造并注册我们的 answer（只做一次）。</summary>
-        private static BlueprintAnswer EnsureAnswer()
+        private static BlueprintAnswer EnsureAnswer(Entry entry)
         {
-            if (_answer != null) return _answer;
+            BlueprintAnswer cached;
+            if (_answers.TryGetValue(entry.Guid, out cached) && cached != null) return cached;
+            BlueprintAnswer _answer = null;
             try
             {
                 // SimpleBlueprint 是普通类不是 ScriptableObject，AssetGuid 就是 string
                 var a = new BlueprintAnswer();
-                a.name = "Kgd_RecruitAnswer";
-                a.AssetGuid = AnswerGuid;
+                a.name = "Kgd_Answer_" + entry.TextKey;
+                a.AssetGuid = entry.Guid;
 
                 // ══════════════════════════════════════════════════════════════════
                 // ★★★ 头号 bug 修复点 ★★★
@@ -172,7 +217,7 @@ namespace KgdRetinue
                 a.DebugMode             = false;
                 a.AddToHistory          = false;   // 纵深防御：Prefix 已跳过 AddHistoryEntry，这里再关一道
 
-                SetText(a);
+                SetText(a, entry.TextKey);
 
                 // ── 自检：只做纯空值断言，★绝不调用 CanShow()/CanSelect()★ ──
                 // 理由：EnsureAnswer 在**区域加载时**执行（不在对话中）。
@@ -190,9 +235,10 @@ namespace KgdRetinue
                     return null;
                 }
 
-                ResourcesLibrary.BlueprintsCache.AddCachedBlueprint(AnswerGuid, a);
+                ResourcesLibrary.BlueprintsCache.AddCachedBlueprint(entry.Guid, a);
                 _answer = a;
-                Main.Log("[招募对话] answer 已注册 " + AnswerGuid);
+                _answers[entry.Guid] = a;
+                Main.Log("[对话注入] answer 已注册 " + entry.Guid + "  「" + entry.Text + "」");
             }
             catch (Exception e) { Main.LogError("[招募对话] 构造 answer 失败: " + e); }
             return _answer;
@@ -203,7 +249,7 @@ namespace KgdRetinue
         /// LocalizedString 没有任何缓存字段，取值时每次都去 LocalizationManager.CurrentPack 查表，
         /// 所以这里只设 Key，真正的文字由 LocalizationPatch 在查表函数上拦下来回填。
         /// </summary>
-        private static void SetText(BlueprintAnswer a)
+        private static void SetText(BlueprintAnswer a, string textKey)
         {
             try
             {
@@ -217,9 +263,9 @@ namespace KgdRetinue
                     return;
                 }
                 var ls = new LocalizedString();
-                ls.Key = TextKey;
+                ls.Key = textKey;
                 f.SetValue(a, ls);
-                Main.Log("[招募对话] Text.Key 已设为 " + TextKey);
+                Main.Log("[对话注入] Text.Key 已设为 " + textKey);
             }
             catch (Exception e) { Main.LogError("[招募对话] 设置文案失败: " + e); }
         }
@@ -230,9 +276,21 @@ namespace KgdRetinue
             int n = 0;
             try
             {
-                if (!Main.Enabled || Main.Settings == null || !Main.Settings.DialogRecruitEntry) return 0;
-                var ans = EnsureAnswer();
-                if (ans == null) return 0;
+                if (!Main.Enabled || Main.Settings == null) return 0;
+                EnsureBuiltins();
+
+                // 先把这一轮要注入的选项算出来。全部被开关关掉就直接返回，
+                // 免得白扫一遍 AllBaseUnits。
+                var active = new List<Entry>();
+                foreach (var e in Entries)
+                {
+                    bool on = true;
+                    try { if (e.Enabled != null) on = e.Enabled(); } catch { on = false; }
+                    if (!on) continue;
+                    if (EnsureAnswer(e) == null) continue;
+                    active.Add(e);
+                }
+                if (active.Count == 0) return 0;
 
                 var game = Game.Instance;
                 if (game == null || game.State == null) return 0;
@@ -281,7 +339,7 @@ namespace KgdRetinue
                     if (dlg == null) { if (verbose) Main.Log("[招募对话] " + bp + " 身上找不到对话（交互数 " + InteractionCount(u) + "）"); continue; }
                     if (verbose) Main.Log("[招募对话] " + bp + " 的对话 = " + dlg.name);
 
-                    n += InjectInto(dlg, verbose);
+                    foreach (var e in active) n += InjectInto(dlg, e, verbose);
                 }
                 if (verbose && n == 0) Main.Log("[招募对话] 没插入任何选项（关键字: " + Main.Settings.RecruitNpcKeys + "）");
             }
@@ -289,7 +347,7 @@ namespace KgdRetinue
             return n;
         }
 
-        private static int InjectInto(BlueprintDialog dlg, bool verbose)
+        private static int InjectInto(BlueprintDialog dlg, Entry entry, bool verbose)
         {
             int n = 0;
             try
@@ -328,17 +386,17 @@ namespace KgdRetinue
                 if (best == null)
                 {
                     if (verbose) Main.Log("[招募对话] " + dlg.name + " 里没有 AnswersList，退回按 cue 找枢纽");
-                    return InjectIntoCueHub(dlg, cues, verbose);
+                    return InjectIntoCueHub(dlg, cues, entry, verbose);
                 }
 
                 {
-                    string key = dlg.name + "/list/" + best.name;
+                    string key = dlg.name + "/list/" + best.name + "|" + entry.Guid;
                     if (_injected.Contains(key)) return 0;
 
                     bool dup = false;
                     foreach (var ar in best.Answers)
                     {
-                        try { if (ar != null && ar.Get() != null && ar.Get().AssetGuid == AnswerGuid) { dup = true; break; } }
+                        try { if (ar != null && ar.Get() != null && ar.Get().AssetGuid == entry.Guid) { dup = true; break; } }
                         catch { }
                     }
                     if (!dup)
@@ -346,7 +404,7 @@ namespace KgdRetinue
                         var r = new BlueprintAnswerBaseReference();
                         var gf = typeof(BlueprintReferenceBase).GetField("guid",
                             BindingFlags.Instance | BindingFlags.NonPublic);
-                        if (gf != null) gf.SetValue(r, AnswerGuid);
+                        if (gf != null) gf.SetValue(r, entry.Guid);
 
                         int at = FindExitIndexInList(best.Answers);
                         if (at < 0 || at > best.Answers.Count) at = best.Answers.Count;
@@ -359,7 +417,7 @@ namespace KgdRetinue
                         // 现在直接跳过 SelectAnswer，NextCue 压根不会被消费。
                         // 指回 vanilla cue 反而有重放台词 / 撞 ShowOnce / 重复 ApplyShiftDialog 的风险。
                         n++;
-                        Main.Log("[招募对话] 已插入到选项列表 " + best.name + "（" + bestWhere + "）"
+                        Main.Log("[对话注入] 「" + entry.Text + "」已插入到选项列表 " + best.name + "（" + bestWhere + "）"
                                  + "  位置 " + at + "/" + best.Answers.Count
                                  + (at < best.Answers.Count - 1 ? "（退出项之前）" : "（末尾）"));
                     }
@@ -371,7 +429,7 @@ namespace KgdRetinue
         }
 
         /// <summary>没有 AnswersList 时的退路：按老办法找 cue 枢纽。</summary>
-        private static int InjectIntoCueHub(BlueprintDialog dlg, List<BlueprintCue> cues, bool verbose)
+        private static int InjectIntoCueHub(BlueprintDialog dlg, List<BlueprintCue> cues, Entry entry, bool verbose)
         {
             int n = 0;
             try
@@ -387,7 +445,7 @@ namespace KgdRetinue
                 if (_injected.Contains(key)) return 0;
                 var r = new BlueprintAnswerBaseReference();
                 var gf = typeof(BlueprintReferenceBase).GetField("guid", BindingFlags.Instance | BindingFlags.NonPublic);
-                if (gf != null) gf.SetValue(r, AnswerGuid);
+                if (gf != null) gf.SetValue(r, entry.Guid);
                 int at = FindExitIndexInList(hub.Answers);
                 if (at < 0 || at > hub.Answers.Count) at = hub.Answers.Count;
                 hub.Answers.Insert(at, r);
@@ -610,7 +668,12 @@ namespace KgdRetinue
 
                     int mine = -1;
                     for (int i = 0; i < list.Count; i++)
-                        if (list[i] != null && list[i].AssetGuid == AnswerGuid) { mine = i; break; }
+                    {
+                        if (list[i] == null) continue;
+                        bool ours = false;
+                        foreach (var e in Entries) if (e.Guid == list[i].AssetGuid) { ours = true; break; }
+                        if (ours) { mine = i; break; }
+                    }
                     if (mine < 0) return;
 
                     int target = -1;
@@ -685,11 +748,14 @@ namespace KgdRetinue
             private static bool Prefix(BlueprintAnswer answer)
             {
                 // 别人的选项：原样放行，零副作用。绝不能在这里加日志（每条对话选项都走这里）。
-                if (answer == null || answer.AssetGuid != AnswerGuid) return true;
+                if (answer == null) return true;
+                Entry entry = null;
+                foreach (var e in Entries) if (e.Guid == answer.AssetGuid) { entry = e; break; }
+                if (entry == null) return true;   // 别人的选项，原样放行
 
                 try
                 {
-                    Main.Log("[招募对话] 玩家选择了征募选项");
+                    Main.Log("[对话注入] 玩家选择了「" + entry.Text + "」");
 
                     var dc = Game.Instance != null ? Game.Instance.DialogController : null;
 
@@ -727,7 +793,8 @@ namespace KgdRetinue
 
                     // StopDialog() 同步派发 IDialogInteractionHandler，且 StopMode(Dialog) 是**延迟生效**的；
                     // 在 SelectAnswer 的 Harmony prefix 里同帧建 UI = 在 EventBus 派发中重入。推迟 2 帧跨过它。
-                    Deferred.NextFrames(2, delegate { Main.OpenRecruitUI(null); });
+                    var act = entry.OnPicked;
+                    if (act != null) Deferred.NextFrames(2, delegate { try { act(); } catch (Exception ex) { Main.LogError("[对话注入] 动作失败: " + ex); } });
                 }
                 catch (Exception e) { Main.LogError("[招募对话] 选择处理失败: " + e); }
 
