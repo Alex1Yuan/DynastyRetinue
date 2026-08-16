@@ -43,6 +43,14 @@ namespace KgdRetinue
             }
         }
 
+        /// <summary>手动触发，无视 flag 和"一次会话只跑一遍"。给【一键全测】用。</summary>
+        public static void ForceRun()
+        {
+            _ran = true;
+            try { Run(); }
+            catch (Exception e) { Main.LogError("[自检] 自身崩了（这本身就是一条失败）: " + e); }
+        }
+
         /// <summary>读档 / 进区域后调一次。幂等 —— 一次会话只跑一遍。</summary>
         public static void RunOnce()
         {

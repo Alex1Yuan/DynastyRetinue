@@ -651,6 +651,18 @@ namespace KgdRetinue
             {
             // ---------- 工具 ----------
             GUILayout.Space(8);
+            // ---------- 一键全测（只在开发模式可见，本区整体已被 DevMode 门住）----------
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("一键全测（只读）", GUILayout.Width(150))) FullTest.RunReadOnly();
+            GUILayout.Label("<color=#aaaaaa>自检 + 装备矩阵 + 状态断言。不动存档、不动你现有的卫兵。</color>");
+            GUILayout.EndHorizontal();
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("一键全测（含破坏性）", GUILayout.Width(170))) FullTest.RunDestructive();
+            GUILayout.Label("<color=#ff8080>额外验死亡规则和卸载流程 —— <b>会清空全部卫兵、把座舰还原成原样</b>。"
+                          + "跑完别存盘，除非你本来就想清空。</color>");
+            GUILayout.EndHorizontal();
+            GUILayout.Space(8);
+
             GUILayout.Label("<b>工具</b>");
             GUILayout.BeginHorizontal();
             if (GUILayout.Button("★ 一键全测 ★", GUILayout.Width(130))) AutoTest.RunAll();
