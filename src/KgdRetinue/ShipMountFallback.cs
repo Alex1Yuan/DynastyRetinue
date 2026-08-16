@@ -205,9 +205,13 @@ namespace KgdRetinue
 
             if (axisOk && hasBounds)
             {
-                // 往回收 12% 而不是 4%：船艏最前端常常是细撞角/桅杆，
-                // 贴着 max.z 摆会挂在实体之外。收到实体船艏上更稳。
-                prowLocal = new Vector3(cx, cy, bb.max.z - bb.size.z * 0.12f);
+                // 往回收 18%。这个数是实测调出来的，不是拍的：
+                //   4%  → 炮飘在撞角上方的虚空里
+                //   12% → 炮塔本体落对了，但底座那块板还探出船艏之外
+                //   18% → 底座贴着船体
+                // 之所以要收这么多，是因为武器美术的几何**从挂点往前长**（炮管朝 +Z），
+                // 挂点在船艏边缘 = 整个炮座悬空。
+                prowLocal = new Vector3(cx, cy, bb.max.z - bb.size.z * 0.18f);
                 how = "L1 包围盒(" + bb.size.ToString("F1") + ") + 船脊高度";
             }
             else if (axisOk && zMax > zMin)
