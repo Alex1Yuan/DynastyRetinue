@@ -156,6 +156,8 @@ namespace KgdRetinue.UI
         private static Transform _archContent;
         private static Transform _unitContent;
         private static TextMeshProUGUI _titleRight;
+        /// <summary>标题下方那条利润因子状态。招募名额由它解锁，每次 Refresh 重画。</summary>
+        private static TextMeshProUGUI _pfLabel;
         private static int _selected = -1;
 
         public static bool IsOpen { get { return _root != null; } }
@@ -245,7 +247,62 @@ namespace KgdRetinue.UI
 
         public static void Toggle() { if (IsOpen) Close(); else Open(); }
 
-        public static void Refresh() { RebuildArchetypes(); RebuildUnits(); }
+        public static void Refresh() { RefreshProfitFactor(); RebuildArchetypes(); RebuildUnits(); }
+
+        /// <summary>
+        /// 重画标题下那条利润因子状态。
+        /// 已解锁的档位标蓝，未解锁的留灰 —— 玩家一眼看到下一档还差多少。
+        /// </summary>
+        private static void RefreshProfitFactor()
+        {
+            if (_pfLabel == null) return;
+            try
+            {
+                if (Main.Settings != null && Main.Settings.UnlockTierLimits)
+                {
+                    _pfLabel.text = "<color=#7ec8ff>已在面板解除全部限制 —— 招募名额不受利润因子约束</color>";
+                    return;
+                }
+                if (Main.Settings != null && !Main.Settings.RecruitUsePfGate)
+                {
+                    _pfLabel.text = "<color=#aaaaaa>招募名额按职业阶位限制（T1=2 / T2=4 / T3=6）。"
+                                  + "想改成按利润因子解锁请到 mod 面板勾选。</color>";
+                    return;
+                }
+
+                int pf = ProfitFactorGate.Current();
+                int un = ProfitFactorGate.Unlocked();
+                int cap = ProfitFactorGate.HardCap();
+                int have = RetinueRegistry.Count;
+                int next = ProfitFactorGate.NextThreshold();
+
+                var sb = new System.Text.StringBuilder();
+                sb.Append("利润因子 <color=#7ec8ff>").Append(pf < 0 ? "?" : pf.ToString()).Append("</color>")
+                  .Append("　名额 <color=#7ec8ff>").Append(have).Append("/").Append(un).Append("</color>")
+                  .Append("（上限 ").Append(cap).Append("）");
+                if (next > 0 && pf >= 0)
+                    sb.Append("　下一名需 <color=#7ec8ff>").Append(next).Append("</color>，还差 ")
+                      .Append(next - pf);
+                else if (pf >= 0)
+                    sb.Append("　已全部解锁");
+
+                // 分级表
+                var th = ProfitFactorGate.Thresholds();
+                if (th.Length > 0)
+                {
+                    sb.Append("　　");
+                    for (int i = 0; i < th.Length; i++)
+                    {
+                        bool got = pf >= th[i];
+                        sb.Append(got ? "<color=#7ec8ff>" : "<color=#7a7a7a>")
+                          .Append(th[i]).Append("</color>");
+                        if (i + 1 < th.Length) sb.Append("<color=#5a5a5a>·</color>");
+                    }
+                }
+                _pfLabel.text = sb.ToString();
+            }
+            catch (Exception e) { Main.LogError("[UI] 利润因子状态刷新失败: " + e.Message); }
+        }
 
         // ------------------------------------------------------------- 骨架搭建
         private static void BuildClickBlocker(Transform parent)
@@ -283,6 +340,13 @@ namespace KgdRetinue.UI
             trt.anchorMin = new Vector2(0f, 1f); trt.anchorMax = new Vector2(1f, 1f);
             trt.pivot = new Vector2(0.5f, 1f);
             trt.offsetMin = new Vector2(32f, -76f); trt.offsetMax = new Vector2(-180f, -20f);
+
+            // 利润因子状态条 —— 招募名额由它解锁，所以放在标题正下方最显眼的位置
+            _pfLabel = MakeLabel(panel.transform, "", 17f, VanillaSkin.Gold, TextAlignmentOptions.Left);
+            RectTransform pfrt = (RectTransform)_pfLabel.transform;
+            pfrt.anchorMin = new Vector2(0f, 1f); pfrt.anchorMax = new Vector2(1f, 1f);
+            pfrt.pivot = new Vector2(0.5f, 1f);
+            pfrt.offsetMin = new Vector2(32f, -92f); pfrt.offsetMax = new Vector2(-180f, -76f);
 
             // 关闭按钮
             Button close = MakeButton(panel.transform, "关闭", 110f, 38f, Close);

@@ -67,73 +67,84 @@ namespace KgdRetinue
             {
                 // ================= 精英卫兵立绘 =================
                 //
-                // ★ v0.25.0 按用户新口径重排 ★
-                //   · 建卡池的脸**可以用**（只在玩家恰好捏了同类主角时撞 1 个）
-                //   · **禁止**用会和玩家经常互动的 NPC（同伴、剧情要角、高台词量角色）
-                //   · **普通卫兵不再给立绘** —— 原来那 6 行 override 已删除，
-                //     它们现在落到解析链第 3 步的 Empty_Portrait（原版正规的"无立绘"图，
-                //     三种尺寸都真实存在，不是破图）。
+                // ★ v0.27.0 —— 按用户口径 + 工作流字节级普查重排 ★
+                //   · 建卡池（CharGenRoot.m_Portraits，实测是 **30** 张不是 32）**可以用**
+                //   · **禁止**高频互动 NPC（cue≥20 / 同伴 / 剧情要角）
+                //   · **普通卫兵不给立绘** —— 那 6 行 override 已删，落到解析链第 3 步的
+                //     Empty_Portrait（原版正规"无立绘"图，三尺寸都在，不是破图）。
+                //     顺带解决了两处「精英与自己手下同脸」。
                 //
-                // ★ 删掉普通卫兵那 6 行顺带解决了两处「精英和自己手下同脸」★
-                //     ArbitesMale      原本 普通狙击卫兵 与 磐石 共用
-                //     ImperialNavyMale 原本 OfficersDeckGuard 与 谕令 共用
-                //   现在这两张脸独归精英。
+                // ★ 这一版最重要的修正：**单位性别** ★
+                // 之前完全没查过性别，结果有两处男脸配女单位。工作串解了 BlueprintUnit 的
+                // blob 布局并用 m_Portrait 已知值自校验；我另外独立核实了两个模型名
+                //（bundle 里 grep 到 BCT_Eldar_Female_Ranger / BCT_Female_Chorda_Psyker）。
                 //
-                // 为什么大部分行没动：这张表本来就是借建卡池的脸建的，
-                // 天然符合新口径。上一轮工作流为了**避开**建卡池而改选高露面 NPC
-                //（赏金猎首→Ruoldo cue=95、谕令→Zacchary_Weisz cue=53），方向恰好反了，未采纳。
-                //
-                // 全部 GUID 已逐个在 ref/bbp/catalog.tsv 核到名字。
+                // 等级：A = cue 0 且非建卡池且无剧情身份 ｜ B = 建卡池 30 张 ｜ C = 低 cue 一次性 NPC
+                // 全部 GUID 已逐个在 ref/bbp/catalog.tsv 核到名字；10 张 Small AssetId 互不相同。
 
-                // 铁壁·先锋队长  TreasureWorld_Arbites_ShieldNShotgun -> ArbitesHelmetMale
-                //   法务部全盔，与盾+霰弹枪的暴动装扮相符。建卡池。
-                { "4a02a1bee6f84892b3cb7a3f8c818c69", "53f44b5aa25442ed8bedd0015e33d25c" },
+                // 铁壁·先锋队长  TreasureWorld_Arbites_ShieldNShotgun（男）-> ArbitratorStein
+                //   ★A 档升级★ 原为建卡池 ArbitesHelmetMale。
+                //   法务部全覆式暴动盔 + 红色目镜，正对"盾+霰弹枪"的镇暴装。
+                //   cue/dlg/bark 全 0，4 个佩戴单位也全 0，非建卡池。
+                { "4a02a1bee6f84892b3cb7a3f8c818c69", "942c9ad5ac1146dea04f03d2d35c6bdf" },
 
-                // 磐石·首席战士  VC2_Arbitres_Melee -> ArbitesMale
-                //   同为法务部但**不戴盔**，和铁壁区分得开。建卡池。
-                { "30e6364a1d7a425b93d877122c6eed40", "f0d5da655acb4b47846e52e8e97a5254" },
+                // 磐石·首席战士  VC2_Arbitres_Melee（男）-> ArbitratorBryce
+                //   ★A 档升级★ 原为建卡池 ArbitesMale。
+                //   这批法务部美术里**唯一不戴全盔**的（红带便帽+呼吸器，露脸），
+                //   和铁壁(Stein)、怒火自带的(Clayton)两张盔面拉开层次。cue=0。
+                { "30e6364a1d7a425b93d877122c6eed40", "a23953738df04e5b9f1d04a52aab3582" },
 
-                // 寂静之眼  Quetza_EldarRangerHard -> DrukhariWych_BeastmasterBase_Portrait
-                //   ★新增★ 该单位自带 BCT_Eldar_Male_Guardian2，但那张**图没发货**，
-                //   游戏里显示为占位符（玩家实测）。
-                //   这是全库唯一的非剧情灵族脸：光头苍白尖耳素颜，不戴黑暗灵族盔。
-                //   被 0 个蓝图引用 ⇒ 零撞脸风险。
-                //   ⚠ 只有 Small 尺寸，无 Half/Full —— 我们目前只画小头像，够用；
-                //     将来若要在角色面板画半身像需另挑。
-                { "aca1e823dbf64d6999d2132e3198dd5a", "d328a891cc7749f49e75b08b636f2ebd" },
+                // 寂静之眼  Quetza_EldarRangerHard（**女性艾达灵族**）-> Iremeryss_Portrait
+                //   自带 BCT_Eldar_Male_Guardian2：三条 SpriteLink 指向同一个 AssetId，
+                //   而那个 id 不在 locationlist.json 的 14150 条里 —— 图确实没发货，
+                //   且连性别都不对（男性 Guardian 配女性 Ranger）。
+                //   ★全库唯一「女性 + 灵族 + 三尺寸完整」的脸★（淡蓝灰皮、尖耳、蓝面纹）。
+                //   代价：C 档 cue=3（Vect 王座厅那场戏三句台词，dlg=0 bark=0，非反复互动对象）。
+                //   为什么退不到 A/B：建卡池 30 张全是帝国人类；A 档异形脸只有 8 张黑暗灵族 +
+                //   1 张 Medusae，其中 7 张戴盔戴面具，唯一素颜那张脸偏男性且仅 Small 尺寸。
+                //   ★Craftworld 灵族全库一张路人脸都没有★——367 个 sprite 里只有
+                //   Yrliet_* / Solitaire_*，不是"漏打包"，是根本没画。
+                { "aca1e823dbf64d6999d2132e3198dd5a", "c0021b321aec4686972310071c458105" },
 
-                // 赏金·猎首  FootfallAnverSniper_Ranged_Elite -> CriminalMale
-                //   疤脸罪犯，赏金猎人主题契合。建卡池。
-                //   ★保留不改★ —— 工作流建议换成 Ruoldo（cue=95，全场露面最多的一张），
-                //   按新口径那是明确禁止的。
-                { "53281ae602a34756a47c3e23f66c06cd", "28e3d61fbcb94305bdbfe3e598ef72c0" },
+                // 赏金·猎首  FootfallAnverSniper_Ranged_Elite（**女**，兜帽遮面）-> CriminalFemale
+                //   ★性别修正★ 原为 CriminalMale。短发+疤+义眼，赏金猎人调性一致。
+                //   B 档 cue=0，0 个单位佩戴。
+                { "53281ae602a34756a47c3e23f66c06cd", "12a70d4ed7204766b38e730fb84cd998" },
 
-                // 圣焰·净罪修女  DLC3_DL_Sororitas_Melta_Unit -> AdeptusMinistorumFemale
-                //   ★改★ 原来是 ArbitesHelmetFemale（法务部盔）—— 给战斗修女戴法务部盔主题不符。
-                //   AdeptusMinistorumFemale 原被普通修女卫兵占用，现已释放。
-                //   全游戏唯一的非同伴教会系女性脸（另一张 SisterArgenta 是阿尔金塔本人，属禁用）。
+                // 圣焰·净罪修女  DLC3_DL_Sororitas_Melta_Unit（女）-> AdeptusMinistorumFemale
+                //   金发+额头虔信刻痕的教会系女性。全库唯一非同伴的教会女脸
+                //  （SisterArgenta 是阿尔金塔本人，cue=78，禁用）。B 档 cue=0。
                 { "2cf75c27e6d34681ab623101b0be1135", "e5fa9cc788be4459bc0b9c6a74968da6" },
 
-                // 亚空间审判者  Ch05Inquisitor_Psyker_unit -> AdeptusMinistorumMale
-                //   教会系男性，审判庭气质相符。建卡池。
-                { "d1287134a3e64a4dbdae16b58d21bd8b", "b8c150a212dc43b8ae2a580c0145fa20" },
+                // 亚空间审判者  Ch05Inquisitor_Psyker_unit（**女**，光头+下颌义体）-> PsykerFemale
+                //   ★性别修正★ 原为 AdeptusMinistorumMale。
+                //   苍白发青的皮肤、发白光的眼睛、近乎光头 —— 和模型 BCT_Inquisition_Mystic
+                //   是同一套设计语言。B 档 cue=0。
+                { "d1287134a3e64a4dbdae16b58d21bd8b", "3c1cff3901824c0298ba4abe1801c807" },
 
-                // 火杖行刑者  Ch04Chorda_Pyromancer_unit -> PsykerMale
-                //   ★新增★ 该单位自带立绘的 SpriteLink 是空的，游戏里显示为占位符（玩家实测）。
-                //   PsykerMale 原被灵能分型的**普通**卫兵占用，现已释放；
-                //   与同为灵能的亚空间审判者（AdeptusMinistorumMale）不撞脸。建卡池。
-                { "638ab19bfae74bb99dacc93e7d6fe7f3", "0114a2db302c45a9bc780593d0ec5134" },
+                // 火杖行刑者  Ch04Chorda_Pyromancer_unit -> DecadenceFemale
+                //   ★vanilla 自己的数据打架★：蓝图 Gender=Male，模型却是 BCT_Female_Chorda_Psyker
+                //  （我在 bundle 里 grep 到了这个名字，头部贴图也是女性）。
+                //   按**模型**为准取女性；苍白贵族女性，同时贴合 Chorda 王朝的宫廷背景。
+                //   自带立绘 JungleWorldRebelOfficerMelee 的 Small 指向不在 locationlist 的 id、
+                //   Half/Full 才是真 null —— 表现同样是占位符。B 档 cue=0。
+                //   想改回"性别模糊"的方案就换 PsykerMale 0114a2db302c45a9bc780593d0ec5134（兜帽+蓝光眼）。
+                { "638ab19bfae74bb99dacc93e7d6fe7f3", "db248f8c0357439bb49480e13a998e6a" },
 
-                // 谕令·灵能军官  VC2_Astropath -> ImperialNavyMale
-                //   帝国海军军官装，与"星语者兼军官"的定位相符。建卡池。
-                //   原本与 OfficersDeckGuard 撞脸，删掉普通卫兵那行后已独占。
+                // 谕令·灵能军官  VC2_Astropath（男）-> ImperialNavyMale
+                //   帝国海军军官装，照顾"军官"身份。B 档 cue=0（3 个佩戴单位都是预设）。
+                //   备选 AdeptusMinistorumMale b8c150a212dc43b8ae2a580c0145fa20：
+                //   兜帽+金色呼吸面罩，其实更贴"星语者"，而且模型 BCT_Male_Astropath
+                //   是苍白光头、和海军那张黑发青年对不太上。两条都是 B 档 cue=0，看取舍。
                 { "bc5ca9badb2042b48afb13c1829619b3", "d03e6b0de6994d8f8b10a8ad16ebd94e" },
 
                 // ---- 下面两个**不需要** override：单位自带立绘且图正常 ----
-                // 怒火·首席连射  TaintedStreets_Arbites_SolomonSquad -> 自带 ArbitratorClayton
-                //     1704807cd8944603b71331183ff36a1f
-                // 铁律·政委军官  HumanCommissar_MeleeRanged_Prison   -> 自带 CommorraghCommissar_Portrait
-                //     a2699823ca3140eba4a1445871d456c5
+                // 怒火·首席连射 -> 自带 ArbitratorClayton 1704807cd8944603b71331183ff36a1f
+                //     A 档 cue=0、三尺寸完好、且是该单位的专属美术 —— 全库最优解，别动。
+                // 铁律·政委军官 -> 自带 CommorraghCommissar_Portrait a2699823ca3140eba4a1445871d456c5
+                //     与模型 BCT_Human_Male_CommorraghCommissar 同源美术（灰发+眼下蓝纹一致）。
+                //     cue=13 但 dlg=0 bark=0，全集中在康莫拉两个杂鱼军官身上；
+                //     换成建卡池 ComissarMale 反而会和**男主默认脸**撞图（逐字节同一张）。
                 // 解析链第 1 步就命中了，加 override 也不会生效（override 只在自带的取不到时才查）。
             };
 

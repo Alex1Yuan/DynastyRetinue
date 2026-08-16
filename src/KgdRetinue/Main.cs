@@ -200,6 +200,23 @@ namespace KgdRetinue
             catch (Exception e) { LogError(e); }
         }
 
+        /// <summary>
+        /// 分区折叠头。返回是否展开。
+        /// 面板原本是 370 行一条道铺到底、33 个按钮混在一起，其中大半是只有我会用的
+        /// 探针/导出。分成「招募 / 舰船 / 规则 / 开发·测试」四区，前三区默认展开，
+        /// 开发区默认折叠 —— 那里好几个按钮会清场，玩家误点代价不小。
+        /// </summary>
+        private static bool Fold(ref bool open, string title, string hint)
+        {
+            GUILayout.Space(8);
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button(open ? "▼" : "▶", GUILayout.Width(28))) open = !open;
+            GUILayout.Label("<b><size=14>" + title + "</size></b>"
+                            + (string.IsNullOrEmpty(hint) ? "" : "　<color=#aaaaaa>" + hint + "</color>"));
+            GUILayout.EndHorizontal();
+            return open;
+        }
+
         private static void OnGUI(UnityModManager.ModEntry modEntry)
         {
             // ---------- 卫队 ----------
@@ -222,11 +239,16 @@ namespace KgdRetinue
                     : "<color=#ff8080>卫兵是持久实体，会写进存档（party.json）。禁用 mod 或在 Steam 里关闭 DLC 之前，请先点【遣散全部】。</color>");
             }
 
-            // ---------- 分型 ----------
-            GUILayout.Space(8);
+            // 分型索引在多个分区里都要用（招募区选它、开发区按它生成），
+            // 所以提到折叠块外面声明，不能留在「招募」区的大括号里
             var _archs = Archetypes.All;
             int _cur = Settings.ArchetypeIndex;
             if (_cur < 0 || _cur >= _archs.Length) _cur = 0;
+
+            if (Fold(ref Settings.PanelShowRecruit, "招募", "分型 / 入口 / 名额上限 / 装备档位"))
+            {
+            // ---------- 分型 ----------
+            GUILayout.Space(8);
             GUILayout.Label("<b>分型</b>   当前 = <color=#80ff80>" + _archs[_cur].Name + "</color>"
                             + "    <i>（模板 archetypes.json：unit=模型/装备, brain=AI行为, plan=天赋方案, chain=职业链）</i>");
             GUILayout.BeginHorizontal();
@@ -276,6 +298,10 @@ namespace KgdRetinue
             GUILayout.Label("<color=#aaaaaa>自动档由主角等级推出（≥36 = T3，≥16 = T2）。"
                           + "55 级存档恒为 T3，要验 T1/T2 那两套就在这里强制。改完对已招募的卫兵无效，重新招一个才会按新档位发。</color>");
 
+            }
+
+            if (Fold(ref Settings.PanelShowShip, "舰船", "分档加成 / 换船模 / 挂点"))
+            {
             // ---------- 舰船 ----------
             GUILayout.Space(8);
             GUILayout.Label("<b>舰船</b>（只改开火次数，不动配置界面、不扩槽位、不改蓝图）");
@@ -392,6 +418,10 @@ namespace KgdRetinue
                           + "分档决定占位/多打判据，prefab 决定外观，"
                           + "DisableSizeScaling 让模型保持原生大小、不被再放大一次。</color>");
 
+            }
+
+            if (Fold(ref Settings.PanelShowRules, "规则", "士气池 / 镜头 / 成长 / 命名 / 热键"))
+            {
             // ---------- 规则 ----------
             GUILayout.Space(8);
             GUILayout.Label("<b>规则</b>");
@@ -404,7 +434,40 @@ namespace KgdRetinue
             Settings.GuardKillFeedsOwnPool = GUILayout.Toggle(Settings.GuardKillFeedsOwnPool, "卫兵杀敌也给卫队池加分（不动你那份，否则卫队只出力不进账）");
             Settings.GuardPsykerNoVeil = GUILayout.Toggle(Settings.GuardPsykerNoVeil, "卫兵灵能不推高亚空间威胁（帷幕是区域唯一值、做不了独立池，只能选计不计入）");
             Settings.NoCameraFollowGuards = GUILayout.Toggle(Settings.NoCameraFollowGuards, "卫兵行动时镜头不跟随（含技能演出特写；你自己队伍不受影响）");
-            Settings.UnlockTierLimits = GUILayout.Toggle(Settings.UnlockTierLimits, "解除阶位限制（无视职业阶位，直接顶 55 级 / 数量不限）");
+            Settings.UnlockTierLimits = GUILayout.Toggle(Settings.UnlockTierLimits,
+                "<b>解除全部招募限制</b>（无视职业阶位、无视利润因子、数量不限，直接顶 55 级）");
+
+            // ---------- 招募上限：利润因子 ----------
+            GUILayout.Space(6);
+            Settings.RecruitUsePfGate = GUILayout.Toggle(Settings.RecruitUsePfGate,
+                "<b>用利润因子解锁招募名额</b>（关掉则退回旧的阶位上限 T1=2 / T2=4 / T3=6）");
+            if (Settings.RecruitUsePfGate)
+            {
+                GUILayout.BeginHorizontal();
+                GUILayout.Label("每名所需利润因子", GUILayout.Width(130));
+                Settings.RecruitPfPerGuard = (int)GUILayout.HorizontalSlider(Settings.RecruitPfPerGuard, 1f, 60f, GUILayout.Width(140));
+                GUILayout.Label(Settings.RecruitPfPerGuard.ToString(), GUILayout.Width(40));
+                GUILayout.Label("最多几名", GUILayout.Width(60));
+                Settings.RecruitMaxGuards = (int)GUILayout.HorizontalSlider(Settings.RecruitMaxGuards, 0f, 12f, GUILayout.Width(120));
+                GUILayout.Label(Settings.RecruitMaxGuards.ToString(), GUILayout.Width(30));
+                GUILayout.EndHorizontal();
+                GUILayout.Label("<color=#c8a45c>" + ProfitFactorGate.Summary() + "</color>");
+                // 分级表：把每一档的门槛列出来，玩家一眼看到下一档还差多少
+                try
+                {
+                    var _th = ProfitFactorGate.Thresholds();
+                    int _pf = ProfitFactorGate.Current();
+                    var _sb = new System.Text.StringBuilder("<color=#aaaaaa>分级：");
+                    for (int _i = 0; _i < _th.Length; _i++)
+                    {
+                        bool _got = _pf >= _th[_i];
+                        _sb.Append(_got ? "<color=#7ec8ff>" : "").Append(_th[_i]).Append("→").Append(_i + 1).Append("名")
+                           .Append(_got ? "</color>" : "").Append(_i + 1 < _th.Length ? "　" : "");
+                    }
+                    GUILayout.Label(_sb.Append("</color>").ToString());
+                }
+                catch { }
+            }
 
             GUILayout.BeginHorizontal();
             Settings.RenameGuards = GUILayout.Toggle(Settings.RenameGuards, "自定义卫兵名（压掉单位蓝图自带的名字）", GUILayout.Width(300));
@@ -429,16 +492,20 @@ namespace KgdRetinue
             GUILayout.EndHorizontal();
             GUILayout.Label("<i>无创伤=不进创伤流水线；跟队恢复=队友被治时一起治；原版=每倒地一次永久掉最大生命，且重伤阈值写死 50% 不吃难度减免</i>");
 
+            }
+
+            if (Fold(ref Settings.PanelShowDev, "开发 · 测试", "★注意：好几个按钮会清空全部卫兵★"))
+            {
             // ---------- 工具 ----------
             GUILayout.Space(8);
             GUILayout.Label("<b>工具</b>");
             GUILayout.BeginHorizontal();
-            if (GUILayout.Button("探测 brain", GUILayout.Width(120))) BrainTool.Probe();
-            if (GUILayout.Button("探测候选单位", GUILayout.Width(130))) Probe.ProbeUnits();
-            if (GUILayout.Button("批量试算方案", GUILayout.Width(130))) PlanProbe.Run();
             if (GUILayout.Button("★ 一键全测 ★", GUILayout.Width(130))) AutoTest.RunAll();
             if (GUILayout.Button("★ 一键测装备 ★", GUILayout.Width(140))) AutoTest.RunGearMatrix();
-            if (GUILayout.Button("导出天赋名录", GUILayout.Width(130))) ItemTool.ExportFeatures();
+            if (GUILayout.Button("探测 brain", GUILayout.Width(110))) BrainTool.Probe();
+            if (GUILayout.Button("探测候选单位", GUILayout.Width(120))) Probe.ProbeUnits();
+            if (GUILayout.Button("批量试算方案", GUILayout.Width(120))) PlanProbe.Run();
+            if (GUILayout.Button("导出天赋名录", GUILayout.Width(120))) ItemTool.ExportFeatures();
             GUILayout.EndHorizontal();
             GUILayout.Label("<i>一键测装备：5 分型 × T1/T2/T3 = 15 组普通卫兵 <b>+ 全部 10 个精英</b>，一次跑完，写 geartest.tsv。"
                           + "　一键全测：额外收集命中率/属性，写 autotest.tsv。两个都会自动清场并还原限制。</i>");
@@ -525,6 +592,7 @@ namespace KgdRetinue
             if (GUILayout.Button("应用热键", GUILayout.Width(90))) ApplyHotkeys();
             GUILayout.Label("<i>填 Unity KeyCode 名（F7 / G / None）。按住 Ctrl/Alt/Shift 时热键一律不触发，避免和 Ctrl+F10 打架。遣散建议留 None。</i>");
             GUILayout.EndHorizontal();
+            }
         }
 
         /// <summary>把面板里填的 KeyCode 名解析成实际按键。填错就保持原值并报错。</summary>
@@ -658,6 +726,21 @@ namespace KgdRetinue
         /// <summary>改装界面（ShipDollRoom）里船模的额外倍率，100 = 归一到原版护卫舰的观感。
         /// 那个房间的机位是按护卫舰构图的，换大船必然撑出画面 —— 纯显示，随便调。</summary>
         public int ShipDollScale = 100;
+
+        // ---------------- 招募上限：按利润因子解锁 ----------------
+        /// <summary>用利润因子决定招募上限（关掉则退回旧的阶位上限 T1=2/T2=4/T3=6）。</summary>
+        public bool RecruitUsePfGate = true;
+        /// <summary>每名卫兵需要多少利润因子。默认 15，即 90 解锁全部 6 名。</summary>
+        public int RecruitPfPerGuard = 15;
+        /// <summary>招募硬上限。默认 6。</summary>
+        public int RecruitMaxGuards = 6;
+
+        // ---------------- 面板分区折叠状态（纯 UI，不影响任何玩法）----------------
+        public bool PanelShowRecruit = true;
+        public bool PanelShowShip    = true;
+        public bool PanelShowRules   = true;
+        /// <summary>开发/测试区。默认**折叠** —— 那些按钮玩家用不到，而且好几个会清场。</summary>
+        public bool PanelShowDev     = false;
 
         /// <summary>换船模后，给船体补上缺失的武器挂点（否则光矛/鱼雷会从舰船原点开火）。</summary>
         public bool ShipMountFallback = true;

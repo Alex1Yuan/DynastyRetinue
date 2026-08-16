@@ -49,12 +49,32 @@ namespace KgdRetinue
                 if (!skipCap)
                 {
                     int tier = Archetypes.PlayerTier(leader);
-                    int cap  = Main.Settings.UnlockTierLimits ? 99 : Archetypes.GuardCountCap(tier);
+                    // 上限三选一，优先级从高到低：
+                    //   面板解除限制（一键全测也走这条） > 利润因子闸 > 旧的阶位上限
+                    int cap;
+                    string why;
+                    if (Main.Settings.UnlockTierLimits)
+                    {
+                        cap = 99; why = "（已解除限制）";
+                    }
+                    else if (Main.Settings.RecruitUsePfGate)
+                    {
+                        cap = ProfitFactorGate.Unlocked();
+                        why = "：" + ProfitFactorGate.Summary();
+                    }
+                    else
+                    {
+                        cap = Archetypes.GuardCountCap(tier);
+                        why = "：玩家 T" + tier + " 最多 " + cap + " 名";
+                    }
+
                     int have = RetinueRegistry.Count;
                     if (have >= cap)
                     {
-                        Main.Log("已达阶位上限：玩家 T" + tier + " 最多 " + cap + " 名（当前 " + have
-                                 + "）。可在面板勾选「解除阶位限制」。");
+                        Main.Log("招募上限已满" + why + "（当前 " + have + " 名）。"
+                                 + (Main.Settings.RecruitUsePfGate
+                                    ? "提升利润因子即可解锁更多；也可在面板改「每名所需利润因子」或勾选「解除阶位限制」。"
+                                    : "可在面板勾选「解除阶位限制」。"));
                         return null;
                     }
                 }
