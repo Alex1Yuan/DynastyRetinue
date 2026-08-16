@@ -169,36 +169,8 @@ namespace KgdRetinue
                 GUILayout.EndHorizontal();
             }
 
-            /// <summary>换成指定船体（含它自己的档位）。</summary>
-            private static string BuyModel(ShipModel m)
-            {
-                try
-                {
-                    int price = ShipDialog.PriceTo(m.Tier);
-                    int have  = ShipDialog.Scrap();
-                    if (have < price)
-                        return "废料不够 —— 需要 " + price + "，账上只有 " + have + "。（一枚都没扣。）";
-
-                    // ★先换船再扣钱★ 换船可能被拒（战斗中），顺序反了就是钱花了船没换。
-                    if (!StarshipViewTool.ApplyModelAtTier(m, m.Tier))
-                        return "现在动不了船坞（在战斗中？）。废料未扣除。";
-
-                    if (price > 0)
-                    {
-                        try { Game.Instance.Player.Scrap.Spend(price); }
-                        catch (Exception e) { Main.LogError("[船坞] ★船已改装但废料扣除失败★: " + e.Message); }
-                    }
-                    Main.Log("[船坞] 成交 -> " + m.Hull + "（" + m.Tier + "）　花费 " + price
-                           + "　余额 " + ShipDialog.Scrap());
-                    return "改装完成。您的座舰现在是一艘「" + m.Hull + "」，"
-                         + (price > 0 ? "船坞收讫 " + price + " 单位废料。" : "本次无需补价。");
-                }
-                catch (Exception e)
-                {
-                    Main.LogError("[船坞] 交易异常: " + e);
-                    return "船坞出了点岔子，交易未完成。";
-                }
-            }
+            /// <summary>换船逻辑与 uGUI 版共用一份，别分叉。</summary>
+            private static string BuyModel(ShipModel m) { return ShipDialog.BuyModel(m); }
 
             private static List<ShipModel> Sorted()
             {

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using UnityEngine;
 using Kingmaker;
 using Kingmaker.Enums;
@@ -38,7 +38,7 @@ namespace KgdRetinue
                 Text       = delegate { return "（船坞）关于座舰的改装事宜……"; },
                 Enabled    = delegate { return Main.Settings != null && Main.Settings.ShipDialogEntry; },
                 KeepDialog = true,          // 留在对话里，好让顾问说完话
-                OnPicked   = ShipYardWindow.Open,
+                OnPicked   = UI.ShipYardUI.Open,
             });
         }
 
@@ -102,7 +102,35 @@ namespace KgdRetinue
 
         // ---------------------------------------------------------------- 成交
 
-        /// <summary>升级到 target。返回给玩家看的一句话。</summary>
+        /// <summary>换成指定船体（含它自己的档位）。返回给玩家看的一句话。</summary>
+        public static string BuyModel(ShipModel m)
+        {
+            try
+            {
+                if (m == null) return "船坞里没有这份图纸。";
+                int price = PriceTo(m.Tier);
+                int have  = Scrap();
+                if (have < price)
+                    return "废料不够 —— 需要 " + price + "，账上只有 " + have + "。（一枚都没扣。）";
+
+                // ★先换船再扣钱★ 换船可能被拒（战斗中 StarshipTool.SetSize 会拒），
+                // 顺序反了就是"钱花了船没换"。宁可白换不能白扣。
+                if (!StarshipViewTool.ApplyModelAtTier(m, m.Tier))
+                    return "现在动不了船坞（在战斗中？）。废料未扣除。";
+
+                if (price > 0)
+                {
+                    try { Game.Instance.Player.Scrap.Spend(price); }
+                    catch (Exception e) { Main.LogError("[船坞] ★船已改装但废料扣除失败★: " + e.Message); }
+                }
+                Main.Log("[船坞] 成交 -> " + m.Hull + "（" + m.Tier + "）　花费 " + price + "　余额 " + Scrap());
+                return "改装完成。您的座舰现在是一艘「" + m.Hull + "」，"
+                     + (price > 0 ? "船坞收讫 " + price + " 单位废料。" : "本次无需补价。");
+            }
+            catch (Exception e) { Main.LogError("[船坞] 交易异常: " + e); return "船坞出了点岔子，交易未完成。"; }
+        }
+
+        /// <summary>升级到 target 档的默认船体。</summary>
         public static string Buy(Size target)
         {
             try

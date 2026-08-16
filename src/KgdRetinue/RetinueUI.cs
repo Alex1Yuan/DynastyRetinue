@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using TMPro;
@@ -311,7 +311,7 @@ namespace KgdRetinue.UI
         }
 
         // ------------------------------------------------------------- 骨架搭建
-        private static void BuildClickBlocker(Transform parent)
+        internal static void BuildClickBlocker(Transform parent)
         {
             GameObject go = NewUI("ClickBlocker", parent);
             Stretch(go, 0f);
@@ -320,7 +320,7 @@ namespace KgdRetinue.UI
             img.raycastTarget = true;    // 吃掉点击，避免点穿到世界
         }
 
-        private static void EnsureEventSystem(Transform parent)
+        internal static void EnsureEventSystem(Transform parent)
         {
             if (EventSystem.current != null) return;
             // 挂在自己根下 -> 关窗一起销毁，不污染全局
@@ -665,7 +665,7 @@ namespace KgdRetinue.UI
             return null;
         }
 
-        private static void ApplyVanillaRenderPath(Canvas c)
+        internal static void ApplyVanillaRenderPath(Canvas c)
         {
             if (c == null) return;
             Camera cam = ResolveUiCamera();
@@ -766,7 +766,7 @@ namespace KgdRetinue.UI
         }
 
         // ------------------------------------------------------------- 小工具
-        private static GameObject NewUI(string name, Transform parent)
+        internal static GameObject NewUI(string name, Transform parent)
         {
             GameObject go = new GameObject(name, typeof(RectTransform));
             go.transform.SetParent(parent, false);
@@ -815,7 +815,7 @@ namespace KgdRetinue.UI
         /// 完全可控、跨版本零依赖，也不会再出这种事。
         /// （字体仍然从场景里摘，那部分实测是好的。）
         /// </summary>
-        private static void PaintPanel(Image img, Sprite sprite, Color fallback)
+        internal static void PaintPanel(Image img, Sprite sprite, Color fallback)
         {
             img.sprite = sprite;
             img.type = (sprite != null && sprite.border != Vector4.zero) ? Image.Type.Sliced : Image.Type.Simple;
@@ -863,7 +863,7 @@ namespace KgdRetinue.UI
         }
 
         /// <summary>窗口/分区底：近乎不透明的暗色 + 金边。半透明会让下面的场景糊进来。</summary>
-        private static Sprite PanelTex()
+        internal static Sprite PanelTex()
         {
             return GenTex("panel",
                 new Color(0.075f, 0.082f, 0.075f, 0.985f),
@@ -881,7 +881,7 @@ namespace KgdRetinue.UI
         }
 
         /// <summary>按钮底：照参考图 —— 上浅下深的金色渐变 + 深棕描边，方角。</summary>
-        private static Sprite ButtonTex()
+        internal static Sprite ButtonTex()
         {
             return GenTex("btn",
                 new Color(0.839f, 0.722f, 0.404f, 1f),
@@ -918,7 +918,7 @@ namespace KgdRetinue.UI
             return t;
         }
 
-        private static TextMeshProUGUI MakeSectionLabel(Transform parent, string text)
+        internal static TextMeshProUGUI MakeSectionLabel(Transform parent, string text)
         {
             TextMeshProUGUI t = MakeLabel(parent, text, 22f, VanillaSkin.Gold, TextAlignmentOptions.Left);
             RectTransform rt = (RectTransform)t.transform;
@@ -928,7 +928,7 @@ namespace KgdRetinue.UI
             return t;
         }
 
-        private static Button MakeButton(Transform parent, string text, float w, float h, Action onClick)
+        internal static Button MakeButton(Transform parent, string text, float w, float h, Action onClick)
         {
             // ① 先试原版克隆（克隆 ESC 菜单里活着的 OwlcatButton）
             Button v = VanillaWidgets.MakeVanillaButton(parent, text, w, h, onClick);
@@ -964,7 +964,7 @@ namespace KgdRetinue.UI
             return b;
         }
 
-        private static void SetInteractable(Button b, bool on)
+        internal static void SetInteractable(Button b, bool on)
         {
             if (b == null) return;
             if (VanillaWidgets.TrySetInteractable(b, on)) return;   // 克隆体：交给 OwlcatButton
@@ -977,7 +977,7 @@ namespace KgdRetinue.UI
         }
 
         /// <summary>建一个纵向滚动区，返回 content。topInset 给区块标题让位。</summary>
-        private static Transform MakeScrollArea(Transform parent, float topInset)
+        internal static Transform MakeScrollArea(Transform parent, float topInset)
         {
             GameObject scroll = NewUI("Scroll", parent);
             RectTransform srt = (RectTransform)scroll.transform;

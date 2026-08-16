@@ -159,7 +159,8 @@ namespace KgdRetinue
                 DeathRules.Unsubscribe();
                 RecruitWindow.Shutdown();   // 连宿主 GameObject 一起销毁，不留残留
                 UI.RetinueUI.Shutdown();    // 新的 uGUI 窗口：销毁 Canvas 根
-                ShipYardWindow.Shutdown();  // 船坞窗口：连宿主 GameObject 一起销毁
+                ShipYardWindow.Shutdown();  // 船坞窗口(IMGUI 退路)：连宿主 GameObject 一起销毁
+                UI.ShipYardUI.Shutdown();   // 船坞窗口(uGUI)：销毁 Canvas 根
                 UnitPortraits.Cleanup();    // 把 hold 住的立绘资源还回去
                 ShipModelBundleHold.Cleanup();  // 把 hold 住的船模 bundle 还回去
                 // 刻意不自动遣散：卫兵现在是持久实体，误触开关不该清掉满级卫队。
