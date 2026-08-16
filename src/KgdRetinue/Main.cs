@@ -391,6 +391,10 @@ namespace KgdRetinue
             if (GUILayout.Button("挂点几何诊断", GUILayout.Width(130))) ShipSlotGeometryProbe.Dump();
             Settings.ShipMountFallback = GUILayout.Toggle(Settings.ShipMountFallback,
                 "换船模后自动补上缺失的武器挂点（修「光矛/鱼雷在虚空开火」）");
+            Settings.ShipSynthKeel = GUILayout.Toggle(Settings.ShipSynthKeel,
+                "连船底(Keel)挂点也补　<color=#aaaaaa>默认关：一件武器的美术可以列多个槽位类型，"
+                + "vanilla 会在每个匹配到的挂点上都实例化一份，补了船底可能多长出一门挂在船腹下的炮。"
+                + "只有你真装了船底武器才需要打开。</color>");
             GUILayout.BeginHorizontal();
             GUILayout.Label("舰首挂点前后", GUILayout.Width(100));
             Settings.ShipProwOffsetPct = (int)GUILayout.HorizontalSlider(Settings.ShipProwOffsetPct, -50f, 50f, GUILayout.Width(130));
@@ -787,6 +791,9 @@ namespace KgdRetinue
         public int ShipProwOffsetPct = 0;
         /// <summary>合成的 Prow 挂点相对船脊高度再抬多少（占船体 y 向高度的百分比）。</summary>
         public int ShipProwUpPct = 0;
+        /// <summary>连船底(Keel)挂点也合成。默认关 —— 见 ShipMountFallback 里的说明，
+        /// 一件武器美术可以列多个 RequiredSlots，补了可能多长出一份挂在船腹下。</summary>
+        public bool ShipSynthKeel = false;
         // 卫兵杀敌同时也给卫队池加一份（不动玩家那份）
         public bool GuardKillFeedsOwnPool = true;
         // 每次区域加载按当前阶位补升级 —— 卫兵"跟久了自己成长"

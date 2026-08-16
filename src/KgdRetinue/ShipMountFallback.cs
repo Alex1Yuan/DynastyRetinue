@@ -250,6 +250,17 @@ namespace KgdRetinue
             {
                 if (have.Contains(want)) continue;
 
+                // ★ Keel（船底）默认不合成 ★
+                // 一件武器的美术描述里可以列**多个** RequiredSlots，
+                // vanilla 会在每一个匹配到的挂点上都实例化一份
+                //（StarshipView.cs:250-266 是两层 foreach）。
+                // 所以给一艘本来没有 Keel 挂点的船凭空补一个，
+                // 可能让某件 Prow 武器的美术**多长出第二份**挂在船腹下。
+                // 而玩家船上通常压根没有 Keel 武器（实测：光矛/鱼雷=Prow、
+                // 迫击炮=Dorsal、另两门=Port/Starboard），补它零收益。
+                // 真装了 Keel 武器再到面板打开这个开关。
+                if (want == "Keel" && !Main.Settings.ShipSynthKeel) continue;
+
                 object enumVal;
                 try { enumVal = Enum.Parse(_tSlotEnum, want); }
                 catch { continue; }
