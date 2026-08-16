@@ -653,20 +653,21 @@ namespace KgdRetinue
             GUILayout.Space(8);
             // ---------- 一键全测（只在开发模式可见，本区整体已被 DevMode 门住）----------
             GUILayout.BeginHorizontal();
-            if (GUILayout.Button("一键全测（只读）", GUILayout.Width(150))) FullTest.RunReadOnly();
-            GUILayout.Label("<color=#aaaaaa>自检 + 装备矩阵 + 状态断言。不动存档、不动你现有的卫兵。</color>");
+            if (GUILayout.Button("一键自检（只读）", GUILayout.Width(150))) FullTest.RunReadOnly();
+            GUILayout.Label("<color=#7ec87e>唯一一个不清场的</color><color=#aaaaaa>：文件 / 分型 / 装备 GUID / 定价 / "
+                          + "倒地豁免 / 命名。不生成任何单位，随便点。</color>");
             GUILayout.EndHorizontal();
             GUILayout.BeginHorizontal();
-            if (GUILayout.Button("一键全测（含破坏性）", GUILayout.Width(170))) FullTest.RunDestructive();
-            GUILayout.Label("<color=#ff8080>额外验死亡规则和卸载流程 —— <b>会清空全部卫兵、把座舰还原成原样</b>。"
-                          + "跑完别存盘，除非你本来就想清空。</color>");
+            if (GUILayout.Button("一键全测（会清空卫兵）", GUILayout.Width(180))) FullTest.RunDestructive();
+            GUILayout.Label("<color=#ff8080>自检 + 装备矩阵 + 死亡规则 + 卸载流程。"
+                          + "<b>会清空全部卫兵、把座舰还原成原样</b>，跑完别存盘。</color>");
             GUILayout.EndHorizontal();
             GUILayout.Space(8);
 
             GUILayout.Label("<b>工具</b>");
             GUILayout.BeginHorizontal();
-            if (GUILayout.Button("★ 一键全测 ★", GUILayout.Width(130))) AutoTest.RunAll();
-            if (GUILayout.Button("★ 一键测装备 ★", GUILayout.Width(140))) AutoTest.RunGearMatrix();
+            if (GUILayout.Button("属性/装备/brain 全表（会清场）", GUILayout.Width(210))) AutoTest.RunAll();
+            if (GUILayout.Button("只测装备矩阵（会清场）", GUILayout.Width(180))) AutoTest.RunGearMatrix();
             if (GUILayout.Button("探测 brain", GUILayout.Width(110))) BrainTool.Probe();
             if (GUILayout.Button("探测候选单位", GUILayout.Width(120))) Probe.ProbeUnits();
             if (GUILayout.Button("批量试算方案", GUILayout.Width(120))) PlanProbe.Run();

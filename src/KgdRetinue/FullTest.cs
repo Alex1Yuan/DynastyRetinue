@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -11,10 +11,14 @@ namespace KgdRetinue
     /// 本来就不需要人参与，只是历史上一直做成了按钮。
     ///
     /// ================= 分成两个按钮，因为破坏性完全不同 =================
-    /// 【只读】  自检 + 装备矩阵 + 状态断言。不动存档、不动卫兵。随便点。
-    /// 【破坏性】额外做：生成两名测试卫兵 → 打死 → 验死亡规则 → 遣散全部 → 还原船模。
-    ///          **会清空你现有的卫兵、把船变回原样。** 所以独立成一个按钮、
-    ///          文案写死"会清空"，而不是塞进同一个按钮里靠说明文字提醒。
+    /// 【只读自检】自检 + 状态断言。**不生成任何单位、不清场。** 随便点。
+    /// 【全测】    自检 + 装备矩阵 + 死亡规则 + 卸载流程。
+    ///            **会清空你现有的卫兵、把船变回原样。**
+    ///
+    /// ★第一版把装备矩阵放进了"只读"那个，并标成"不动你现有的卫兵" —— 那是假的。★
+    /// AutoTest.RunGearMatrix 开头第一句就是 RetinueRegistry.DismissAll()（AutoTest.cs:129）。
+    /// 一个自称只读、实则清空存档内容的按钮，比根本没有这个按钮糟糕得多：
+    /// 玩家会因为"它说只读"而放心点，然后丢掉整支卫队。已改。
     ///
     /// ================= 必须跨帧 =================
     /// SpawnUnit 是**延迟入册**的（要到下一次 Tick 才进 state），同帧读
@@ -37,29 +41,31 @@ namespace KgdRetinue
 
         // ------------------------------------------------------------ 只读
 
+        /// <summary>
+        /// 真·只读：自检 + 状态断言。**不生成任何单位、不清场、不改存档。**
+        ///
+        /// ★这里刻意不调 AutoTest.RunGearMatrix★ 第一版调了，并且标成"不动你现有的卫兵" ——
+        /// 那是假的：RunGearMatrix 开头第一句就是 RetinueRegistry.DismissAll()（AutoTest.cs:129），
+        /// 它会**先把你现有的卫兵全清掉**再开始测。
+        /// 一个自称只读、实则清空存档内容的按钮，比没有这个按钮糟糕得多。
+        /// 装备矩阵归下面那个明确写着"会清场"的按钮。
+        /// </summary>
         public static void RunReadOnly()
         {
             if (_running) { Main.Log("[全测] 上一轮还没跑完。"); return; }
             _running = true;
             _log.Clear();
-            Main.Log("======== 一键全测（只读）开始 ========");
+            Main.Log("======== 一键自检（只读，不生成单位、不清场）开始 ========");
             try
             {
-                // 1) 自检：文件 / 分型 / GUID / 定价 / 座舰 / 诊断包脱敏
                 SelfCheck.ForceRun();
                 Step("自检：见上方 ✓/✗ 块");
-
-                // 2) 装备矩阵：会**生成并销毁**临时卫兵，但不碰玩家现有的
-                Step("装备矩阵：开始（会生成临时卫兵并自行清理）");
-                AutoTest.RunGearMatrix();
-
-                // 3) 状态断言
                 Assertions();
             }
             catch (Exception e) { Main.LogError("[全测] 异常: " + e); }
             finally
             {
-                Summary("只读");
+                Summary("只读自检");
                 _running = false;
             }
         }
@@ -135,6 +141,10 @@ namespace KgdRetinue
             {
                 SelfCheck.ForceRun();
                 Assertions();
+
+                // 装备矩阵放在这里而不是只读那个里 —— 它开头就 DismissAll（AutoTest.cs:129）
+                Step("装备矩阵：开始（★会先清场★）");
+                AutoTest.RunGearMatrix();
 
                 // 生成两名测试卫兵：一名普通、一名精英（精英要能解锁才生成得出来）
                 Step("死亡规则：生成测试卫兵……");
