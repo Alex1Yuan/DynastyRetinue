@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Reflection;
 using HarmonyLib;
 using Kingmaker;
@@ -116,8 +116,41 @@ namespace KgdRetinue
         /// 只看 WeaponType 分不开（vanilla 的 StarshipModifyMaxCharges 就是只看 WeaponType，
         /// 所以它做不到"只加舷炮"，这也是我们不复用那个组件的原因）。
         /// </summary>
+        /// <summary>
+        /// 这把炮是不是**玩家座舰**上的。
+        ///
+        /// ★为什么必须有这一道★ BonusFor / RangeBonusFor 都是
+        /// 「读玩家座舰的分档 → 作用在传进来的武器上」，两件事之间**没有任何关联**。
+        /// 而射程那条挂在 RuleCalculateAbilityRange.OnTrigger 上，
+        /// **每条船算射程都会过一遍** —— 于是玩家一升巡洋舰，全场敌舰的非舷炮也跟着 +3，
+        /// 大巡则是舷炮 +3、船脊/舰首 +5。玩家看不见任何提示，只会觉得仗突然变难。
+        /// 多打那条挂在 Reload 的 Postfix 上，触发面窄一些，但同一个洞。
+        ///
+        /// 同文件里护盾(:256) 和装甲(:345) 都做了 ReferenceEquals(owner, ship)，
+        /// 只有这两个漏了 —— 抄的时候漏抄了判据，不是设计如此。
+        ///
+        /// ★fail-closed★ 取不到船主一律返回 false（不给加成）。
+        /// 反过来（取不到就给）会让一个反射失败静默地把加成撒给全场。
+        /// </summary>
+        private static bool IsPlayerShipWeapon(object weapon)
+        {
+            try
+            {
+                if (weapon == null) return false;
+                // ItemEntityStarshipWeapon.Starship => (StarshipEntity)HoldingSlot.Owner
+                //   ref/rt_probe/dec/Warhammer.SpaceCombat.StarshipLogic.Weapon/ItemEntityStarshipWeapon.cs:31
+                var st = Get(weapon, "Starship");
+                if (st == null) return false;
+                var ship = Game.Instance != null && Game.Instance.Player != null
+                         ? (object)Game.Instance.Player.PlayerShip : null;
+                return ship != null && ReferenceEquals(st, ship);
+            }
+            catch { return false; }
+        }
+
         private static int BonusFor(object weapon)
         {
+            if (!IsPlayerShipWeapon(weapon)) return 0;   // ★别把加成撒给敌舰★
             var sz = ShipSize();
             if (sz != Size.Cruiser_2x4 && sz != Size.GrandCruiser_3x6) return 0;
 
@@ -198,6 +231,7 @@ namespace KgdRetinue
         /// <summary>这门炮能加多少射程。舷炮不加 —— 它们靠次数。</summary>
         private static int RangeBonusFor(object weapon)
         {
+            if (!IsPlayerShipWeapon(weapon)) return 0;   // ★别把加成撒给敌舰★
             var sz = ShipSize();
             if (sz != Size.Cruiser_2x4 && sz != Size.GrandCruiser_3x6) return 0;
 

@@ -29,3 +29,4 @@ autotest.tsv
 # 工作流 agent 的反编译产物（并发写入，别让 git 去索引）
 _tmp/lance/
 _tmp/hull/
+dist/
