@@ -362,6 +362,16 @@ namespace KgdRetinue
             }
             if (GUILayout.Button("还原原版船模", GUILayout.Width(140))) StarshipViewTool.RevertAll();
             if (GUILayout.Button("挂点诊断", GUILayout.Width(110))) ShipSlotProbe.Dump();
+            Settings.ShipMountFallback = GUILayout.Toggle(Settings.ShipMountFallback,
+                "换船模后自动补上缺失的武器挂点（修「光矛/鱼雷在虚空开火」）");
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("舰首挂点前推", GUILayout.Width(130));
+            Settings.ShipProwOffsetPct = (int)GUILayout.HorizontalSlider(Settings.ShipProwOffsetPct, -50f, 50f, GUILayout.Width(140));
+            GUILayout.Label(Settings.ShipProwOffsetPct + "%", GUILayout.Width(46));
+            GUILayout.EndHorizontal();
+            GUILayout.Label("<color=#aaaaaa>0% = 合成的舰首挂点就放在船脊位置（最保险）。"
+                          + "船体 prefab 的朝向轴我没有实据，往前推有可能推成往后 —— "
+                          + "看到从船尾开火就把它调成负数或归零。</color>");
             GUILayout.Label("<color=#c8a45c>实测挂点（决定武器美术挂不挂得上，挂不上就会「在虚空里开火」）：</color>\n"
                           + "  <color=#7ec8ff>Dictator</color> 20 个：Prow ✓ Keel ✓ Dorsal ✓ Port×4 Starboard×4 —— <color=#7ec8ff>四个里唯一齐全的，大巡默认</color>\n"
                           + "  Gothic 9 个：Port×4 Starboard×4 Dorsal×1 —— <color=#ff8080>缺 Prow，光矛会在虚空开火</color>\n"
@@ -646,6 +656,12 @@ namespace KgdRetinue
         /// <summary>改装界面（ShipDollRoom）里船模的额外倍率，100 = 归一到原版护卫舰的观感。
         /// 那个房间的机位是按护卫舰构图的，换大船必然撑出画面 —— 纯显示，随便调。</summary>
         public int ShipDollScale = 100;
+
+        /// <summary>换船模后，给船体补上缺失的武器挂点（否则光矛/鱼雷会从舰船原点开火）。</summary>
+        public bool ShipMountFallback = true;
+        /// <summary>合成的 Prow 挂点相对船脊往前推多少（占船体最长边的百分比）。
+        /// 默认 0 = 纯船脊位置 —— 船体 prefab 的朝向轴我没有实据，猜错会从船尾开火。</summary>
+        public int ShipProwOffsetPct = 0;
         // 卫兵杀敌同时也给卫队池加一份（不动玩家那份）
         public bool GuardKillFeedsOwnPool = true;
         // 每次区域加载按当前阶位补升级 —— 卫兵"跟久了自己成长"
