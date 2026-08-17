@@ -81,6 +81,28 @@ namespace KgdRetinue
         /// <summary>英文人名池。为空则回落中文池。</summary>
         public static string[] GuardNamePoolEn;
 
+        /// <summary>
+        /// 把一个人名换成当前语言的对应写法。换不了就原样返回。
+        ///
+        /// ★两个池按下标对齐★ guardNamePool[i] 和 guardNamePool_en[i] 是同一个人
+        /// （凯尔顿 ↔ Kelton、沈砚舟 ↔ Shen Yanzhou）。所以切语言时不该给卫兵
+        /// **重新抽一个名字** —— 那等于换了个人 —— 而是把他自己的名字换种写法。
+        /// 「近卫长·李霁川」切成英文应该是「Household Sergeant · Li Jichuan」，
+        /// 不是随机变成另一个人。
+        /// </summary>
+        public static string TranslatePerson(string person)
+        {
+            if (string.IsNullOrEmpty(person)) return person;
+            var zh = GuardNamePool; var en = GuardNamePoolEn;
+            if (zh == null || en == null || zh.Length != en.Length) return person;
+            bool wantEn = (L.Current == L.EnGB);
+            var from = wantEn ? zh : en;
+            var to   = wantEn ? en : zh;
+            for (int i = 0; i < from.Length; i++)
+                if (string.Equals(from[i], person, StringComparison.Ordinal)) return to[i];
+            return person;   // 不在池里（玩家手改的、或池子换过）—— 不动
+        }
+
         /// <summary>按当前界面语言取人名池。英文池为空时回落中文池 —— 有名字总比没有强。</summary>
         public static string[] NamePool
         {

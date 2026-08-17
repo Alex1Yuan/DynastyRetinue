@@ -393,7 +393,9 @@ namespace KgdRetinue
                     // 旧的固定专属名（「铁壁 · 先锋队长」）没有人名可继承，直接重发一个
                     if (!string.IsNullOrEmpty(ep) && IsOurRank(arch, er))
                     {
-                        string ren = _eRank + SEP + ep;
+                        // 切语言时把人名也换成对应写法（两个池按下标对齐），
+                        // 而不是重新抽一个 —— 那等于换了个人
+                        string ren = _eRank + SEP + Archetypes.TranslatePerson(ep);
                         d.SetName(ren);
                         Main.Log("  改名(精英): " + ecur + " -> " + ren);
                         return;
@@ -426,10 +428,13 @@ namespace KgdRetinue
                 string curRank, person;
                 SplitRankPerson(cur, out curRank, out person);
 
-                if (curRank == rank) return;                        // 已经是当前军衔，不动
+                // 军衔和人名**都**已经是当前语言才早退。
+                // 只看军衔的话，"先切英文、名字没跟上、再切回中文"这条路径会卡住：
+                // 军衔看起来对，人名却还是另一种语言的写法。
+                if (curRank == rank && person == Archetypes.TranslatePerson(person)) return;
                 if (IsOurRank(arch, curRank) && !string.IsNullOrEmpty(person))
                 {
-                    string renamed = rank + SEP + person;
+                    string renamed = rank + SEP + Archetypes.TranslatePerson(person);
                     d.SetName(renamed);
                     Main.Log("  晋升: " + cur + " -> " + renamed);
                     return;
@@ -697,10 +702,10 @@ namespace KgdRetinue
         /// 必须**先全部清空再逐个赋名**：ApplyName 靠扫描其他卫兵的已有编号取最大值，
         /// 边清边赋会读到上一轮的旧名字，编号就接着旧的往上爬了。
         /// </summary>
-        public static void RenameAll()
+        public static int RenameAll()
         {
             var list = RetinueRegistry.All();
-            if (list.Count == 0) { Main.Log("没有在册卫兵。"); return; }
+            if (list.Count == 0) { Main.Log("没有在册卫兵。"); return 0; }
 
             foreach (var g in list)
             {
@@ -711,6 +716,7 @@ namespace KgdRetinue
             {
                 try { ApplyName(g); } catch (Exception e) { Main.LogError("改名失败: " + e.Message); }
             }
+            return list.Count;
         }
 
         /// <summary>

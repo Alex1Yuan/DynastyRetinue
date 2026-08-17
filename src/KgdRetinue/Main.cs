@@ -585,7 +585,7 @@ namespace KgdRetinue
             for (int i = 0; i < _langs.Length; i++)
                 if (GUILayout.Toggle(Settings.Language == i, _langs[i], "Button", GUILayout.Width(i == 0 ? 90 : 70))
                     && Settings.Language != i)
-                { Settings.Language = i; L.Reset(); }
+                    L.Apply(i);   // 立刻生效：重读译文 + 重命名卫兵 + 刷新已开的窗口
             GUILayout.Label("<color=#aaaaaa>默认跟随游戏语言（LocalizationManager.CurrentLocale）。"
                           + "译文在 l10n_en.json 里，热加载 —— 查不到的条目原样显示中文，不会空白。"
                           + "卫兵军衔/精英位阶/人名池另有英文版，在 archetypes.json 的 *_en 字段。</color>");

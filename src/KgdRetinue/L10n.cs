@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
@@ -152,8 +152,41 @@ namespace KgdRetinue
             }
         }
 
-        /// <summary>面板改了语言/改了 json 之后强制重读。</summary>
+        /// <summary>面板改了语言/改了 json 之后强制重读译文表。</summary>
         public static void Reset() { _loadedFor = -1; _table = null; _warned = false; }
+
+        /// <summary>
+        /// 切语言。**立刻生效，不用重启** —— 但有三处不会自己跟上，必须在这里推一把：
+        ///
+        ///   1. **译文表**：换语言要重读（Reset）。
+        ///   2. **uGUI 窗口**：招募窗口和船坞窗口的文字是建树时写进 TMP 的，
+        ///      不重绘就还是旧语言。开着就刷新，没开着不管。
+        ///   3. **卫兵名字**：CustomName 是**存进存档**的，设一次就固定了。
+        ///      不重命名的话，切了语言军衔还是中文 —— 而这恰恰是玩家最先看到的东西。
+        ///      重命名会把人名也换成对应写法（两个池按下标对齐），
+        ///      「近卫长·李霁川」→「Household Sergeant · Li Jichuan」，还是同一个人。
+        ///
+        /// 面板上的文字不用管：IMGUI 每帧重建，下一帧就是新语言。
+        /// 对话选项也不用管：Entry.Text 是委托，LocalizedString 每次取值都查表。
+        /// </summary>
+        public static void Apply(int language)
+        {
+            try
+            {
+                if (Main.Settings != null) Main.Settings.Language = language;
+                Reset();
+
+                int n = 0;
+                try { n = RetinueTest.RenameAll(); } catch (Exception e) { Main.LogError("[本地化] 重命名失败: " + e.Message); }
+
+                try { if (UI.RetinueUI.IsOpen)  UI.RetinueUI.Refresh();  } catch { }
+                try { if (UI.ShipYardUI.IsOpen) UI.ShipYardUI.Refresh(); } catch { }
+
+                Main.Log("[本地化] 已切到 " + (Current == ZhCN ? "中文" : "English")
+                       + "　卫兵改名 " + n + " 名　（面板和对话选项下一帧自动跟上，不用重启）");
+            }
+            catch (Exception e) { Main.LogError("[本地化] 切换失败: " + e); }
+        }
 
         /// <summary>
         /// 开发用：把调用过 T() 但表里没有的中文条目导出来，方便补译。
