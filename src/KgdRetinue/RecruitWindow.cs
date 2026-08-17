@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
 using Kingmaker;
@@ -65,7 +65,7 @@ namespace KgdRetinue
                 if (!Show || !Main.Enabled) return;
                 // 标题写清楚是谁 —— 它跟 UMM 用的是同一套 IMGUI，默认皮肤长得一模一样，
                 // 实测用户会以为点出来的是 UMM 菜单。
-                _rect = GUILayout.Window(0x4B674452, _rect, Body, "卫队招募 — KgdRetinue");
+                _rect = GUILayout.Window(0x4B674452, _rect, Body, L.T("卫队招募 — KgdRetinue"));
                 GUI.BringWindowToFront(0x4B674452);
             }
 
@@ -76,13 +76,13 @@ namespace KgdRetinue
                     var archs = Archetypes.All;
                     if (archs == null || archs.Length == 0)
                     {
-                        GUILayout.Label("没有可用分型 —— archetypes.json 没载入？");
+                        GUILayout.Label(L.T("没有可用分型 —— archetypes.json 没载入？"));
                     }
                     else
                     {
                         int cur = 0;
                         try { cur = RetinueRegistry.Count; } catch { }
-                        GUILayout.Label("在册卫兵 " + cur + " 名。选择要招募的分型：");
+                        GUILayout.Label(L.F("在册卫兵 {0} 名。选择要招募的分型：", cur));
                         GUILayout.Space(6);
 
                         _scroll = GUILayout.BeginScrollView(_scroll, GUILayout.Height(300));
@@ -94,22 +94,24 @@ namespace KgdRetinue
                             GUILayout.Label("<b>" + a.Name + "</b>");
                             var ed = GearTool.NextElite(i);
                             // ★ 灰按钮必须给理由 ★ 之前只置灰不解释，看起来像坏了
+                            // 灰色标签整条（含 <color> 标签）交给译者，别把标签拆出来拼 —— 拆了就成片段
                             string why = null;
                             if (ed == null)
                             {
-                                if (a.Elites == null || a.Elites.Length == 0) why = "本分型没有配精英";
+                                if (a.Elites == null || a.Elites.Length == 0)
+                                    why = L.T("<color=#aaaaaa>本分型没有配精英</color>");
                                 else if (!GearTool.EliteUnlocked(i))
-                                    why = "精英未解锁 —— 需先有本路线的卫兵练到 T3 职业（面板可勾「无视 T3 解锁条件」）";
-                                else why = "本分型精英已招满（面板可勾「解除精英数量上限」）";
+                                    why = L.T("<color=#aaaaaa>精英未解锁 —— 需先有本路线的卫兵练到 T3 职业（面板可勾「无视 T3 解锁条件」）</color>");
+                                else
+                                    why = L.T("<color=#aaaaaa>本分型精英已招满（面板可勾「解除精英数量上限」）</color>");
                             }
-                            GUILayout.Label(ed != null ? "下一个精英: " + ed.Name
-                                                       : "<color=#aaaaaa>" + why + "</color>");
+                            GUILayout.Label(ed != null ? L.F("下一个精英: {0}", ed.Name) : why);
                             GUILayout.EndVertical();
 
-                            if (GUILayout.Button("招募 普通", GUILayout.Width(90)))
+                            if (GUILayout.Button(L.T("招募 普通"), GUILayout.Width(90)))
                                 Recruit(i, null);
                             GUI.enabled = ed != null;
-                            if (GUILayout.Button("招募 精英", GUILayout.Width(90)))
+                            if (GUILayout.Button(L.T("招募 精英"), GUILayout.Width(90)))
                                 Recruit(i, ed);
                             GUI.enabled = true;
                             GUILayout.EndHorizontal();
@@ -119,15 +121,15 @@ namespace KgdRetinue
 
                     GUILayout.Space(6);
                     GUILayout.BeginHorizontal();
-                    if (GUILayout.Button("遣散全部", GUILayout.Width(100)))
+                    if (GUILayout.Button(L.T("遣散全部"), GUILayout.Width(100)))
                     {
                         try { RetinueRegistry.DismissAll(); } catch (Exception e) { Main.LogError(e.Message); }
                     }
                     GUILayout.FlexibleSpace();
-                    if (GUILayout.Button("关闭", GUILayout.Width(80))) Show = false;
+                    if (GUILayout.Button(L.T("关闭"), GUILayout.Width(80))) Show = false;
                     GUILayout.EndHorizontal();
                 }
-                catch (Exception e) { GUILayout.Label("窗口异常: " + e.Message); }
+                catch (Exception e) { GUILayout.Label(L.F("窗口异常: {0}", e.Message)); }
                 GUI.DragWindow(new Rect(0, 0, 10000, 20));
             }
 

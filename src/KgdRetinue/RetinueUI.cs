@@ -261,18 +261,17 @@ namespace KgdRetinue.UI
             {
                 if (Main.Settings != null && Main.Settings.NoCountCap())
                 {
-                    _pfLabel.text = "<color=#7ec8ff>已在面板解除数量上限 —— 招募名额不受利润因子约束</color>";
+                    _pfLabel.text = L.T("<color=#7ec8ff>已在面板解除数量上限 —— 招募名额不受利润因子约束</color>");
                     return;
                 }
                 if (Main.Settings != null && Main.Settings.NoPfGate())
                 {
-                    _pfLabel.text = "<color=#aaaaaa>已解除利润因子限制 —— 名额按职业阶位算（T1=2 / T2=4 / T3=6）</color>";
+                    _pfLabel.text = L.T("<color=#aaaaaa>已解除利润因子限制 —— 名额按职业阶位算（T1=2 / T2=4 / T3=6）</color>");
                     return;
                 }
                 if (Main.Settings != null && !Main.Settings.RecruitUsePfGate)
                 {
-                    _pfLabel.text = "<color=#aaaaaa>招募名额按职业阶位限制（T1=2 / T2=4 / T3=6）。"
-                                  + "想改成按利润因子解锁请到 mod 面板勾选。</color>";
+                    _pfLabel.text = L.T("<color=#aaaaaa>招募名额按职业阶位限制（T1=2 / T2=4 / T3=6）。想改成按利润因子解锁请到 mod 面板勾选。</color>");
                     return;
                 }
 
@@ -283,14 +282,12 @@ namespace KgdRetinue.UI
                 int next = ProfitFactorGate.NextThreshold();
 
                 var sb = new System.Text.StringBuilder();
-                sb.Append("利润因子 <color=#7ec8ff>").Append(pf < 0 ? "?" : pf.ToString()).Append("</color>")
-                  .Append("　名额 <color=#7ec8ff>").Append(have).Append("/").Append(un).Append("</color>")
-                  .Append("（上限 ").Append(cap).Append("）");
+                sb.Append(L.F("利润因子 <color=#7ec8ff>{0}</color>　名额 <color=#7ec8ff>{1}/{2}</color>（上限 {3}）",
+                              pf < 0 ? "?" : pf.ToString(), have, un, cap));
                 if (next > 0 && pf >= 0)
-                    sb.Append("　下一名需 <color=#7ec8ff>").Append(next).Append("</color>，还差 ")
-                      .Append(next - pf);
+                    sb.Append("　").Append(L.F("下一名需 <color=#7ec8ff>{0}</color>，还差 {1}", next, next - pf));
                 else if (pf >= 0)
-                    sb.Append("　已全部解锁");
+                    sb.Append("　").Append(L.T("已全部解锁"));
 
                 // 分级表
                 var th = ProfitFactorGate.Thresholds();
@@ -340,7 +337,7 @@ namespace KgdRetinue.UI
             PaintPanel(panel.AddComponent<Image>(), PanelTex(), VanillaSkin.Ink);
 
             // 标题栏
-            TextMeshProUGUI title = MakeLabel(panel.transform, "卫队招募", 34f, VanillaSkin.Gold,
+            TextMeshProUGUI title = MakeLabel(panel.transform, L.T("卫队招募"), 34f, VanillaSkin.Gold,
                                               TextAlignmentOptions.Left);
             RectTransform trt = (RectTransform)title.transform;
             trt.anchorMin = new Vector2(0f, 1f); trt.anchorMax = new Vector2(1f, 1f);
@@ -359,7 +356,7 @@ namespace KgdRetinue.UI
             pfrt.offsetMin = new Vector2(32f, -108f); pfrt.offsetMax = new Vector2(-40f, -78f);
 
             // 关闭按钮
-            Button close = MakeButton(panel.transform, "关闭", 110f, 38f, Close);
+            Button close = MakeButton(panel.transform, L.T("关闭"), 110f, 38f, Close);
             RectTransform crt = (RectTransform)close.transform;
             crt.anchorMin = crt.anchorMax = new Vector2(1f, 1f);
             crt.pivot = new Vector2(1f, 1f);
@@ -373,7 +370,7 @@ namespace KgdRetinue.UI
             lrt.offsetMin = new Vector2(28f, 28f);
             lrt.offsetMax = new Vector2(28f + 320f, -116f);
             PaintPanel(left.AddComponent<Image>(), RowTex(), VanillaSkin.RowBg);
-            MakeSectionLabel(left.transform, "分型");
+            MakeSectionLabel(left.transform, L.T("分型"));
             _archContent = MakeScrollArea(left.transform, 44f);
 
             // 右列：该分型下的单位
@@ -384,7 +381,7 @@ namespace KgdRetinue.UI
             rrt.offsetMin = new Vector2(28f + 320f + 16f, 28f);
             rrt.offsetMax = new Vector2(-28f, -116f);
             PaintPanel(right.AddComponent<Image>(), RowTex(), VanillaSkin.RowBg);
-            _titleRight = MakeSectionLabel(right.transform, "请先选择左侧分型");
+            _titleRight = MakeSectionLabel(right.transform, L.T("请先选择左侧分型"));
             _unitContent = MakeScrollArea(right.transform, 44f);
         }
 
@@ -398,7 +395,7 @@ namespace KgdRetinue.UI
             try { all = Archetypes.All; } catch (Exception e) { Main.LogError(e.Message); }
             if (all == null || all.Length == 0)
             {
-                MakeLabel(_archContent, "没有可用分型（archetypes.json 没载入？）", 20f, VanillaSkin.TextDim,
+                MakeLabel(_archContent, L.T("没有可用分型（archetypes.json 没载入？）"), 20f, VanillaSkin.TextDim,
                           TextAlignmentOptions.Left);
                 return;
             }
@@ -429,15 +426,15 @@ namespace KgdRetinue.UI
             try { all = Archetypes.All; } catch { }
             if (all == null || _selected < 0 || _selected >= all.Length)
             {
-                if (_titleRight != null) _titleRight.text = "请先选择左侧分型";
+                if (_titleRight != null) _titleRight.text = L.T("请先选择左侧分型");
                 return;
             }
 
             ChainProbe.Archetype arch = all[_selected];
-            if (_titleRight != null) _titleRight.text = arch.Name + " — 可招募单位";
+            if (_titleRight != null) _titleRight.text = L.F("{0} — 可招募单位", arch.Name);
 
             // 第一行：普通卫兵
-            AddUnitRow(NormalUnitId(arch), "普通卫兵", NormalSubtitle(), _selected, null);
+            AddUnitRow(NormalUnitId(arch), L.T("普通卫兵"), NormalSubtitle(), _selected, null);
 
             // 后续行：该分型下的精英
             if (arch.Elites != null)
@@ -469,17 +466,17 @@ namespace KgdRetinue.UI
         {
             try
             {
-                if (!CapReached()) return "无限制";
+                if (!CapReached()) return L.T("无限制");
                 if (Main.Settings != null && Main.Settings.RecruitUsePfGate && !Main.Settings.NoPfGate())
                 {
                     int next = ProfitFactorGate.NextThreshold();
                     return next > 0
-                        ? "名额已满 — 利润因子到 " + next + " 解锁下一名"
-                        : "名额已满 — 已达上限 " + ProfitFactorGate.HardCap() + " 名";
+                        ? L.F("名额已满 — 利润因子到 {0} 解锁下一名", next)
+                        : L.F("名额已满 — 已达上限 {0} 名", ProfitFactorGate.HardCap());
                 }
-                return "名额已满 — 受职业阶位限制";
+                return L.T("名额已满 — 受职业阶位限制");
             }
-            catch { return "无限制"; }
+            catch { return L.T("无限制"); }
         }
 
         private static string EliteSubtitle(int archIndex, ChainProbe.EliteDef ed)
@@ -487,10 +484,10 @@ namespace KgdRetinue.UI
             try
             {
                 ChainProbe.EliteDef next = GearTool.NextElite(archIndex);
-                if (next != null && ReferenceEquals(next, ed)) return "可招募";
+                if (next != null && ReferenceEquals(next, ed)) return L.T("可招募");
                 if (!GearTool.EliteUnlocked(archIndex))
-                    return "未解锁 — 需本路线卫兵练到 T3 职业";
-                return "已招募 / 排队中";
+                    return L.T("未解锁 — 需本路线卫兵练到 T3 职业");
+                return L.T("已招募 / 排队中");
             }
             catch { return ""; }
         }
@@ -519,7 +516,7 @@ namespace KgdRetinue.UI
             else { pimg.color = new Color(0.15f, 0.15f, 0.15f, 1f); }
 
             // 名字 + 副标题
-            TextMeshProUGUI nameTxt = MakeLabel(row.transform, name ?? "(未命名)", 24f,
+            TextMeshProUGUI nameTxt = MakeLabel(row.transform, name ?? L.T("(未命名)"), 24f,
                                                 VanillaSkin.Text, TextAlignmentOptions.Left);
             RectTransform nrt = (RectTransform)nameTxt.transform;
             nrt.anchorMin = new Vector2(0f, 0.5f); nrt.anchorMax = new Vector2(1f, 1f);
@@ -532,13 +529,13 @@ namespace KgdRetinue.UI
             srt.offsetMin = new Vector2(104f, 10f); srt.offsetMax = new Vector2(-300f, 0f);
 
             // 两个按钮
-            Button gear = MakeButton(row.transform, "改装备", 118f, 38f, () => OnEditGear(archIndex, elite));
+            Button gear = MakeButton(row.transform, L.T("改装备"), 118f, 38f, () => OnEditGear(archIndex, elite));
             RectTransform grt = (RectTransform)gear.transform;
             grt.anchorMin = grt.anchorMax = new Vector2(1f, 0.5f);
             grt.pivot = new Vector2(1f, 0.5f);
             grt.anchoredPosition = new Vector2(-152f, 0f);
 
-            Button hire = MakeButton(row.transform, "招募", 118f, 38f, () => OnRecruit(archIndex, elite));
+            Button hire = MakeButton(row.transform, L.T("招募"), 118f, 38f, () => OnRecruit(archIndex, elite));
             RectTransform hrt = (RectTransform)hire.transform;
             hrt.anchorMin = hrt.anchorMax = new Vector2(1f, 0.5f);
             hrt.pivot = new Vector2(1f, 0.5f);
@@ -617,9 +614,10 @@ namespace KgdRetinue.UI
             // 第二阶段才做（按约定：阶段一只做招募，用固定装备组；阶段二才是装配界面）。
             // 但按钮不能点了没反应 —— 那看起来像坏了，实测用户就是这么反馈的。
             string who = elite != null ? elite.Name : "普通卫兵";
+            // 日志固定中文（诊断用），界面那份单独走本地化
+            string whoShown = elite != null ? elite.Name : L.T("普通卫兵");
             if (_titleRight != null)
-                _titleRight.text = "「" + who + "」装备编辑属于第二阶段，尚未实现"
-                                 + "（当前用固定装备组：按玩家阶位发 T1/T2/T3）";
+                _titleRight.text = L.F("「{0}」装备编辑属于第二阶段，尚未实现（当前用固定装备组：按玩家阶位发 T1/T2/T3）", whoShown);
             Main.Log("[装备] 改装备尚未实现（第二阶段）: archIndex=" + archIndex + " " + who);
         }
 

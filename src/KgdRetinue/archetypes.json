@@ -28,6 +28,7 @@
           "unit": "4a02a1bee6f84892b3cb7a3f8c818c69",
           "name": "铁壁 · 先锋队长",
           "rank": "铁壁卫长",
+          "rank_en": "Ironwall Warden",
           "plan": "rt_abelard_vanguard",
           "chain": [
             "974496d72fbe4329b438ee15cf004bd2",
@@ -77,6 +78,7 @@
           "unit": "30e6364a1d7a425b93d877122c6eed40",
           "name": "磐石 · 首席战士",
           "rank": "磐石首席",
+          "rank_en": "Bedrock Primus",
           "plan": "abelard_fighter_veteran",
           "chain": [
             "974496d72fbe4329b438ee15cf004bd2",
@@ -150,6 +152,11 @@
         "近卫兵",
         "近卫长",
         "近卫官"
+      ],
+      "guardNames_en": [
+        "Household Guard",
+        "Household Sergeant",
+        "Household Officer"
       ]
     },
     {
@@ -176,6 +183,7 @@
           "unit": "aca1e823dbf64d6999d2132e3198dd5a",
           "name": "寂静之眼",
           "rank": "寂静之眼",
+          "rank_en": "The Silent Eye",
           "plan": "yrliet_adept_hunter",
           "_注preGrant": "伊莉耶特的两条专属天赋（迅捷视觉 Yrliet_Talent01 / 流浪者道途 WayOfTheWanderer）。它们只挂在她本人身上，别的单位升级时永远不会出现在候选池里，只能直接授予。都是原版蓝图。 追加 穿透洞见=Yrliet_Talent02 / 预知远景=Yrliet_Talent03，同样是她本人专属。",
           "preGrant": [
@@ -226,6 +234,7 @@
           "unit": "53281ae602a34756a47c3e23f66c06cd",
           "name": "赏金 · 猎首",
           "rank": "赏金猎手",
+          "rank_en": "Bounty Hunter",
           "chain": [
             "06f4f78a9c1a472b85cd79a9a142153d",
             "6f276e8a8e2c4a548504ae39d2a7f22a",
@@ -328,6 +337,11 @@
         "斥候兵",
         "神射手",
         "狙击官"
+      ],
+      "guardNames_en": [
+        "Scout",
+        "Marksman",
+        "Sharpshooter"
       ]
     },
     {
@@ -355,6 +369,7 @@
           "unit": "9bc515c1b1b84c3ab0f65544807e22ee",
           "name": "怒火 · 首席连射",
           "rank": "怒火铳长",
+          "rank_en": "Wrathgun Master",
           "plan": "rt_soldier_suppress",
           "chain": [
             "06f4f78a9c1a472b85cd79a9a142153d",
@@ -389,6 +404,7 @@
           "unit": "2cf75c27e6d34681ab623101b0be1135",
           "name": "圣焰 · 净罪修女",
           "rank": "圣焰净罪",
+          "rank_en": "Sacred Flame",
           "plan": "argenta_soldier_veteran",
           "chain": [
             "06f4f78a9c1a472b85cd79a9a142153d",
@@ -451,6 +467,11 @@
         "射击手",
         "射击长",
         "射击官"
+      ],
+      "guardNames_en": [
+        "Gunner",
+        "Gun Sergeant",
+        "Gun Officer"
       ]
     },
     {
@@ -479,6 +500,7 @@
           "unit": "d1287134a3e64a4dbdae16b58d21bd8b",
           "name": "亚空间审判者",
           "rank": "灵能判官",
+          "rank_en": "Warp Arbiter",
           "plan": "heinrix_fighter_assassin",
           "_注preGrant": "Sanctic_Base_Feature。海因里希是生物系(起源=合法灵能者·生物系)，但他额外从剧情特性表 HeinrixFeatureList_Chapter1_Start 白拿了神圣系 —— 存档里那条 Sanctic_Base 的来源就是它的 AddFacts。方案里的 英雄诗篇 记录为 Ascension r1 / PathFeatureSource=Sanctic_Base，只能从神圣系池出。我们的模板没有那份剧情表，所以要补。原版蓝图。",
           "preGrant": [
@@ -509,6 +531,7 @@
           "unit": "638ab19bfae74bb99dacc93e7d6fe7f3",
           "name": "火杖行刑者",
           "rank": "灵能刽子",
+          "rank_en": "Pyre Executioner",
           "plan": "rt_fire_executioner",
           "_注preGrant": "Pyromancy_Base_Feature —— 火系灵能学派。它带 9 个 AddFeaturesToLevelUp，不给的话方案里 7 条火系灵能一条都进不了候选池（怒焰迸射/烈焰风暴/烈焰焚尽…）。原版蓝图，不新增 AssetId。",
           "preGrant": [
@@ -572,6 +595,11 @@
         "灵能者",
         "灵能卫",
         "灵能官"
+      ],
+      "guardNames_en": [
+        "Psyker",
+        "Psy-Warden",
+        "Psy-Officer"
       ]
     },
     {
@@ -593,6 +621,7 @@
           "unit": "bc5ca9badb2042b48afb13c1829619b3",
           "name": "谕令 · 灵能军官",
           "rank": "谕令参谋",
+          "rank_en": "Edict Adjutant",
           "plan": "rt_psyker_officer",
           "_注preGrant": "Biomancy_Base_Feature —— 生物系灵能学派。同理，不给的话方案里 9 条生物系（恢复生机/亚空神速/过度代谢/躯体转化…）全进不来。原版蓝图。",
           "preGrant": [
@@ -620,6 +649,7 @@
           "unit": "5990a9129d6648a68aa7b62ebe2cdc05",
           "name": "铁律 · 政委军官",
           "rank": "铁律政委",
+          "rank_en": "Iron Law Commissar",
           "plan": "rt_commissar_officer",
           "chain": [
             "33725d84e95e4323ac46d8fbf899b250",
@@ -683,6 +713,11 @@
         "指挥者",
         "指挥官",
         "战略家"
+      ],
+      "guardNames_en": [
+        "Leader",
+        "Commander",
+        "Strategist"
       ]
     }
   ],
@@ -791,5 +826,107 @@
     "张栖迟",
     "颜北望",
     "袁停舟"
+  ],
+  "guardNamePool_en": [
+    "Kelton",
+    "Valen",
+    "Draken",
+    "Corvis",
+    "Severin",
+    "Lockhart",
+    "Ferdinand",
+    "Grimmer",
+    "Halwin",
+    "Istvan",
+    "Julian",
+    "Kasper",
+    "Landry",
+    "Marcus",
+    "Nikola",
+    "Ottori",
+    "Pascal",
+    "Quentin",
+    "Renard",
+    "Thorne",
+    "Theodor",
+    "Urban",
+    "Viktor",
+    "Wolf",
+    "Zephyrin",
+    "Adrian",
+    "Balthasar",
+    "Cyrian",
+    "Damian",
+    "Edmund",
+    "Fabian",
+    "Godric",
+    "Herbert",
+    "Ingram",
+    "Yorick",
+    "Clement",
+    "Lucien",
+    "Maynard",
+    "Norbert",
+    "Orlando",
+    "Petro",
+    "Quintus",
+    "Rodric",
+    "Sigmund",
+    "Tobias",
+    "Ulrich",
+    "Vasily",
+    "Winfield",
+    "Zachary",
+    "Adele",
+    "Beatrice",
+    "Cassandra",
+    "Dorothea",
+    "Eloise",
+    "Fiona",
+    "Greta",
+    "Helena",
+    "Isabel",
+    "Juliana",
+    "Katrin",
+    "Lucille",
+    "Shen Yanzhou",
+    "Lu Jueming",
+    "Gu Changfeng",
+    "Pei Zhao",
+    "Xiao Heye",
+    "Jiang Xun",
+    "Xie Wujiu",
+    "Cheng Zhiyuan",
+    "Han Jin",
+    "Su Wenqu",
+    "Bai Luochuan",
+    "Song Tingyun",
+    "Qin Rang",
+    "Liang Guzhou",
+    "Cui Huaijin",
+    "Ye Jingzhe",
+    "Tang Jiusi",
+    "Zhong Yu",
+    "Feng Tinglan",
+    "Shao Qi",
+    "Wen Yan",
+    "Xu Nanzhi",
+    "Jian Xun",
+    "Lou Jianshan",
+    "Yuan Qingye",
+    "Yuan Zhi",
+    "Yan Zhao",
+    "Yan Linzhou",
+    "Wang Yanqing",
+    "Wang Jue",
+    "Li Yun",
+    "Li Jichuan",
+    "Zhang Ye",
+    "Zhang Chenzhou",
+    "Wang Shuo",
+    "Li Guiyi",
+    "Zhang Qichi",
+    "Yan Beiwang",
+    "Yuan Tingzhou"
   ]
 }

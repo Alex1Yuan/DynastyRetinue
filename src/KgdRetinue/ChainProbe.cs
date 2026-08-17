@@ -45,6 +45,8 @@ namespace KgdRetinue
             public string UnitId;
             /// <summary>专属名字。旧格式，只在没有 Rank 时用。</summary>
             public string Name;
+            /// <summary>英文位阶（archetypes.json 的 "rank_en"）。缺失回落中文。</summary>
+            public string RankEn;
             /// <summary>专属位阶（archetypes.json 的 "rank"）。有它就走「位阶·人名」，
             /// 和普通卫兵同一套机制，只是位阶固定不随等级晋升 —— 精英本来就在顶。</summary>
             public string Rank;
@@ -126,6 +128,9 @@ namespace KgdRetinue
             /// <summary>可选：普通卫兵按阶位取的三档名字（T1/T2/T3）。
             /// 升阶时会把已有卫兵改名到新档、保留编号。精英不走这里，用 EliteDef.Name。</summary>
             public string[] GuardNames;
+            /// <summary>英文军衔。archetypes.json 的 "guardNames_en"。
+            /// 缺失时回落中文 —— 宁可一处没译，也不能空白。</summary>
+            public string[] GuardNamesEn;
             /// <summary>可选：该分型的多个精英（每个有自己的单位/名字/装备/链）。
             /// 配了这个就忽略上面的 EliteUnitId/EliteName/Gear 单精英字段。</summary>
             public EliteDef[] Elites;

@@ -78,6 +78,19 @@ namespace KgdRetinue
         /// 那是刻意的：这个人没了，名字可以有新人继承。
         /// </summary>
         public static string[] GuardNamePool;
+        /// <summary>英文人名池。为空则回落中文池。</summary>
+        public static string[] GuardNamePoolEn;
+
+        /// <summary>按当前界面语言取人名池。英文池为空时回落中文池 —— 有名字总比没有强。</summary>
+        public static string[] NamePool
+        {
+            get
+            {
+                if (L.Current == L.EnGB && GuardNamePoolEn != null && GuardNamePoolEn.Length > 0)
+                    return GuardNamePoolEn;
+                return GuardNamePool;
+            }
+        }
 
         /// <summary>
         /// 上一次加载失败是不是**暂时性**的（蓝图还没就绪）。是就不缓存失败，下次访问重试。
@@ -135,6 +148,10 @@ namespace KgdRetinue
                 // 卫兵的人名池（根级，五条线共用）。取不到就留空，ApplyName 会退回编号式命名。
                 try { GuardNamePool = ReadGuidList(root["guardNamePool"]); }
                 catch { GuardNamePool = null; }
+                // 英文人名池。中文池里那 100 个虽然写成汉字，多半是西方名的音译
+                //（凯尔顿=Kelton、洛克哈特=Lockhart…），英文语境下直接用汉字会很突兀。
+                try { GuardNamePoolEn = ReadGuidList(root["guardNamePool_en"]); }
+                catch { GuardNamePoolEn = null; }
 
                 var list = new List<ChainProbe.Archetype>();
                 foreach (var item in arr)
@@ -171,6 +188,7 @@ namespace KgdRetinue
                     a.GearT2     = ReadGuidList(item["gearT2"]);
                     a.GearT3     = ReadGuidList(item["gearT3"]);
                     a.GuardNames = ReadGuidList(item["guardNames"]);   // 复用同一个字符串数组读法
+                    a.GuardNamesEn = ReadGuidList(item["guardNames_en"]);
                     a.GrantFeatures = ReadGuidList(item["grantFeatures"]);
                     a.PreGrant      = ReadGuidList(item["preGrant"]);
 
@@ -188,6 +206,7 @@ namespace KgdRetinue
                                 UnitId   = (string)e["unit"],
                                 Name     = (string)e["name"],
                                 Rank     = (string)e["rank"],
+                                RankEn   = (string)e["rank_en"],
                                 PlanName = (string)e["plan"],
                                 Gear     = ReadGuidList(e["gear"]),
                                 Chain    = ReadGuidList(e["chain"]),

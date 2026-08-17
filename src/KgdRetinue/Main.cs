@@ -576,8 +576,26 @@ namespace KgdRetinue
             Settings.GuardKillFeedsOwnPool = GUILayout.Toggle(Settings.GuardKillFeedsOwnPool, "卫兵杀敌也给卫队池加分（不动你那份，否则卫队只出力不进账）");
             Settings.GuardPsykerNoVeil = GUILayout.Toggle(Settings.GuardPsykerNoVeil, "卫兵灵能不推高亚空间威胁（帷幕是区域唯一值、做不了独立池，只能选计不计入）");
             Settings.NoCameraFollowGuards = GUILayout.Toggle(Settings.NoCameraFollowGuards, "卫兵行动时镜头不跟随（含技能演出特写；你自己队伍不受影响）");
+            // 「发放装备」这四个字太省，作者本人都问过它是干嘛的 ——
+            // 作者看不懂的标签，玩家一定看不懂。改成把**两边的后果**都写出来。
+            // ---------- 界面语言 ----------
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("界面语言", GUILayout.Width(70));
+            string[] _langs = { "跟随游戏", "中文", "English" };
+            for (int i = 0; i < _langs.Length; i++)
+                if (GUILayout.Toggle(Settings.Language == i, _langs[i], "Button", GUILayout.Width(i == 0 ? 90 : 70))
+                    && Settings.Language != i)
+                { Settings.Language = i; L.Reset(); }
+            GUILayout.Label("<color=#aaaaaa>默认跟随游戏语言（LocalizationManager.CurrentLocale）。"
+                          + "译文在 l10n_en.json 里，热加载 —— 查不到的条目原样显示中文，不会空白。"
+                          + "卫兵军衔/精英位阶/人名池另有英文版，在 archetypes.json 的 *_en 字段。</color>");
+            GUILayout.EndHorizontal();
+            GUILayout.Space(6);
+
             Settings.EquipGraduationGear = GUILayout.Toggle(Settings.EquipGraduationGear,
-                "招募时发放毕业装备（关掉则只给蓝图自带的）");
+                "<b>给卫兵发装备</b>　<color=#aaaaaa>开：按 archetypes.json 的配表凭空生成一整套"
+              + "（普通卫兵按 T1/T2/T3 三档，精英用专属套），不动你的仓库。"
+              + "关：一件不发，卫兵只有单位蓝图自带的那身 —— 嫌 mod 发的装备太强就关掉。</color>");
             Settings.EliteCanBeDowned = GUILayout.Toggle(Settings.EliteCanBeDowned,
                 "精英倒地可救（0 血进昏迷而非死亡）　<color=#aaaaaa>普通卫兵始终永久死亡 —— "
                 + "那是原版对 ExCompanion 的默认行为（UnitLifeController.CalculateLifeState），不需要我们做任何事</color>");

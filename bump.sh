@@ -60,6 +60,8 @@ if [ "$2" = "pack" ]; then
   OUT=dist/KgdRetinue
   rm -rf dist && mkdir -p "$OUT"
   cp "$R/Info.json" "$R/archetypes.json" "$R/plans.json" "$OUT/"
+  # 译文表：缺了只是界面不显示英文，不影响功能；但既然有就该发
+  if [ -f "$R/l10n_en.json" ]; then cp "$R/l10n_en.json" "$OUT/"; fi
   cp "$BIN/KgdRetinue.dll" "$OUT/"
   if [ -f README.md ]; then cp README.md "$OUT/"; fi
   # 不打 pdb（玩家用不上，只让包变大）；不打 Settings.xml（那是本机配置）；

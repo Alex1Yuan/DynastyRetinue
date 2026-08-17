@@ -64,7 +64,7 @@ namespace KgdRetinue
             {
                 if (!_open) return;
                 EnsureStyles();
-                _rect = GUI.Window(0x4B475921, _rect, Body, "船坞 · 座舰改装");
+                _rect = GUI.Window(0x4B475921, _rect, Body, L.T("船坞 · 座舰改装"));
             }
 
             private static void EnsureStyles()
@@ -85,10 +85,9 @@ namespace KgdRetinue
                 var orig = ShipDialog.OriginalSize();
 
                 GUILayout.Space(4);
-                GUILayout.Label("当前座舰：<b>" + ShipDialog.SizeName(cur) + "</b>"
-                              + "　　原本：" + ShipDialog.SizeName(orig)
-                              + "　　废料：<b>" + ShipDialog.Scrap() + "</b>", _sHead);
-                GUILayout.Label("升级只补差价 —— 已经花过的不重复收。还原按当前档全额退还。", _sDim);
+                GUILayout.Label(L.F("当前座舰：<b>{0}</b>　　原本：{1}　　废料：<b>{2}</b>",
+                                    ShipDialog.SizeName(cur), ShipDialog.SizeName(orig), ShipDialog.Scrap()), _sHead);
+                GUILayout.Label(L.T("升级只补差价 —— 已经花过的不重复收。还原按当前档全额退还。"), _sDim);
                 GUILayout.Space(6);
 
                 _scroll = GUILayout.BeginScrollView(_scroll, GUILayout.Height(340));
@@ -100,8 +99,8 @@ namespace KgdRetinue
                     {
                         lastTier = o.Tier;
                         GUILayout.Space(6);
-                        GUILayout.Label("── " + ShipDialog.SizeName(o.Tier)
-                                      + "　总价 " + ShipDialog.TotalFor(o.Tier) + " 废料 ──", _sHead);
+                        GUILayout.Label(L.F("── {0}　总价 {1} 废料 ──",
+                                            ShipDialog.SizeName(o.Tier), ShipDialog.TotalFor(o.Tier)), _sHead);
                     }
                     Row(o, cur);
                 }
@@ -113,17 +112,17 @@ namespace KgdRetinue
                 bool canRevert = cur != orig;
                 GUI.enabled = canRevert;
                 if (GUILayout.Button(canRevert
-                        ? "还原为原样（" + ShipDialog.SizeName(orig) + "，退还 " + refund + " 废料）"
-                        : "已经是原样（" + ShipDialog.SizeName(orig) + "）", GUILayout.Height(26)))
+                        ? L.F("还原为原样（{0}，退还 {1} 废料）", ShipDialog.SizeName(orig), refund)
+                        : L.F("已经是原样（{0}）", ShipDialog.SizeName(orig)), GUILayout.Height(26)))
                     _reply = ShipDialog.Revert();
                 GUI.enabled = true;
-                if (GUILayout.Button("关闭", GUILayout.Width(90), GUILayout.Height(26))) _open = false;
+                if (GUILayout.Button(L.T("关闭"), GUILayout.Width(90), GUILayout.Height(26))) _open = false;
                 GUILayout.EndHorizontal();
 
                 GUILayout.Space(6);
                 GUILayout.Label(string.IsNullOrEmpty(_reply)
-                    ? "<i>「有什么需要，尽管吩咐。」</i>"
-                    : "<b>高阶顾问：</b>" + _reply, _sReply, GUILayout.MinHeight(58));
+                    ? L.T("<i>「有什么需要，尽管吩咐。」</i>")
+                    : L.F("<b>高阶顾问：</b>{0}", _reply), _sReply, GUILayout.MinHeight(58));
 
                 GUI.DragWindow(new Rect(0, 0, 10000, 22));
             }
@@ -149,18 +148,18 @@ namespace KgdRetinue
 
                 if (!usable)
                 {
-                    GUILayout.Label("<color=#b06060>不可用：" + why + "</color>", _sDim);
+                    GUILayout.Label(L.F("<color=#b06060>不可用：{0}</color>", why), _sDim);
                 }
                 else if (isCurrent && o.Tier == cur)
                 {
-                    GUILayout.Label("<color=#80c880>当前座舰</color>", GUILayout.Width(110));
+                    GUILayout.Label(L.T("<color=#80c880>当前座舰</color>"), GUILayout.Width(110));
                     GUILayout.FlexibleSpace();
                 }
                 else
                 {
                     GUILayout.Label(ShipDialog.PriceLabel(o.Tier), GUILayout.Width(110));
                     GUI.enabled = afford;
-                    if (GUILayout.Button(afford ? "改装" : "废料不足", GUILayout.Width(90)))
+                    if (GUILayout.Button(afford ? L.T("改装") : L.T("废料不足"), GUILayout.Width(90)))
                     {
                         // 目标档由船体决定；先设档再换模由 ApplyModelAtTier 内部保证顺序
                         _reply = BuyModel(o);

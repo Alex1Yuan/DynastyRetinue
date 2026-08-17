@@ -36,7 +36,7 @@ namespace KgdRetinue
             {
                 Guid       = YardGuid,
                 TextKey    = YardKey,
-                Text       = delegate { return "（船坞）关于座舰的改装事宜……"; },
+                Text       = delegate { return L.T("（船坞）关于座舰的改装事宜……"); },
                 Enabled    = delegate { return Main.Settings != null && Main.Settings.ShipDialogEntry; },
                 KeepDialog = true,          // 留在对话里，好让顾问说完话
                 OnPicked   = UI.ShipYardUI.Open,
@@ -100,9 +100,9 @@ namespace KgdRetinue
         public static string PriceLabel(Size target)
         {
             int p = PriceTo(target);
-            if (p > 0) return p + " 废料";
-            if (p < 0) return "退还 " + (-p) + " 废料";
-            return "无需补价";
+            if (p > 0) return L.F("{0} 废料", p);
+            if (p < 0) return L.F("退还 {0} 废料", -p);
+            return L.T("无需补价");
         }
 
         /// <summary>还原到原本那档能退多少 —— 按当前档的总投入全额退。</summary>
@@ -114,10 +114,10 @@ namespace KgdRetinue
 
         public static string SizeName(Size s)
         {
-            if (s == Size.GrandCruiser_3x6) return "大巡洋舰";
-            if (s == Size.Cruiser_2x4)      return "巡洋舰";
-            if (s == Size.Frigate_1x2)      return "护卫舰";
-            if (s == Size.Raider_1x1)       return "劫掠舰";
+            if (s == Size.GrandCruiser_3x6) return L.T("大巡洋舰");
+            if (s == Size.Cruiser_2x4)      return L.T("巡洋舰");
+            if (s == Size.Frigate_1x2)      return L.T("护卫舰");
+            if (s == Size.Raider_1x1)       return L.T("劫掠舰");
             return s.ToString();
         }
 
@@ -175,7 +175,15 @@ namespace KgdRetinue
             return list;
         }
 
-        public const string UnsupportedHint = "未调整好（挂点与缩放未在这条船体上校准）";
+        /// <summary>
+        /// 「未校准」的提示语。★是属性不是 const★ —— const 在编译期就定死了，
+        /// 没法过 L.T；而 ShipYardUI 直接拿它拼字符串，只有在这里本地化，
+        /// 两个窗口才会一起变英文。调用点写法不变（都是运行期取值）。
+        /// </summary>
+        public static string UnsupportedHint
+        {
+            get { return L.T("未调整好（挂点与缩放未在这条船体上校准）"); }
+        }
 
         /// <summary>
         /// 这条船体是不是**校准过**的。
@@ -215,20 +223,20 @@ namespace KgdRetinue
         {
             try
             {
-                if (m == null) return "船坞里没有这份图纸。";
+                if (m == null) return L.T("船坞里没有这份图纸。");
                 // ★兜底放在这里而不是 UI 里★ 两个窗口共用这条路，
                 // 任何一边漏了判断都不会让未校准的船体真的换上去。
                 if (!IsSupported(tier, m))
-                    return "这条船体船坞还没调校好，暂不承接。（" + UnsupportedHint + "）";
+                    return L.F("这条船体船坞还没调校好，暂不承接。（{0}）", UnsupportedHint);
                 int price = PriceTo(tier);          // 负数 = 该退给玩家
                 int have  = Scrap();
                 if (price > 0 && have < price)
-                    return "废料不够 —— 需要 " + price + "，账上只有 " + have + "。（一枚都没扣。）";
+                    return L.F("废料不够 —— 需要 {0}，账上只有 {1}。（一枚都没扣。）", price, have);
 
                 // ★先换船再扣钱★ 换船可能被拒（战斗中 StarshipTool.SetSize 会拒），
                 // 顺序反了就是"钱花了船没换"。宁可白换不能白扣。
                 if (!StarshipViewTool.ApplyModelAtTier(m, tier))
-                    return "现在动不了船坞（在战斗中？）。废料未扣除。";
+                    return L.T("现在动不了船坞（在战斗中？）。废料未扣除。");
 
                 if (price > 0)
                 {
@@ -243,13 +251,18 @@ namespace KgdRetinue
                     catch (Exception e) { Main.LogError("[船坞] ★船已改装但退款失败★: " + e.Message); }
                 }
                 Main.Log("[船坞] 成交 -> " + m.Hull + " @ " + tier + "　净费用 " + price + "　余额 " + Scrap());
-                return "改装完成。您的座舰现在是一艘" + SizeName(tier)
-                     + "（船体：" + m.Hull + "），"
-                     + (price > 0 ? "船坞收讫 " + price + " 单位废料。"
-                      : price < 0 ? "船坞退还 " + (-price) + " 单位废料。"
-                                  : "本次无需补价。");
+                // ★三句各自成句★ 不要"前半段 + 三选一的尾巴"那种拼法：
+                // 英文里收款/退款/免费三种说法的语序都不一样，拆成片段必然错位。
+                if (price > 0)
+                    return L.F("改装完成。您的座舰现在是一艘{0}（船体：{1}），船坞收讫 {2} 单位废料。",
+                               SizeName(tier), m.Hull, price);
+                if (price < 0)
+                    return L.F("改装完成。您的座舰现在是一艘{0}（船体：{1}），船坞退还 {2} 单位废料。",
+                               SizeName(tier), m.Hull, -price);
+                return L.F("改装完成。您的座舰现在是一艘{0}（船体：{1}），本次无需补价。",
+                           SizeName(tier), m.Hull);
             }
-            catch (Exception e) { Main.LogError("[船坞] 交易异常: " + e); return "船坞出了点岔子，交易未完成。"; }
+            catch (Exception e) { Main.LogError("[船坞] 交易异常: " + e); return L.T("船坞出了点岔子，交易未完成。"); }
         }
 
         /// <summary>升级到 target 档的默认船体。</summary>
@@ -257,30 +270,30 @@ namespace KgdRetinue
         {
             try
             {
-                if (Current() == target) return "座舰已经是" + SizeName(target) + "了。";
+                if (Current() == target) return L.F("座舰已经是{0}了。", SizeName(target));
 
                 int price = PriceTo(target);
                 int have  = Scrap();
                 if (have < price)
-                    return "废料不够 —— 需要 " + price + "，账上只有 " + have
-                         + "。还差 " + (price - have) + "。（一枚都没扣。）";
+                    return L.F("废料不够 —— 需要 {0}，账上只有 {1}。还差 {2}。（一枚都没扣。）",
+                               price, have, price - have);
 
                 var model = ShipModelCatalog.DefaultFor(target);
-                if (model == null) return "船坞里没有对应的船体图纸，交易取消，废料未扣。";
+                if (model == null) return L.T("船坞里没有对应的船体图纸，交易取消，废料未扣。");
 
                 // ★先换船再扣钱★ 换船可能被拒（战斗中 StarshipTool.SetSize 会拒），
                 // 顺序反了就是"钱花了船没换"。宁可白换不能白扣。
                 if (!StarshipViewTool.ApplyModelAtTier(model, target))
-                    return "现在动不了船坞（在战斗中？）。废料未扣除。";
+                    return L.T("现在动不了船坞（在战斗中？）。废料未扣除。");
 
                 try { Game.Instance.Player.Scrap.Spend(price); }
                 catch (Exception e) { Main.LogError("[船坞] ★船已改装但废料扣除失败★: " + e.Message); }
 
                 Main.Log("[船坞] 成交 -> " + SizeName(target) + "　花费 " + price + "　余额 " + Scrap());
-                return "改装完成。您的座舰现在是一艘" + SizeName(target) + "了，"
-                     + "船坞收讫 " + price + " 单位废料。";
+                return L.F("改装完成。您的座舰现在是一艘{0}了，船坞收讫 {1} 单位废料。",
+                           SizeName(target), price);
             }
-            catch (Exception e) { Main.LogError("[船坞] 交易异常: " + e); return "船坞出了点岔子，交易未完成。"; }
+            catch (Exception e) { Main.LogError("[船坞] 交易异常: " + e); return L.T("船坞出了点岔子，交易未完成。"); }
         }
 
         /// <summary>还原成玩家原本那条船，并退还废料。</summary>
@@ -289,14 +302,14 @@ namespace KgdRetinue
             try
             {
                 var orig = OriginalSize();
-                if (Current() == orig) return "座舰本来就是" + SizeName(orig) + "，无需还原。";
+                if (Current() == orig) return L.F("座舰本来就是{0}，无需还原。", SizeName(orig));
 
                 int refund = RefundOnRevert();
 
                 // 还原走 RevertAll：它同时把 m_CustomPrefabGuid 清空、把 Size 设回 OriginalSize。
                 // 只改一样会留下"新模型 + 旧档位"或反过来的中间态。
                 if (!StarshipViewTool.RevertAll())
-                    return "现在动不了船坞（在战斗中？）。什么都没改。";
+                    return L.T("现在动不了船坞（在战斗中？）。什么都没改。");
 
                 if (refund > 0)
                 {
@@ -304,10 +317,10 @@ namespace KgdRetinue
                     catch (Exception e) { Main.LogError("[船坞] 退款失败: " + e.Message); }
                 }
                 Main.Log("[船坞] 已还原为 " + SizeName(orig) + "　退款 " + refund + "　余额 " + Scrap());
-                return "已按原样复原。您的座舰重新是一艘" + SizeName(orig) + "，"
-                     + "船坞退还 " + refund + " 单位废料。";
+                return L.F("已按原样复原。您的座舰重新是一艘{0}，船坞退还 {1} 单位废料。",
+                           SizeName(orig), refund);
             }
-            catch (Exception e) { Main.LogError("[船坞] 还原异常: " + e); return "船坞出了点岔子，还原未完成。"; }
+            catch (Exception e) { Main.LogError("[船坞] 还原异常: " + e); return L.T("船坞出了点岔子，还原未完成。"); }
         }
     }
 }

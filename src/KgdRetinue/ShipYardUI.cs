@@ -99,7 +99,7 @@ namespace KgdRetinue.UI
             prt.sizeDelta = new Vector2(980f, 720f);
             prt.anchoredPosition = Vector2.zero;
 
-            var title = RetinueUI.MakeLabelPublic(panel.transform, "船坞 · 座舰改装", 30f,
+            var title = RetinueUI.MakeLabelPublic(panel.transform, L.T("船坞 · 座舰改装"), 30f,
                                                   VanillaSkin.Gold, TextAlignmentOptions.Left);
             var trt = (RectTransform)title.transform;
             trt.anchorMin = new Vector2(0f, 1f); trt.anchorMax = new Vector2(1f, 1f);
@@ -126,13 +126,13 @@ namespace KgdRetinue.UI
             catch (Exception e) { Main.LogError("[船坞UI] 调整滚动区底边失败: " + e.Message); }
 
             // 底部：还原 + 关闭
-            _revertBtn = RetinueUI.MakeButton(panel.transform, "还原为原样", 300f, 40f, OnRevert);
+            _revertBtn = RetinueUI.MakeButton(panel.transform, L.T("还原为原样"), 300f, 40f, OnRevert);
             var rrt = (RectTransform)_revertBtn.transform;
             rrt.anchorMin = new Vector2(0f, 0f); rrt.anchorMax = new Vector2(0f, 0f);
             rrt.pivot = new Vector2(0f, 0f);
             rrt.anchoredPosition = new Vector2(32f, 108f);
 
-            Button close = RetinueUI.MakeButton(panel.transform, "关闭", 140f, 40f, Close);
+            Button close = RetinueUI.MakeButton(panel.transform, L.T("关闭"), 140f, 40f, Close);
             var crt = (RectTransform)close.transform;
             crt.anchorMin = new Vector2(1f, 0f); crt.anchorMax = new Vector2(1f, 0f);
             crt.pivot = new Vector2(1f, 0f);
@@ -157,10 +157,8 @@ namespace KgdRetinue.UI
                 Size cur = ShipDialog.Current(), orig = ShipDialog.OriginalSize();
 
                 if (_header != null)
-                    _header.text = "当前座舰　<color=#c6a24e>" + ShipDialog.SizeName(cur) + "</color>"
-                                 + "　　原本　" + ShipDialog.SizeName(orig)
-                                 + "　　废料　<color=#c6a24e>" + ShipDialog.Scrap() + "</color>"
-                                 + "　　<size=15>升级只补差价，还原全额退还</size>";
+                    _header.text = L.F("当前座舰　<color=#c6a24e>{0}</color>　　原本　{1}　　废料　<color=#c6a24e>{2}</color>　　<size=15>升级只补差价，还原全额退还</size>",
+                                       ShipDialog.SizeName(cur), ShipDialog.SizeName(orig), ShipDialog.Scrap());
 
                 if (_revertBtn != null)
                 {
@@ -168,15 +166,15 @@ namespace KgdRetinue.UI
                     var t = _revertBtn.GetComponentInChildren<TextMeshProUGUI>();
                     if (t != null)
                         t.text = cur != orig
-                            ? "还原为" + ShipDialog.SizeName(orig) + "（退 " + refund + "）"
-                            : "已是原样";
+                            ? L.F("还原为{0}（退 {1}）", ShipDialog.SizeName(orig), refund)
+                            : L.T("已是原样");
                     RetinueUI.SetInteractable(_revertBtn, cur != orig);
                 }
 
                 if (_reply != null)
                     _reply.text = string.IsNullOrEmpty(_replyText)
-                        ? "<color=#8d867a><i>「有什么需要，尽管吩咐。」</i></color>"
-                        : "<color=#c6a24e>高阶顾问：</color>" + _replyText;
+                        ? L.T("<color=#8d867a><i>「有什么需要，尽管吩咐。」</i></color>")
+                        : L.F("<color=#c6a24e>高阶顾问：</color>{0}", _replyText);
 
                 RebuildRows();
             }
@@ -200,7 +198,7 @@ namespace KgdRetinue.UI
                 {
                     lastTier = o.Tier;
                     RetinueUI.MakeSectionLabel(_content,
-                        ShipDialog.SizeName(o.Tier) + "　总价 " + ShipDialog.TotalFor(o.Tier) + " 废料");
+                        L.F("{0}　总价 {1} 废料", ShipDialog.SizeName(o.Tier), ShipDialog.TotalFor(o.Tier)));
                 }
                 MakeRow(o, cur);
             }
@@ -241,7 +239,7 @@ namespace KgdRetinue.UI
 
             if (!usable)
             {
-                var w = RetinueUI.MakeLabelPublic(row.transform, "<color=#b06060>不可用：" + why + "</color>",
+                var w = RetinueUI.MakeLabelPublic(row.transform, L.F("<color=#b06060>不可用：{0}</color>", why),
                                                   16f, VanillaSkin.TextDim, TextAlignmentOptions.Right);
                 var wrt = (RectTransform)w.transform;
                 wrt.anchorMin = new Vector2(1f, 0f); wrt.anchorMax = new Vector2(1f, 1f);
@@ -268,7 +266,7 @@ namespace KgdRetinue.UI
 
             if (isCurrent && o.Tier == cur)
             {
-                var w = RetinueUI.MakeLabelPublic(row.transform, "<color=#7ec87e>当前座舰</color>",
+                var w = RetinueUI.MakeLabelPublic(row.transform, L.T("<color=#7ec87e>当前座舰</color>"),
                                                   18f, VanillaSkin.Text, TextAlignmentOptions.Right);
                 var wrt = (RectTransform)w.transform;
                 wrt.anchorMin = new Vector2(1f, 0f); wrt.anchorMax = new Vector2(1f, 1f);
@@ -288,7 +286,7 @@ namespace KgdRetinue.UI
             prt.anchoredPosition = new Vector2(-176f, 0f);
 
             var offer = o;   // 闭包捕获：别在 lambda 里用循环变量
-            Button b = RetinueUI.MakeButton(row.transform, "改装", 140f, 34f,
+            Button b = RetinueUI.MakeButton(row.transform, L.T("改装"), 140f, 34f,
                                             delegate { OnBuy(offer); });
             var brt = (RectTransform)b.transform;
             brt.anchorMin = new Vector2(1f, 0.5f); brt.anchorMax = new Vector2(1f, 0.5f);

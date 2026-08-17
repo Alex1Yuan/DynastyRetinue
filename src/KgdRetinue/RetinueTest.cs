@@ -376,7 +376,11 @@ namespace KgdRetinue
             // 精英和普通卫兵之间也不会重名 —— PickPersonName 是全名册去重的。
             // 没配 rank 的旧数据退回专属固定名，保证升级上来的存档不改名。
             var _ed = GearTool.EliteDefOf(g, arch);
-            if (_ed != null && !string.IsNullOrEmpty(_ed.Rank))
+            string _eRank = null;
+            if (_ed != null)
+                _eRank = (L.Current == L.EnGB && !string.IsNullOrEmpty(_ed.RankEn))
+                       ? _ed.RankEn : _ed.Rank;
+            if (!string.IsNullOrEmpty(_eRank))
             {
                 string ecur = d.CustomName;
                 if (!string.IsNullOrEmpty(ecur))
@@ -385,18 +389,18 @@ namespace KgdRetinue
                     SplitRankPerson(ecur, out er, out ep);
                     // ★要求人名也在★ 否则「寂静之眼」这种位阶和旧固定名同字的会在这里
                     // 早退，永远补不上人名（旧名整串被当成位阶，person 是空的）
-                    if (er == _ed.Rank && !string.IsNullOrEmpty(ep)) return;
+                    if (er == _eRank && !string.IsNullOrEmpty(ep)) return;
                     // 旧的固定专属名（「铁壁 · 先锋队长」）没有人名可继承，直接重发一个
                     if (!string.IsNullOrEmpty(ep) && IsOurRank(arch, er))
                     {
-                        string ren = _ed.Rank + SEP + ep;
+                        string ren = _eRank + SEP + ep;
                         d.SetName(ren);
                         Main.Log("  改名(精英): " + ecur + " -> " + ren);
                         return;
                     }
                     if (ecur != _ed.Name) return;                     // 玩家手改过，不动
                 }
-                string en = _ed.Rank + SEP + PickPersonName(g);
+                string en = _eRank + SEP + PickPersonName(g);
                 d.SetName(en);
                 Main.Log("  改名(精英): " + (g.Blueprint != null ? g.Blueprint.CharacterName : "?") + " -> " + en);
                 return;
@@ -458,7 +462,7 @@ namespace KgdRetinue
         /// </summary>
         private static string PickPersonName(BaseUnitEntity self)
         {
-            var pool = Archetypes.GuardNamePool;
+            var pool = Archetypes.NamePool;
 
             var used = new System.Collections.Generic.HashSet<string>();
             int maxNum = 0;
@@ -509,14 +513,18 @@ namespace KgdRetinue
         {
             try
             {
-                if (arch != null && arch.GuardNames != null && arch.GuardNames.Length > 0)
+                // 英文界面用 guardNames_en；没配就回落中文 —— 宁可一处没译，也不能空白
+                var names = (L.Current == L.EnGB && arch != null
+                             && arch.GuardNamesEn != null && arch.GuardNamesEn.Length > 0)
+                          ? arch.GuardNamesEn : (arch != null ? arch.GuardNames : null);
+                if (names != null && names.Length > 0)
                 {
                     // 阶位按**卫兵自己的等级**推，不是玩家的 —— 军衔该跟着他自己的成长走
                     int lv = g.Progression != null ? g.Progression.CharacterLevel : 1;
                     int t = lv >= 36 ? 3 : (lv >= 16 ? 2 : 1);
                     int idx = t - 1;
-                    if (idx >= arch.GuardNames.Length) idx = arch.GuardNames.Length - 1;
-                    var s = arch.GuardNames[idx];
+                    if (idx >= names.Length) idx = names.Length - 1;
+                    var s = names[idx];
                     if (!string.IsNullOrEmpty(s)) return s;
                 }
             }
@@ -533,13 +541,20 @@ namespace KgdRetinue
             if (string.IsNullOrEmpty(rank)) return false;
             try
             {
+                // ★中英两套都要认★ 玩家中途切语言时，卫兵身上还挂着另一种语言的军衔。
+                // 认不出来就会被当成"玩家手改的名字"而不敢改，晋升从此卡死。
                 if (arch != null && arch.GuardNames != null)
-                    foreach (var s in arch.GuardNames)
-                        if (s == rank) return true;
+                    foreach (var s in arch.GuardNames) if (s == rank) return true;
+                if (arch != null && arch.GuardNamesEn != null)
+                    foreach (var s in arch.GuardNamesEn) if (s == rank) return true;
                 // 精英位阶也算 —— 否则改了 rank 之后老名字会被当成"玩家手改的"而不敢动
                 if (arch != null && arch.Elites != null)
                     foreach (var e in arch.Elites)
-                        if (e != null && !string.IsNullOrEmpty(e.Rank) && e.Rank == rank) return true;
+                    {
+                        if (e == null) continue;
+                        if (!string.IsNullOrEmpty(e.Rank)   && e.Rank   == rank) return true;
+                        if (!string.IsNullOrEmpty(e.RankEn) && e.RankEn == rank) return true;
+                    }
             }
             catch { }
             try

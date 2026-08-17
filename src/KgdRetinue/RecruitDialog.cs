@@ -62,7 +62,7 @@ namespace KgdRetinue
             Register(new Entry {
                 Guid     = AnswerGuid,
                 TextKey  = TextKey,
-                Text     = delegate { return TextValue; },
+                Text     = delegate { return L.T(TextValue); },
                 Enabled  = delegate { return Main.Settings != null && Main.Settings.DialogRecruitEntry; },
                 OnPicked = delegate { Main.OpenRecruitUI(null); },
             });
