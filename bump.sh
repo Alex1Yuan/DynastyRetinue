@@ -31,7 +31,16 @@ R=src/KgdRetinue
 BIN=$R/bin/Release
 D="C:/Users/kyua805/AppData/LocalLow/Owlcat Games/Warhammer 40000 Rogue Trader/UnityModManager/KgdRetinue"
 
-[ -f "$BIN/KgdRetinue.dll" ] || { echo "x $BIN/KgdRetinue.dll 不存在 —— 先 dotnet build -c Release"; exit 1; }
+# ★先编译，且编译失败就停★
+# 只查 DLL 存在是不够的：编译失败时上一次的 DLL 还在，于是 Info.json 涨到新版、
+# 二进制却是旧的，还照样打成发布包 —— v0.55.0 就这么发出去过一次（4 个编译错误被无视）。
+echo "编译中……"
+( cd "$R" && dotnet build -c Release -v:m ) > /tmp/kgd_build.log 2>&1 || {
+  echo "✗ 编译失败，已中止。错误："; grep -E "error" /tmp/kgd_build.log | sort -u | head -10; exit 1; }
+if grep -qE ": error " /tmp/kgd_build.log; then
+  echo "✗ 编译有错误，已中止："; grep -E ": error " /tmp/kgd_build.log | sort -u | head -10; exit 1
+fi
+[ -f "$BIN/KgdRetinue.dll" ] || { echo "x $BIN/KgdRetinue.dll 不存在"; exit 1; }
 [ -f "$R/archetypes.json" ]  || { echo "x $R/archetypes.json 不存在"; exit 1; }
 [ -f "$R/plans.json" ]       || { echo "x $R/plans.json 不存在"; exit 1; }
 
