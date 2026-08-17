@@ -260,6 +260,10 @@ namespace KgdRetinue
                     if (_n > 0)   _w.AppendLine("　1. 招募区点【遣散全部】（当前在册 " + _n + " 名，它们写在存档里）");
                     if (_swapped) _w.AppendLine("　" + (_n > 0 ? "2" : "1") + ". 舰船区点【还原原版船模】");
                     _w.Append("　" + ((_n > 0 ? 1 : 0) + (_swapped ? 1 : 0) + 1) + ". <b>存盘</b> —— 前面几步只在内存里，不存盘等于没做");
+                    _w.Append("
+<color=#aaaaaa>这条流程是实测验证过的；"
+                            + "「不清理就直接删 mod」理论上也安全（存档里只写裸字符串和原版枚举），"
+                            + "但没做过完整实验，所以不给承诺。</color>");
                     GUILayout.Label(_w.ToString());
                 }
             }
