@@ -30,3 +30,8 @@ autotest.tsv
 _tmp/lance/
 _tmp/hull/
 dist/
+
+# archetypes.json 的临时回滚点（改配表前 cp 一份，纯本地安全网）
+src/KgdRetinue/archetypes.json.pre-*
+# src 下划线开头的是一次性排查脚本，不入库
+src/KgdRetinue/_*.py

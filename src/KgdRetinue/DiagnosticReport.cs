@@ -35,6 +35,7 @@ namespace KgdRetinue
 
                 var sb = new StringBuilder(64 * 1024);
                 Header(sb);
+                Integrity(sb, dir);
                 SettingsDump(sb);
                 RuntimeState(sb);
                 LogTail(sb, dir);
@@ -57,6 +58,62 @@ namespace KgdRetinue
         {
             try { return Main.ModEntry != null && Main.ModEntry.Info != null ? Main.ModEntry.Info.Version : "?"; }
             catch { return "?"; }
+        }
+
+        /// <summary>
+        /// 数据文件指纹核对。**只标注，不拦截** —— 对不上照常运行。
+        ///
+        /// ★用途是省时间，不是防人★
+        /// 别人（或用户自己）改过 archetypes.json / plans.json 之后发来一份 bug 报告，
+        /// 不标出来的话，会照着原版代码去查一个根本不存在的问题，白烧几小时。
+        /// 常见的合理情形也不少：用户自己调过配表忘了、两个版本的文件混在一起、
+        /// 或者装的是别人二次分发的版本。
+        ///
+        /// 预期哈希编在 DLL 里（BuildManifest.cs，由 tools/gen_manifest.py 在 bump 时生成），
+        /// 不是放一个和数据文件并排的清单 —— 否则改配表的人顺手把清单一起改了就没意义了。
+        /// 当然，能重编 DLL 的人照样能绕过；这挡的是「改 JSON」这一档，不是「改 DLL」那一档。
+        ///
+        /// 对正常玩家零感知：只出现在诊断包里，游戏内不提示、日志里不刷。
+        /// </summary>
+        private static void Integrity(StringBuilder sb, string dir)
+        {
+            sb.AppendLine();
+            sb.AppendLine("---- 数据文件 ----");
+            try
+            {
+                if (BuildManifest.Hashes == null || BuildManifest.Hashes.Count == 0)
+                {
+                    sb.AppendLine("  （本次构建没有指纹信息，跳过核对）");
+                    return;
+                }
+                if (!string.Equals(BuildManifest.Version, Ver(), StringComparison.Ordinal))
+                    sb.AppendLine("  ! DLL 内记录的版本 " + BuildManifest.Version
+                                + " 与 Info.json 的 " + Ver() + " 不一致");
+
+                foreach (var kv in BuildManifest.Hashes)
+                {
+                    string p = Path.Combine(dir, kv.Key);
+                    if (!File.Exists(p)) { sb.AppendLine("  ✗ " + kv.Key.PadRight(18) + "缺失"); continue; }
+                    string actual = Sha256(p);
+                    bool same = string.Equals(actual, kv.Value, StringComparison.OrdinalIgnoreCase);
+                    sb.AppendLine("  " + (same ? "✓ " : "★ ") + kv.Key.PadRight(18)
+                                + actual.Substring(0, 16) + "…  "
+                                + (same ? "与发布版一致" : "★与发布版不符 —— 该文件被修改过★"));
+                }
+            }
+            catch (Exception e) { sb.AppendLine("  （核对失败: " + e.Message + "）"); }
+        }
+
+        private static string Sha256(string path)
+        {
+            using (var sha = System.Security.Cryptography.SHA256.Create())
+            using (var fs = File.OpenRead(path))
+            {
+                var h = sha.ComputeHash(fs);
+                var sb = new StringBuilder(h.Length * 2);
+                foreach (var b in h) sb.Append(b.ToString("x2"));
+                return sb.ToString();
+            }
         }
 
         private static void Header(StringBuilder sb)

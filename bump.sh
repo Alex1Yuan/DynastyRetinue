@@ -31,6 +31,11 @@ R=src/KgdRetinue
 BIN=$R/bin/Release
 D="C:/Users/kyua805/AppData/LocalLow/Owlcat Games/Warhammer 40000 Rogue Trader/UnityModManager/KgdRetinue"
 
+# ★先生成数据文件指纹，再编译★ 顺序不能反 —— BuildManifest.cs 要参与编译。
+# 指纹只用于诊断包里标注"这份配表被改过没有"，不做任何拦截，正常玩家无感。
+echo "生成数据指纹……"
+py tools/gen_manifest.py "$VER"
+
 # ★先编译，且编译失败就停★
 # 只查 DLL 存在是不够的：编译失败时上一次的 DLL 还在，于是 Info.json 涨到新版、
 # 二进制却是旧的，还照样打成发布包 —— v0.55.0 就这么发出去过一次（4 个编译错误被无视）。
@@ -43,6 +48,9 @@ fi
 [ -f "$BIN/KgdRetinue.dll" ] || { echo "x $BIN/KgdRetinue.dll 不存在"; exit 1; }
 [ -f "$R/archetypes.json" ]  || { echo "x $R/archetypes.json 不存在"; exit 1; }
 [ -f "$R/plans.json" ]       || { echo "x $R/plans.json 不存在"; exit 1; }
+# 译文表现在是交付物的一部分。缺了不影响功能（会回落中文），但英文玩家会看到满屏中文，
+# 而这个失败是静默的 —— 所以在这里显式挡一道，别让它悄悄漏发。
+[ -f "$R/l10n_en.json" ]     || { echo "x $R/l10n_en.json 不存在（英文玩家会看到中文界面）"; exit 1; }
 
 py -c "
 import io,re
@@ -54,6 +62,13 @@ io.open(p,'w',encoding='utf-8-sig',newline='\n').write(s)
 cp "$R/Info.json"        "$D/Info.json"
 cp "$BIN/KgdRetinue.dll" "$D/"
 if [ -f "$BIN/KgdRetinue.pdb" ]; then cp "$BIN/KgdRetinue.pdb" "$D/"; fi
+# ★数据文件也要拷★ 原来只拷 Info+DLL，于是改了 src/ 的 archetypes.json / plans.json /
+# l10n_en.json 之后跑 bump.sh，部署目录里还是旧的 —— 游戏读的是部署目录，
+# 所以现象是"改了没生效"，而且不报错。l10n_en.json 更隐蔽：缺了会静默回落中文，
+# 看起来就只是"英文没做好"。
+cp "$R/archetypes.json"  "$D/"
+cp "$R/plans.json"       "$D/"
+if [ -f "$R/l10n_en.json" ]; then cp "$R/l10n_en.json" "$D/"; fi
 echo "已部署 v$VER 到本机"
 
 if [ "$2" = "pack" ]; then
@@ -64,6 +79,9 @@ if [ "$2" = "pack" ]; then
   if [ -f "$R/l10n_en.json" ]; then cp "$R/l10n_en.json" "$OUT/"; fi
   cp "$BIN/KgdRetinue.dll" "$OUT/"
   if [ -f README.md ]; then cp README.md "$OUT/"; fi
+  # 许可证必须随包发 —— MIT 要求"保留本许可文件"，不发就等于自己没遵守自己的条款
+  [ -f LICENSE ] || { echo "x LICENSE 不存在"; exit 1; }
+  cp LICENSE "$OUT/"
   # 不打 pdb（玩家用不上，只让包变大）；不打 Settings.xml（那是本机配置）；
   # 不打 *.tsv / kgd_log.txt（调试数据，且日志含本机绝对路径）
   py -c "

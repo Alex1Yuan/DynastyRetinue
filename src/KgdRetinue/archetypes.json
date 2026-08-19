@@ -124,29 +124,35 @@
         "10d7a4f74c9b4d1e98c3678fe71f00b7",
         "796b83ebb385460889c0a8ff9c2e9138",
         "d599481b53504578abb84f967df07741",
-        "86bc9833350c406f85531f4c4d2e65c8"
+        "86bc9833350c406f85531f4c4d2e65c8",
+        "9f512940203c4d15b243b7a20d289415",
+        "faa38ecde3ac4b3ea6c843a95b6138fa"
       ],
       "gearT2": [
         "7b79b4991269412db0e112ae93f34b62",
         "2802cf103af344f8b9d780ae4fb74a25",
         "35844167264c40449ef10a89d7eb63d5",
-        "9c29e48ed0e341cf8a00ed4ae303c8ee",
-        "cc543c33dc1b47b489ccad2b312a5a86",
+        "86be5119b66f457b9e6ff13b0301998d",
+        "10d7a4f74c9b4d1e98c3678fe71f00b7",
         "43b6db54d56c4e89b5bb7ebefeda0180",
-        "351a6d1bcf32412c85340005a44db34b",
-        "6cddf55f77d94067bf64af3b62b18afe"
+        "7cc40088132c4d7884a962e22d30b50e",
+        "6cddf55f77d94067bf64af3b62b18afe",
+        "9f512940203c4d15b243b7a20d289415",
+        "faa38ecde3ac4b3ea6c843a95b6138fa"
       ],
       "gearT3": [
         "0d864d6cca6a4233a3f68e62e5883a34",
         "faa1d25f61284c1d9e10623ec49dfe6d",
         "d081b0d5d44a48fb89b6adb7173c53d1",
-        "86be5119b66f457b9e6ff13b0301998d",
+        "9c29e48ed0e341cf8a00ed4ae303c8ee",
         "4733a2e3bce3437a890d98ed499570b4",
-        "d470a8f5a3bc4f6292735ca2931607b7",
-        "7cc40088132c4d7884a962e22d30b50e",
+        "a2639877686f48f3b659f4c6b95709d8",
+        "351a6d1bcf32412c85340005a44db34b",
         "1209014b491841b0b226bd3d036b0ae2",
         "710ecc018ff14207842910fcd0f9f466|c08512df303f42ab9b0c633a1882db24",
-        "8cd258b21e974216bbbe2b2bf943a48e|9d9ffeda704e468b8e92df6f5d2ff75b"
+        "8cd258b21e974216bbbe2b2bf943a48e|9d9ffeda704e468b8e92df6f5d2ff75b",
+        "9f512940203c4d15b243b7a20d289415",
+        "faa38ecde3ac4b3ea6c843a95b6138fa"
       ],
       "guardNames": [
         "近卫兵",
@@ -309,29 +315,33 @@
         "f37dd20306d34bdcbc5a3edac3775fad",
         "0c26742029854f6fbca188bf1354fd2e",
         "ff66d1a21d9b4d54b40c7930733708ac",
-        "de2f5ce2589b4952a9b036ab7e2ccc02"
+        "e4d169e23d894df699fa2bc76b985f28",
+        "8a74cb37c4d44537a0921c3ff1f03cc6"
       ],
       "gearT2": [
-        "c8f3d4d57f6b490d8b55aa5a7ca7acca|6679bda02e994ebb96710a52ce27e3a2|bb427b937c304ece913793a020aea87f|db96ff8975434c40b78705377291ff4e",
+        "c8f3d4d57f6b490d8b55aa5a7ca7acca|6679bda02e994ebb96710a52ce27e3a2|bb427b937c304ece913793a020aea87f",
         "1025b5850b95477296280af42b1c31f8",
-        "eacceef2db4d41fb9ab46faf8f011a28|8fe1068ed34746ba83d2388efc97c79f|9598d953dd4e4af3a4fbd2b2940dbf33",
+        "eacceef2db4d41fb9ab46faf8f011a28|8fe1068ed34746ba83d2388efc97c79f",
         "b48e40d87ac0417abeb1b7ab3fc7c781",
-        "9c92a7c55d3b4d4891060d63bb5f9873",
         "1b447777d38f43baa643fc2e915d6ef3",
-        "8729750ca66049cc8f92a93f2933e534",
-        "116f9387b5ec4a0c8ce2728ab84bace6"
+        "ff66d1a21d9b4d54b40c7930733708ac",
+        "116f9387b5ec4a0c8ce2728ab84bace6",
+        "8a74cb37c4d44537a0921c3ff1f03cc6",
+        "89b407114dda4c0b895ca2c9ee0bf03f"
       ],
       "gearT3": [
         "9fff749bf072433fac15cc2907f4e266",
         "3535abdbb30543bbaa395ef07059dbc1",
-        "44555bd3e9b149408470cefb5da1c9ba|5bee6a60c37341b6a4cb39995498546e|2d262a9870604d3e88260a11c984d725|8fe1068ed34746ba83d2388efc97c79f",
+        "44555bd3e9b149408470cefb5da1c9ba|5bee6a60c37341b6a4cb39995498546e|2d262a9870604d3e88260a11c984d725",
         "78787ef16bb84f28b68f71b98c726260",
         "31d4ecc2b4ff4fa48c0414687d2d6844",
-        "a056c47963334568b26d7ae9f143c87f",
-        "1d43c1f399e945a785423a2a800b2499",
-        "e4d169e23d894df699fa2bc76b985f28",
+        "ff66d1a21d9b4d54b40c7930733708ac",
+        "de2f5ce2589b4952a9b036ab7e2ccc02",
         "fd1da14cd1f54ef0a280ce1160dde3e6",
-        "d16dbc47d0fc46c0833b3549f9be82f0|fa121ed0f18c4017a53c7adb6036a552|fe6060602c6d4b71be16808f05368242"
+        "d16dbc47d0fc46c0833b3549f9be82f0|fa121ed0f18c4017a53c7adb6036a552|fe6060602c6d4b71be16808f05368242",
+        "1b447777d38f43baa643fc2e915d6ef3",
+        "8a74cb37c4d44537a0921c3ff1f03cc6",
+        "89b407114dda4c0b895ca2c9ee0bf03f"
       ],
       "guardNames": [
         "斥候兵",
@@ -347,7 +357,8 @@
     {
       "name": "连射 Suppress",
       "unit": "5fc80452fb6a4e2db02cd0a305715446",
-      "brain": "adcf80a5d2a344d3814dcf3bb6b127f7",
+      "brain": "c3b4b0e56cec4a99b448bc7102971bd3",
+      "_brain注": "ArgentaAlternative_Brain —— 阿洁塔（连射爆弹枪同伴）被 AI 接管时用的脑子，和我们「玩家方单位交给 AI 打」是同一场景。判据(全部来自 ref/rt_probe/q/_scan_all.json)：uol=false（不锁技能白名单，career 链练出来的技能 AI 才会考虑）、prio 为空（不绑定某件具体武器）、序=EnemyThreat>Hide>Closiness。★两个踩过的坑，别再回去★ (1) 8dc8edca=Melta 脑：uol 虽 false 但序里 EffectiveDistance 优先、Hide/StayingAway 全忽略，实测只打单发+反复装弹+移动 0。(2) 32111e7b=HBolter 脑：uol=TRUE 且三个白名单能力(HuntDownThePrey/ControlledShot/RapidFire)全部绑死在 DLC3_DL_Sororitas_HeavyBolter_Item 上，我们五套装备一件都没有；且 hit_unintended_penalty=0.0（完全不在乎误伤友军），给我方单位用会对着队友开火。",
       "plan": "rt_soldier_suppress",
       "chain": [
         "06f4f78a9c1a472b85cd79a9a142153d",
@@ -380,7 +391,7 @@
             "a9cb0b71c88043a886992fe55f1d9d77",
             "3803098850504a7ebf80d6fbb70c37c6",
             [
-              "dec66b3861c64c088c5f38fd49024d44",
+              "594030b15093416c925dabc415eda101",
               "0adaa28e654e4fd6a74830eed3f63390",
               "b11dc12ae9e943c29cce0aa7d52bf980"
             ],
@@ -406,6 +417,7 @@
           "rank": "圣焰净罪",
           "rank_en": "Sacred Flame",
           "plan": "argenta_soldier_veteran",
+          "_brain注": "★不要因为 unit 是 DLC3_DL_Sororitas_Melta_Unit 就配熔火脑★ 这个精英手里是 ArgentaBolterUnique(血腥礼赞)/泪如泉涌 + AdvancedHeavyStubber，一把熔火都没有。unit 当初选 Melta 版只是因为它比 HBolter 版干净(那个带 CantMove+CombatBoss)，跟武器无关。判据是【最终手里拿什么枪】，不是【单位蓝图原生什么枪】——所以这里继承分型的 HBolter 脑才对。",
           "chain": [
             "06f4f78a9c1a472b85cd79a9a142153d",
             "651684417def4c258c72ba91f481b817",
@@ -442,26 +454,27 @@
         "3475135047dc4717b8860b8f611ccd39"
       ],
       "gearT2": [
+        "bc7201bf17ed4a8cb5018c83a05ff630",
         "a50db54c76a44ac9a8986c8a602d66b4",
-        "e59bb191ce8549ceb8a129cbcffd9223",
         "35844167264c40449ef10a89d7eb63d5",
         "f959c35b1c484435b8f60ad52dfe7d6f",
         "5efe1b33826c43b3bceb38d9dadf0795",
         "c7bb6c810e554f45a7cff0276940d1a0",
         "7b7251116ea04590a109e317b1b06bd3",
-        "60548ad4ada54c8f9e56fd4fd8cb0803"
+        "3475135047dc4717b8860b8f611ccd39"
       ],
       "gearT3": [
         "96454b5f89a44a24baca3a940991f7a2",
-        "e3178a0e77ff45bfa7ac0144570f6f38",
         "ddd6d0a5bdfc4fefaed5f247cf46e852",
         "fbfbed0b49354b578afced5af717f7de",
         "b3a6fed0355b455ea773a199378b5a6f",
         "1b8f8b6fd7a54e74946eef66514eebb0",
         "62ab680bb2214c30a10116d18d2b6336",
-        "8106576e497f4b6ea99da4de1b964ef9",
+        "3475135047dc4717b8860b8f611ccd39",
         "04fbf60fe58d4da289a55f645969bb52|756e0384483540e8a160b1b5584440c9",
-        "710ecc018ff14207842910fcd0f9f466|c08512df303f42ab9b0c633a1882db24"
+        "710ecc018ff14207842910fcd0f9f466|c08512df303f42ab9b0c633a1882db24",
+        "553d02360e5640bcad28d88b745c974a",
+        "dec66b3861c64c088c5f38fd49024d44"
       ],
       "guardNames": [
         "射击手",
@@ -477,7 +490,7 @@
     {
       "name": "灵能 Psy/Exec",
       "unit": "5bc8b3a8fb834977a3692a2325aff0f6",
-      "brain": "5c53d46a9f6848cda77f19b3492d4281",
+      "brain": "e257fc0ffe054d569cde2b18723f7a4a",
       "plan": "heinrix_fighter_assassin",
       "_注preGrant": "分型级前置，普通卫兵走这条（它们没有 EliteDef）。Sanctic_Base_Feature：海因里希方案里的 英雄诗篇 只能从神圣系池出，而他那份神圣系是剧情特性表白给的，模板没有。",
       "preGrant": [
@@ -568,28 +581,34 @@
         "d2cc62c3c3ca49f897c03462f2853c67",
         "26ee92e2e0884b5c9f535197f0790071",
         "6fcb1096ef4443b1838d3e19855e9302",
-        "e06e0887d9d6494797ef681077f79a7b"
+        "e06e0887d9d6494797ef681077f79a7b",
+        "45f1e2a97aea4788b05fea84cff054e2",
+        "0c3d2a3a6f8c4b8f9c372f5a34823cc9"
       ],
       "gearT2": [
         "266766be7aab4142af87ba3e76e0ddce",
         "c021b67cbf084ccba92c6faafdb44f29",
         "5a6788bd6cec4195b6056ab7cae88dcb",
         "fbfbed0b49354b578afced5af717f7de",
-        "0ad8654159e3402fa381f669b556d7ae",
+        "f44d8c44d5044cbda7539cac89410670",
         "26ee92e2e0884b5c9f535197f0790071",
-        "b6ab1c49a5af4a6e99046661bd01a2fc",
-        "f77bfa73e8fe467e8b60eeac96adfa07"
+        "6fcb1096ef4443b1838d3e19855e9302",
+        "f77bfa73e8fe467e8b60eeac96adfa07",
+        "45f1e2a97aea4788b05fea84cff054e2",
+        "0c3d2a3a6f8c4b8f9c372f5a34823cc9"
       ],
       "gearT3": [
         "d891b6e2ca284b32aa5cfeafb07bdd29",
         "7f57ba5ee2cc4fc7bcdc9a9ededc1fb4",
         "3f677383da874ab1ba5c8e106cfa9c72|ea60e97cfbe14231b8fdb8e1702b5f70|35844167264c40449ef10a89d7eb63d5|99d54e96fa724292890f41d29246159c",
-        "3e4dbb7086c74e3fb6e80eded7945816",
-        "470ac26be1d44baaa85bb01c45783ead",
+        "760f232b0d5947229b74c0ce9462fb3a",
+        "f44d8c44d5044cbda7539cac89410670",
         "26ee92e2e0884b5c9f535197f0790071",
         "6f43e63d9cb54ed3b782a9924f8975e9",
         "49a0c35d9315459b8d0dd756049082cb",
-        "710ecc018ff14207842910fcd0f9f466|c08512df303f42ab9b0c633a1882db24"
+        "710ecc018ff14207842910fcd0f9f466|c08512df303f42ab9b0c633a1882db24",
+        "45f1e2a97aea4788b05fea84cff054e2",
+        "0c3d2a3a6f8c4b8f9c372f5a34823cc9"
       ],
       "guardNames": [
         "灵能者",
@@ -677,37 +696,38 @@
       ],
       "plan": "rt_psyker_officer",
       "gearT1": [
-        "082334e491e34c65b464c90e317d4e7f",
+        "2802cf103af344f8b9d780ae4fb74a25",
         "c19182971ae54259ba718566486ef204",
         "391d9d4120d64d81ad0314e444675817",
         "f959c35b1c484435b8f60ad52dfe7d6f",
         "2f86ac3fc26e4fdda239a72f621357e4",
         "245cd2e564e541a080458edd666fddf7",
         "ff66d1a21d9b4d54b40c7930733708ac",
-        "60548ad4ada54c8f9e56fd4fd8cb0803"
+        "b3c4b6b453b94c93bd28085db2c53cc6"
       ],
       "gearT2": [
-        "2802cf103af344f8b9d780ae4fb74a25",
+        "082334e491e34c65b464c90e317d4e7f",
         "880be9ee37f6436cab915965b28ebf3d",
         "7b77b09f4d144086901fdf81236aea9a",
         "19c9755559574a7ea34adb408f8c5c06",
         "37f4848470d943acaf08b7a933d4cf9f",
         "f123c305357a44f58b1d6449ded7cda7",
         "e98d0049c14443f6be83932b5207d7a5",
-        "b3c4b6b453b94c93bd28085db2c53cc6"
+        "60548ad4ada54c8f9e56fd4fd8cb0803"
       ],
       "gearT3": [
         "dbf6e298905b4619a9408c8fa89dea62",
         "93bc89a2332847b0b75394b31dd9274d",
         "d5dfd4f7fec149dcb7a19089cfee5b02",
-        "0afd9f6b148a4c82a5ca3ba0a6bd646a",
+        "85b84712fc30435ea73f3d45049f25f2",
         "1718f0c0583c4c4983c05391b0b333eb",
-        "1b8f8b6fd7a54e74946eef66514eebb0",
+        "1b447777d38f43baa643fc2e915d6ef3",
         "282432979339434183f587d931ab0df0",
-        "b711dacb0c2f4af58b7ad0292d6e2f6b",
+        "60548ad4ada54c8f9e56fd4fd8cb0803",
         "f9e771d6f94f4601b7e6c955c40d2307|33a49bd301814a2c803bb82650cea118",
         "3ee99c8bed704c04affaf706eaee785e|3c1c3f3fb1444f3e96541b356ca64ab2",
-        "dc5d0e7b109e42a6959f509756fdbdc2|756e0384483540e8a160b1b5584440c9"
+        "dc5d0e7b109e42a6959f509756fdbdc2|756e0384483540e8a160b1b5584440c9",
+        "37f4848470d943acaf08b7a933d4cf9f"
       ],
       "guardNames": [
         "指挥者",

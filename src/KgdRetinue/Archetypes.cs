@@ -226,6 +226,7 @@ namespace KgdRetinue
                             var def = new ChainProbe.EliteDef
                             {
                                 UnitId   = (string)e["unit"],
+                                BrainId  = (string)e["brain"],   // 可选：不填沿用分型的
                                 Name     = (string)e["name"],
                                 Rank     = (string)e["rank"],
                                 RankEn   = (string)e["rank_en"],
@@ -460,8 +461,26 @@ namespace KgdRetinue
                 var path = TemplatePath;
                 if (System.IO.File.Exists(path))
                 {
-                    System.IO.File.Copy(path, path + ".bak", true);
-                    Main.Log("原模板已备份为 archetypes.json.bak");
+                    // ★备份必须防得住"点第二次"★
+                    // 原来是 File.Copy(path, path + ".bak", true) —— 单槽且 overwrite=true。
+                    // 第一次点：把完好的配表备份到 .bak；第二次点：用**已经被毁的**配表
+                    // 覆盖掉那份备份，于是唯一的救命稻草没了。
+                    // 而这次导入只写 name/plan/chain，unitId / GearT1-T3 / elites /
+                    // guardNamePool 一个都不写 —— 丢的是整个 40KB 配表。
+                    //
+                    // 所以分两层：.orig 是第一次导入前的原件，**永不覆盖**；
+                    // 另外每次再留一份带时间戳的，方便回退到任意一次导入之前。
+                    string pristine = path + ".orig";
+                    if (!System.IO.File.Exists(pristine))
+                    {
+                        System.IO.File.Copy(path, pristine, false);
+                        Main.Log("★已保存原始模板 archetypes.json.orig（此后不再覆盖）★");
+                    }
+                    string stamped = path + "." + DateTime.Now.ToString("yyyyMMdd_HHmmss") + ".bak";
+                    System.IO.File.Copy(path, stamped, false);
+                    Main.Log("本次导入前的模板已备份为 " + System.IO.Path.GetFileName(stamped));
+                    Main.Log("★注意★ 导入只写 name/plan/chain —— 精英定义、装备表、人名池、"
+                           + "单位蓝图都不会被写回。要保留它们请从上面的备份手工合并。");
                 }
                 System.IO.File.WriteAllText(path, sb.ToString(), new System.Text.UTF8Encoding(false));
                 Main.Log("已导入 " + n + " 个分型（共 " + plans.Count + " 套方案）。");

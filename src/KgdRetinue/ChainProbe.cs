@@ -41,6 +41,25 @@ namespace KgdRetinue
 
         public sealed class EliteDef
         {
+            /// <summary>
+            /// 这个精英专属的 brain（可选）。不填就沿用分型的。
+            ///
+            /// ★为什么精英需要单独配★
+            /// 精英往往是照着某个具体 NPC 复刻的（圣焰·净罪修女的加点方案就是
+            /// argenta_soldier_veteran —— Argenta 本人的），那么那个 NPC 的 brain
+            /// 通常也最贴它的技能构成。而分型级 brain 是按"普通卫兵那个单位"选的，
+            /// 硬套到精英身上不一定合适。
+            ///
+            /// ★选之前必须验两件事★
+            ///   ① m_UseOnlyListedAbilities 必须是 false，或者它列的技能这个单位真的有。
+            ///      若为 true 且列的是别人的技能，这个单位会被**锁死**（比现状糟得多）——
+            ///      这正是 RetinueTest.cs:233 那条注释描述的坑。
+            ///   ② 同名不同物要当心：Inquisitor_Argenta_brain 列的
+            ///      HuntDownThePrey_**Hunter**_Ability 和修女的
+            ///      DLC3_DL_Sororitas_HBolter_HuntDownThePrey_Ability 是不同 GUID。
+            /// </summary>
+            public string BrainId;
+
             /// <summary>精英专用单位蓝图 —— 兼作"是不是这个精英"的持久判据。</summary>
             public string UnitId;
             /// <summary>专属名字。旧格式，只在没有 Rank 时用。</summary>

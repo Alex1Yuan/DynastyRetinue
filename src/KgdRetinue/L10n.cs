@@ -41,16 +41,34 @@ namespace KgdRetinue
         private static int _loadedFor = -1;
         private static bool _warned;
 
-        /// <summary>当前生效的语言（已把 Auto 解析成具体值）。</summary>
+        /// <summary>
+        /// 当前生效的语言（已把 Auto 解析成具体值）。
+        ///
+        /// ★必须缓存★ 这个属性被 L.T() 每次调用都读一遍，而 IMGUI 面板每帧要跑
+        /// 200 多次 L.T()。走 Auto 分支时它会调 GameLocaleIsChinese()，那里面的
+        /// AccessTools.TypeByName **要遍历所有已加载程序集的所有类型**（Unity 里几万个），
+        /// 而且 `??` 意味着第一次找不到还要再全扫一遍。
+        /// 200 次/帧 × 全程序集扫描 = 开面板直接卡死、拖拉条再卡死。
+        /// v0.58 把整个面板接进 L.T 之后就是这个下场 —— 之前只有零星几处调用，感觉不出来。
+        ///
+        /// 游戏语言一局之内不会变，所以缓存到 Reset() 为止就够了。
+        /// </summary>
         public static int Current
         {
             get
             {
                 int s = Main.Settings != null ? Main.Settings.Language : Auto;
-                if (s == ZhCN || s == EnGB) return s;
-                return GameLocaleIsChinese() ? ZhCN : EnGB;
+                if (s == ZhCN || s == EnGB) return s;      // 面板显式指定：直接返回，不做任何反射
+                if (_autoCache != 0) return _autoCache;    // 0 = 还没算过
+                _autoCache = GameLocaleIsChinese() ? ZhCN : EnGB;
+                Main.Log("[本地化] 跟随游戏语言 → " + (_autoCache == ZhCN ? "中文" : "English")
+                       + "（已缓存；切换语言或改 json 后会重算）");
+                return _autoCache;
             }
         }
+
+        /// <summary>Auto 分支的解析结果缓存。0=未算过，其余同 ZhCN/EnGB。</summary>
+        private static int _autoCache;
 
         /// <summary>
         /// 游戏当前语言是不是中文。读不到就当中文 ——
@@ -92,7 +110,11 @@ namespace KgdRetinue
                 EnsureTable(cur);
                 if (_table == null) return zh;
                 string v;
-                return _table.TryGetValue(zh, out v) && !string.IsNullOrEmpty(v) ? v : zh;
+                if (_table.TryGetValue(zh, out v) && !string.IsNullOrEmpty(v)) return v;
+                // 漏译的记下来（只在开发模式，玩家不付这个开销）。
+                // 覆盖率没法靠通读源码保证 —— 只有真跑一遍界面才知道哪句没进表。
+                if (Main.DevMode) _missing.Add(zh);
+                return zh;
             }
             catch { return zh; }
         }
@@ -153,7 +175,7 @@ namespace KgdRetinue
         }
 
         /// <summary>面板改了语言/改了 json 之后强制重读译文表。</summary>
-        public static void Reset() { _loadedFor = -1; _table = null; _warned = false; }
+        public static void Reset() { _loadedFor = -1; _table = null; _warned = false; _autoCache = 0; }
 
         /// <summary>
         /// 切语言。**立刻生效，不用重启** —— 但有三处不会自己跟上，必须在这里推一把：

@@ -230,19 +230,48 @@ namespace KgdRetinue
             try { g.GetMechanicFeature(MechanicsFeatureType.ForceAIControl).Retain(); }
             catch (Exception e) { Main.LogError("ForceAIControl: " + e.Message); }
 
+            // c1b) 缠斗中允许开火。
+            //
+            // ★为什么需要★ AbilityData.cs:884 / :1551 —— 被近战缠住时，
+            // UsingInThreateningArea == CannotUse 的技能一律不能用，
+            // **除非**持有 MechanicsFeatureType.CanShootInMelee。
+            // 重武器的射击技能基本都是 CannotUse，于是远程卫兵一旦被贴脸就只剩两条路：
+            //   · brain 开着退位 ⇒ 整个回合花在挪位上，实测 29 个动作里只打 5 次
+            //   · brain 关掉退位 ⇒ 永远缠斗中、一枪开不出来，实测站着被打死
+            // 两条都不能打输出。玩家可以手动走位规避，但卫兵是 AI 控制、不能微操。
+            //
+            // 这确实是**偏离原版规则的加成**，所以做成开关。默认开：
+            // 关掉的话上面那两条死路就是卫兵的常态，而那不是"更硬核"，只是"不会打架"。
+            if (Main.Settings.GuardsCanShootInMelee)
+            {
+                try { g.GetMechanicFeature(MechanicsFeatureType.CanShootInMelee).Retain(); }
+                catch (Exception e) { Main.LogError("CanShootInMelee: " + e.Message); }
+            }
+
             // c2) 换 brain —— 原版卫兵 brain 多为 UseOnlyListed=True，
             //     不换的话 career 链练出来的技能 AI 一条都不会考虑（v0.2.3 实测）
             try
             {
                 int _ai = RetinueRegistry.ArchetypeOf(g);
                 var _a = Archetypes.Get(_ai >= 0 ? _ai : Main.Settings.ArchetypeIndex);
-                if (_a != null && !string.IsNullOrEmpty(_a.BrainId))
+                // 精英可以配自己的 brain（elites[].brain），不填就沿用分型的。
+                // ★为什么精英该分开★ 精英常是照着某个具体 NPC 复刻的（圣焰·净罪修女的
+                // 加点方案就是 argenta_soldier_veteran —— Argenta 本人的），那个 NPC 的
+                // brain 通常最贴它的技能构成；而分型级 brain 是按普通卫兵那个单位选的。
+                string brainId = _a != null ? _a.BrainId : null;
+                try
+                {
+                    var _ed = GearTool.EliteDefOf(g, _a);
+                    if (_ed != null && !string.IsNullOrEmpty(_ed.BrainId)) brainId = _ed.BrainId;
+                }
+                catch { }
+                if (!string.IsNullOrEmpty(brainId))
                 {
                     var cur = g.Brain != null && g.Brain.Blueprint != null ? g.Brain.Blueprint.AssetGuid.ToString() : null;
-                    if (!string.Equals(cur, _a.BrainId, StringComparison.OrdinalIgnoreCase))
+                    if (!string.Equals(cur, brainId, StringComparison.OrdinalIgnoreCase))
                     {
-                        if (BrainTool.Apply(g, _a.BrainId))
-                            Main.Log("  brain: " + (cur ?? "无") + " -> " + _a.BrainId);
+                        if (BrainTool.Apply(g, brainId))
+                            Main.Log("  brain: " + (cur ?? "无") + " -> " + brainId);
                     }
                 }
             }
@@ -917,9 +946,107 @@ namespace KgdRetinue
                     "  follow=" + (follow == null ? "无" : "有") +
                     "  level=" + u.Progression.CharacterLevel + "  exp=" + u.Progression.Experience + "\n" +
                     "    属性=" + DescribeStats(u) + "\n" +
-                    "    facts=" + (u.Facts != null ? u.Facts.List.Count : -1));
+                    "    facts=" + (u.Facts != null ? u.Facts.List.Count : -1) + "\n" +
+                    "    技能=" + DescribeAbilities(u));
             }
             catch (Exception e) { Main.LogError("Dump 失败: " + e.Message); }
+        }
+
+        /// <summary>
+        /// 卫兵**实际会哪些技能**。
+        ///
+        /// ★为什么必须有这一栏★
+        /// 排查「灵能只用猛踢、不放灵能」时，前两轮都在猜 brain：先怀疑它锁技能
+        /// （UseOnlyListed），再怀疑它的打分顺序，换了 brain 仍然只用猛踢。
+        /// 但这两条都建立在一个**没验过的前提**上 —— 「它有灵能可放」。
+        /// 加点方案给的多是 Pyromancy_Base / PsyRating 这类**学派解锁和被动**，
+        /// 真正能施放的灵能未必被选中。没得放的话，换什么 brain 都放不出来。
+        /// 先看它手上到底有什么，再谈它为什么不用。
+        /// </summary>
+        private static string DescribeAbilities(BaseUnitEntity u)
+        {
+            try
+            {
+                if (u.Abilities == null || u.Abilities.RawFacts == null) return "(读不到)";
+                var names = new List<string>();
+                foreach (var ab in u.Abilities.RawFacts)
+                {
+                    try
+                    {
+                        var bp = ab != null ? ab.Blueprint : null;
+                        if (bp == null) continue;
+                        names.Add(bp.name);
+                    }
+                    catch { }
+                }
+                names.Sort(StringComparer.Ordinal);
+                return names.Count + " 个: " + string.Join(", ", names.ToArray());
+            }
+            catch (Exception e) { return "(异常: " + e.Message + ")"; }
+        }
+
+        // ------------------------------------------------------------ 批量生成
+
+        /// <summary>
+        /// 批量生成，用于**实战测试**：一次把要观察的对象全摆出来，省得手动招五次。
+        ///
+        /// ★和【一键全测】的区别★
+        /// 一键全测跑完最后一步是 Teardown（遣散全部 + 还原座舰），跑完手上一个兵都没有。
+        /// 这个方法**只生成、不清场**，生成完你直接去打一场，然后看 CombatWatch 的总账。
+        ///
+        /// ★档位只影响装备★
+        /// 卫兵等级跟主角走（55 级存档招出来就是 55 级），所以"生成 T1"实际是
+        /// 「55 级 + T1 装备」，不是真正的 T1 卫兵。测装备和 brain 够用，测成长曲线不够。
+        /// 要换装备档位请先在【规则】区设好【普通卫兵发哪一档】，它不追溯、只影响之后生成的。
+        ///
+        /// skipCap=true：绕过名额上限和利润因子闸 —— 测试要的是"全都摆出来"，
+        /// 而不是"按玩家规则最多招几个"。
+        /// </summary>
+        public static void SpawnAll(bool normals, bool elites)
+        {
+            try
+            {
+                var all = Archetypes.All;
+                if (all == null || all.Length == 0) { Main.LogError("[批量生成] 没有分型可用。"); return; }
+
+                int n = 0, fail = 0;
+                Main.Log("======== 批量生成开始（只生成、不清场）========");
+
+                if (normals)
+                    for (int i = 0; i < all.Length; i++)
+                    {
+                        try
+                        {
+                            var u = SpawnOne(i, null, true, true);   // forceNormal：别被 NextElite 抢走
+                            if (u != null) n++; else fail++;
+                        }
+                        catch (Exception e) { fail++; Main.LogError("  ✗ " + all[i].Name + " 普通: " + e.Message); }
+                    }
+
+                if (elites)
+                    for (int i = 0; i < all.Length; i++)
+                    {
+                        var defs = all[i].Elites;
+                        if (defs == null) continue;
+                        foreach (var d in defs)
+                        {
+                            if (d == null) continue;
+                            try
+                            {
+                                var u = SpawnOne(i, d, true);
+                                if (u != null) n++; else fail++;
+                            }
+                            catch (Exception e) { fail++; Main.LogError("  ✗ " + all[i].Name + " " + d.Name + ": " + e.Message); }
+                        }
+                    }
+
+                Main.Log("======== 批量生成结束：成功 " + n + "　失败 " + fail
+                       + "　（SpawnUnit 是延迟入册的，名册数要过一两帧才对得上）========");
+                Main.Log("  接下来：去打一场，战斗结束时会自动打一份「战斗行为总账」。");
+                if (fail > 0)
+                    Main.LogError("  ★有 " + fail + " 个没生成出来★ 多半是精英解锁条件或蓝图缺失，见上面的 ✗ 行。");
+            }
+            catch (Exception e) { Main.LogError("[批量生成] 异常: " + e); }
         }
     }
 }

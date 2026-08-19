@@ -43,6 +43,7 @@ namespace KgdRetinue
 
             RetinueLifecycle.Subscribe();
             DeathRules.Subscribe();
+            CombatWatch.Install();
 
             // ★必须在载入时装，不能懒装★
             // m_CustomPrefabGuid 进存档，冷启动读档根本不会走 Apply()；
@@ -206,18 +207,31 @@ namespace KgdRetinue
                 // Input.GetKeyDown(F10) 在按住 Ctrl 时照样为 true，而 Ctrl+F10 是 UMM 的
                 // 开面板热键 —— 结果是每次开面板都顺手遣散一次卫队。卫兵现在是持久实体，
                 // 遣散 = 永久销毁，这个误触代价太大。
-                bool _mod = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)
-                         || Input.GetKey(KeyCode.LeftAlt)     || Input.GetKey(KeyCode.RightAlt)
-                         || Input.GetKey(KeyCode.LeftShift)   || Input.GetKey(KeyCode.RightShift);
-                if (!_mod)
+                //
+                // ★ 整块用 DevMode 门住 ★
+                // 在此之前这里没有任何门，而 SpawnKey 的默认值就是 F7 —— 于是
+                // **每个玩家的 F7 都绑着"往 party.json 里塞一名持久卫兵"**，
+                // 唯一能改/关掉它的输入框却在默认隐藏的开发区里。
+                // 玩家误按之后：不知道这名卫兵哪来的，也不知道卸载前必须先遣散它。
+                // 「效果对所有人生效、开关只有作者看得见」是最坏的组合，两边取一边即可。
+                // 这里选择关掉效果而不是暴露开关：招募窗口才是玩家该走的入口，
+                // 热键只是作者反复测试时的快捷方式。
+                if (DevMode)
                 {
-                    if (Settings.SpawnKey != KeyCode.None && Input.GetKeyDown(Settings.SpawnKey))
-                        RetinueTest.SpawnOne();
-                    if (Settings.DespawnKey != KeyCode.None && Input.GetKeyDown(Settings.DespawnKey))
-                        RetinueTest.DespawnAll();
+                    bool _mod = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)
+                             || Input.GetKey(KeyCode.LeftAlt)     || Input.GetKey(KeyCode.RightAlt)
+                             || Input.GetKey(KeyCode.LeftShift)   || Input.GetKey(KeyCode.RightShift);
+                    if (!_mod)
+                    {
+                        if (Settings.SpawnKey != KeyCode.None && Input.GetKeyDown(Settings.SpawnKey))
+                            RetinueTest.SpawnOne();
+                        if (Settings.DespawnKey != KeyCode.None && Input.GetKeyDown(Settings.DespawnKey))
+                            RetinueTest.DespawnAll();
+                    }
                 }
 
                 RetinueLifecycle.TickPending();
+                CombatWatch.Tick();          // 一帧一个 bool 比较，战斗结束那一帧才干活
                 if (Settings.WatchMomentum) MomentumWatch.Tick();
             }
             catch (Exception e) { LogError(e); }
@@ -256,22 +270,23 @@ namespace KgdRetinue
                 if (_n > 0 || _swapped)
                 {
                     var _w = new System.Text.StringBuilder();
-                    _w.AppendLine("<color=#ffcc66><b>卸载 / 禁用本 mod 或 DLC 之前，按顺序做完这几步：</b></color>");
-                    if (_n > 0)   _w.AppendLine("　1. 招募区点【遣散全部】（当前在册 " + _n + " 名，它们写在存档里）");
-                    if (_swapped) _w.AppendLine("　" + (_n > 0 ? "2" : "1") + ". 舰船区点【还原原版船模】");
-                    _w.Append("　" + ((_n > 0 ? 1 : 0) + (_swapped ? 1 : 0) + 1) + ". <b>存盘</b> —— 前面几步只在内存里，不存盘等于没做");
+                    _w.AppendLine(L.T("<color=#ffcc66><b>卸载 / 禁用本 mod 或 DLC 之前，按顺序做完这几步：</b></color>"));
+                    if (_n > 0)   _w.AppendLine(L.F("　1. 招募区点【遣散全部】（当前在册 {0} 名，它们写在存档里）", _n));
+                    if (_swapped) _w.AppendLine(L.F("　{0}. 舰船区点【还原原版船模】", _n > 0 ? "2" : "1"));
+                    _w.Append(L.F("　{0}. <b>存盘</b> —— 前面几步只在内存里，不存盘等于没做",
+                                  (_n > 0 ? 1 : 0) + (_swapped ? 1 : 0) + 1));
                     _w.AppendLine();
-                    _w.Append("<color=#aaaaaa>这条流程是实测验证过的；"
-                            + "「不清理就直接删 mod」理论上也安全（存档里只写裸字符串和原版枚举），"
-                            + "但没做过完整实验，所以不给承诺。</color>");
+                    _w.Append(L.T("<color=#aaaaaa>这条流程是实测验证过的；"
+                                + "「不清理就直接删 mod」理论上也安全（存档里只写裸字符串和原版枚举），"
+                                + "但没做过完整实验，所以不给承诺。</color>"));
                     GUILayout.Label(_w.ToString());
                 }
             }
-            GUILayout.Label("<b>卫队</b>   在册 " + RetinueRegistry.Count + "   " + RetinueRegistry.Describe());
+            GUILayout.Label(L.F("<b>卫队</b>   在册 {0}   {1}", RetinueRegistry.Count, RetinueRegistry.Describe()));
             GUILayout.BeginHorizontal();
-            if (GUILayout.Button("生成一个", GUILayout.Width(110))) RetinueTest.SpawnOne();
-            if (GUILayout.Button("Dump 状态", GUILayout.Width(110))) RetinueTest.DumpState();
-            if (GUILayout.Button("遣散全部", GUILayout.Width(110))) RetinueRegistry.DismissAll();
+            if (GUILayout.Button(L.T("生成一个"), GUILayout.Width(110))) RetinueTest.SpawnOne();
+            if (GUILayout.Button(L.T("Dump 状态"), GUILayout.Width(110))) RetinueTest.DumpState();
+            if (GUILayout.Button(L.T("遣散全部"), GUILayout.Width(110))) RetinueRegistry.DismissAll();
             GUILayout.EndHorizontal();
             // ★ 存档安全提醒 ★ 卫兵是持久实体，写进 party.json。
             // 禁用 mod / 关掉 DLC / 换 Steam 账号之后再读档，卫兵引用的蓝图解析不到会导致存档打不开。
@@ -280,9 +295,9 @@ namespace KgdRetinue
                 int alive = 0;
                 try { alive = RetinueRegistry.Count; } catch { }
                 GUILayout.Label(alive > 0
-                    ? "<color=#ff8080><b>⚠ 存档里有 " + alive + " 名卫兵。</b>禁用 mod、在 Steam 里关闭 DLC、"
-                      + "或更换 Steam 账号之前，请先点【遣散全部】—— 否则读档时卫兵引用的蓝图可能解析不到。</color>"
-                    : "<color=#ff8080>卫兵是持久实体，会写进存档（party.json）。禁用 mod 或在 Steam 里关闭 DLC 之前，请先点【遣散全部】。</color>");
+                    ? L.F("<color=#ff8080><b>⚠ 存档里有 {0} 名卫兵。</b>禁用 mod、在 Steam 里关闭 DLC、"
+                        + "或更换 Steam 账号之前，请先点【遣散全部】—— 否则读档时卫兵引用的蓝图可能解析不到。</color>", alive)
+                    : L.T("<color=#ff8080>卫兵是持久实体，会写进存档（party.json）。禁用 mod 或在 Steam 里关闭 DLC 之前，请先点【遣散全部】。</color>"));
             }
 
             // 分型索引在多个分区里都要用（招募区选它、开发区按它生成），
@@ -291,12 +306,13 @@ namespace KgdRetinue
             int _cur = Settings.ArchetypeIndex;
             if (_cur < 0 || _cur >= _archs.Length) _cur = 0;
 
-            if (Fold(ref Settings.PanelShowRecruit, "招募", "分型 / 入口 / 名额上限"))
+            if (Fold(ref Settings.PanelShowRecruit, L.T("招募"), L.T("分型 / 入口 / 名额上限")))
             {
             // ---------- 分型 ----------
             GUILayout.Space(8);
-            GUILayout.Label("<b>分型</b>   当前 = <color=#80ff80>" + _archs[_cur].Name + "</color>"
-                            + "    <i>（模板 archetypes.json：unit=模型/装备, brain=AI行为, plan=天赋方案, chain=职业链）</i>");
+            GUILayout.Label(L.F("<b>分型</b>   当前 = <color=#80ff80>{0}</color>"
+                              + "    <i>（模板 archetypes.json：unit=模型/装备, brain=AI行为, plan=天赋方案, chain=职业链）</i>",
+                                _archs[_cur].Name));
             GUILayout.BeginHorizontal();
             for (int i = 0; i < _archs.Length; i++)
             {
@@ -307,33 +323,33 @@ namespace KgdRetinue
             GUILayout.EndHorizontal();
 
             GUILayout.BeginHorizontal();
-            if (GUILayout.Button("重载模板", GUILayout.Width(110))) Archetypes.Reload();
-            if (GUILayout.Button("导入 RTAutoBuilder", GUILayout.Width(150))) Archetypes.ImportFromAutoBuilder();
-            if (GUILayout.Button("列出加点方案", GUILayout.Width(130))) BuildPlans.Reload();
+            if (GUILayout.Button(L.T("重载模板"), GUILayout.Width(110))) Archetypes.Reload();
+            if (GUILayout.Button(L.T("导入 RTAutoBuilder"), GUILayout.Width(150))) Archetypes.ImportFromAutoBuilder();
+            if (GUILayout.Button(L.T("列出加点方案"), GUILayout.Width(130))) BuildPlans.Reload();
             GUILayout.EndHorizontal();
 
             // ---------- 招募入口 ----------
             GUILayout.Space(8);
-            GUILayout.Label("<b>招募入口</b>（挂在 NPC 身上的原生点击交互，不进存档）");
-            Settings.NpcRecruitEntry = GUILayout.Toggle(Settings.NpcRecruitEntry, "点击 NPC 弹招募面板（原生点击交互）");
-            Settings.DialogRecruitEntry = GUILayout.Toggle(Settings.DialogRecruitEntry, "在 NPC 对话里加一条「征募护卫队」选项");
+            GUILayout.Label(L.T("<b>招募入口</b>（挂在 NPC 身上的原生点击交互，不进存档）"));
+            Settings.NpcRecruitEntry = GUILayout.Toggle(Settings.NpcRecruitEntry, L.T("点击 NPC 弹招募面板（原生点击交互）"));
+            Settings.DialogRecruitEntry = GUILayout.Toggle(Settings.DialogRecruitEntry, L.T("在 NPC 对话里加一条「征募护卫队」选项"));
             GUILayout.BeginHorizontal();
-            GUILayout.Label("目标 NPC 关键字", GUILayout.Width(110));
+            GUILayout.Label(L.T("目标 NPC 关键字"), GUILayout.Width(110));
             Settings.RecruitNpcKeys = GUILayout.TextField(Settings.RecruitNpcKeys ?? "", GUILayout.Width(220));
-            if (GUILayout.Button("挂到当前区域", GUILayout.Width(110)))
+            if (GUILayout.Button(L.T("挂到当前区域"), GUILayout.Width(110)))
             { RecruitEntry.AttachInArea(true); RecruitDialog.InjectInArea(true); }
-            if (GUILayout.Button("列出可挂载 NPC", GUILayout.Width(130))) RecruitEntry.ListCandidates();
-            if (GUILayout.Button("直接开窗", GUILayout.Width(90))) OpenRecruitUI(null);
+            if (GUILayout.Button(L.T("列出可挂载 NPC"), GUILayout.Width(130))) RecruitEntry.ListCandidates();
+            if (GUILayout.Button(L.T("直接开窗"), GUILayout.Width(90))) OpenRecruitUI(null);
             GUILayout.EndHorizontal();
-            GUILayout.BeginHorizontal();
-            if (GUILayout.Button("预览新窗口", GUILayout.Width(110))) UI.RetinueUI.Open();
-            GUILayout.EndHorizontal();
-            GUILayout.Label("<color=#aaaaaa>名单打在 kgd_log.txt 里。本船的高阶顾问蓝图名是 HighFactotum，音阵大师是 VoxMaster。</color>");
+            // 这里原来还有一个【预览新窗口】按钮，调 UI.RetinueUI.Open()。
+            // 而【直接开窗】走的 OpenRecruitUI 第一句就是 try { UI.RetinueUI.Open(); return; } ——
+            // 也就是说它是【直接开窗】的**真子集**（少了异常兜底）。两个按钮并排只会让人猜区别。
+            GUILayout.Label(L.T("<color=#aaaaaa>名单打在 kgd_log.txt 里。本船的高阶顾问蓝图名是 HighFactotum，音阵大师是 VoxMaster。</color>"));
 
             // ---------- 招募上限：利润因子 ----------
             GUILayout.Space(6);
             Settings.RecruitUsePfGate = GUILayout.Toggle(Settings.RecruitUsePfGate,
-                "<b>用利润因子解锁招募名额</b>（关掉则退回旧的阶位上限 T1=2 / T2=4 / T3=6）");
+                L.T("<b>用利润因子解锁招募名额</b>（关掉则退回旧的阶位上限 T1=2 / T2=4 / T3=6）"));
             {
                 GUILayout.BeginHorizontal();
                 // ★闸门关掉时也要显示上限★ 原来这整块套在 if (RecruitUsePfGate) 里，
@@ -342,11 +358,11 @@ namespace KgdRetinue
                 // 两个上限来源迟早打架。现在上限只有一处，就是下面这根滑条。
                 if (Settings.RecruitUsePfGate)
                 {
-                GUILayout.Label("每名所需利润因子", GUILayout.Width(130));
+                GUILayout.Label(L.T("每名所需利润因子"), GUILayout.Width(130));
                 Settings.RecruitPfPerGuard = (int)GUILayout.HorizontalSlider(Settings.RecruitPfPerGuard, 1f, 60f, GUILayout.Width(140));
                 GUILayout.Label(Settings.RecruitPfPerGuard.ToString(), GUILayout.Width(40));
                 }
-                GUILayout.Label("最多几名", GUILayout.Width(60));
+                GUILayout.Label(L.T("最多几名"), GUILayout.Width(60));
                 Settings.RecruitMaxGuards = (int)GUILayout.HorizontalSlider(Settings.RecruitMaxGuards, 0f, 12f, GUILayout.Width(120));
                 GUILayout.Label(Settings.RecruitMaxGuards.ToString(), GUILayout.Width(30));
                 GUILayout.EndHorizontal();
@@ -358,11 +374,12 @@ namespace KgdRetinue
                 {
                     var _th = ProfitFactorGate.Thresholds();
                     int _pf = ProfitFactorGate.Current();
-                    var _sb = new System.Text.StringBuilder("<color=#aaaaaa>分级：");
+                    var _sb = new System.Text.StringBuilder("<color=#aaaaaa>" + L.T("分级："));
                     for (int _i = 0; _i < _th.Length; _i++)
                     {
                         bool _got = _pf >= _th[_i];
-                        _sb.Append(_got ? "<color=#7ec8ff>" : "").Append(_th[_i]).Append("→").Append(_i + 1).Append("名")
+                        _sb.Append(_got ? "<color=#7ec8ff>" : "")
+                           .Append(L.F("{0}→{1}名", _th[_i], _i + 1))
                            .Append(_got ? "</color>" : "").Append(_i + 1 < _th.Length ? "　" : "");
                     }
                     GUILayout.Label(_sb.Append("</color>").ToString());
@@ -372,81 +389,81 @@ namespace KgdRetinue
 
             }
 
-            if (Fold(ref Settings.PanelShowShip, "舰船", "分档加成 / 换船模 / 挂点"))
+            if (Fold(ref Settings.PanelShowShip, L.T("舰船"), L.T("分档加成 / 换船模 / 挂点")))
             {
             // ---------- 舰船 ----------
             GUILayout.Space(8);
             // 状态行：不点任何按钮就能看出"现在到底是不是巡洋舰"。
             // 之前只能靠点一次切换按钮、从日志里读「当前分档=」，太绕。
             {
-                string _sz = "?", _pf = "原版";
+                string _sz = "?", _pf = L.T("原版");
                 try { _sz = StarshipTool.CurrentSize().ToString(); } catch { }
                 try { var _p = StarshipViewTool.CurrentPrefab;
                       if (!string.IsNullOrEmpty(_p))
                       { var _k = ShipModelCatalog.ByPrefab(_p); _pf = _k != null ? _k.Hull : _p; } }
                 catch { }
-                GUILayout.Label("<b>当前座舰</b>　分档 = <color=#80ff80>" + _sz + "</color>"
-                              + "　船模 = <color=#80ff80>" + _pf + "</color>"
-                              + "　<color=#aaaaaa>两项都写进存档，但要**存过盘**才留得住：改完直接读档就没了。</color>");
+                GUILayout.Label(L.F("<b>当前座舰</b>　分档 = <color=#80ff80>{0}</color>"
+                                  + "　船模 = <color=#80ff80>{1}</color>"
+                                  + "　<color=#aaaaaa>两项都写进存档，但要**存过盘**才留得住：改完直接读档就没了。</color>", _sz, _pf));
             }
-            GUILayout.Label("<b>舰船</b>　分档加成：护盾 / 装甲 / 撞角距离 / 开火次数 / 射程。<color=#aaaaaa>不动配置界面、不扩槽位、不改蓝图。</color>");
+            GUILayout.Label(L.T("<b>舰船</b>　分档加成：护盾 / 装甲 / 撞角距离 / 开火次数 / 射程。<color=#aaaaaa>不动配置界面、不扩槽位、不改蓝图。</color>"));
             Settings.ShipExtraShots = GUILayout.Toggle(Settings.ShipExtraShots,
-                "换大船后同一槽位可多次开火（当前舰船分档: " + StarshipChargesPatch.ShipSize() + "）");
+                L.F("换大船后同一槽位可多次开火（当前舰船分档: {0}）", StarshipChargesPatch.ShipSize()));
             GUILayout.BeginHorizontal();
-            GUILayout.Label("巡洋舰 舷炮 +", GUILayout.Width(110));
+            GUILayout.Label(L.T("巡洋舰 舷炮 +"), GUILayout.Width(110));
             Settings.ShipCruiserBroadside = (int)GUILayout.HorizontalSlider(Settings.ShipCruiserBroadside, 0f, 4f, GUILayout.Width(120));
             GUILayout.Label(Settings.ShipCruiserBroadside.ToString(), GUILayout.Width(24));
-            GUILayout.Label("大巡洋 舷炮 +", GUILayout.Width(110));
+            GUILayout.Label(L.T("大巡洋 舷炮 +"), GUILayout.Width(110));
             Settings.ShipGrandBroadside = (int)GUILayout.HorizontalSlider(Settings.ShipGrandBroadside, 0f, 4f, GUILayout.Width(120));
             GUILayout.Label(Settings.ShipGrandBroadside.ToString(), GUILayout.Width(24));
-            GUILayout.Label("大巡洋 船首/背炮 +", GUILayout.Width(140));
+            GUILayout.Label(L.T("大巡洋 船首/背炮 +"), GUILayout.Width(140));
             Settings.ShipGrandProw = (int)GUILayout.HorizontalSlider(Settings.ShipGrandProw, 0f, 4f, GUILayout.Width(120));
             GUILayout.Label(Settings.ShipGrandProw.ToString(), GUILayout.Width(24));
             GUILayout.EndHorizontal();
-            GUILayout.Label("<color=#aaaaaa>护卫舰/袭击舰无加成，保持原版手感。数值是「额外」次数：+1 = 两打。</color>");
+            GUILayout.Label(L.T("<color=#aaaaaa>护卫舰/袭击舰无加成，保持原版手感。数值是「额外」次数：+1 = 两打。</color>"));
 
             GUILayout.BeginHorizontal();
-            GUILayout.Label("换船（默认：巡洋/大巡都用 Gothic）", GUILayout.Width(210));
-            if (GUILayout.Button("护卫舰", GUILayout.Width(80)))   StarshipViewTool.ApplyTierDefault(Kingmaker.Enums.Size.Frigate_1x2);
-            if (GUILayout.Button("巡洋舰", GUILayout.Width(80)))   StarshipViewTool.ApplyTierDefault(Kingmaker.Enums.Size.Cruiser_2x4);
-            if (GUILayout.Button("大巡洋舰", GUILayout.Width(90)))  StarshipViewTool.ApplyTierDefault(Kingmaker.Enums.Size.GrandCruiser_3x6);
+            GUILayout.Label(L.T("换船（默认：巡洋/大巡都用 Gothic）"), GUILayout.Width(210));
+            if (GUILayout.Button(L.T("护卫舰"), GUILayout.Width(80)))   StarshipViewTool.ApplyTierDefault(Kingmaker.Enums.Size.Frigate_1x2);
+            if (GUILayout.Button(L.T("巡洋舰"), GUILayout.Width(80)))   StarshipViewTool.ApplyTierDefault(Kingmaker.Enums.Size.Cruiser_2x4);
+            if (GUILayout.Button(L.T("大巡洋舰"), GUILayout.Width(90)))  StarshipViewTool.ApplyTierDefault(Kingmaker.Enums.Size.GrandCruiser_3x6);
             GUILayout.EndHorizontal();
-            Settings.ShipSwitchInCombat = GUILayout.Toggle(Settings.ShipSwitchInCombat, "允许战斗中换船（有风险：格子占位会变，寻路网格未必跟着重算）");
+            Settings.ShipSwitchInCombat = GUILayout.Toggle(Settings.ShipSwitchInCombat, L.T("允许战斗中换船（有风险：格子占位会变，寻路网格未必跟着重算）"));
             GUILayout.BeginHorizontal();
-            GUILayout.Label("护盾上限 +%  巡洋", GUILayout.Width(130));
+            GUILayout.Label(L.T("护盾上限 +%  巡洋"), GUILayout.Width(130));
             Settings.ShipCruiserShieldPct = (int)GUILayout.HorizontalSlider(Settings.ShipCruiserShieldPct, 0f, 200f, GUILayout.Width(140));
             GUILayout.Label(Settings.ShipCruiserShieldPct + "%", GUILayout.Width(46));
-            GUILayout.Label("大巡", GUILayout.Width(40));
+            GUILayout.Label(L.T("大巡"), GUILayout.Width(40));
             Settings.ShipGrandShieldPct = (int)GUILayout.HorizontalSlider(Settings.ShipGrandShieldPct, 0f, 300f, GUILayout.Width(140));
             GUILayout.Label(Settings.ShipGrandShieldPct + "%", GUILayout.Width(46));
             GUILayout.EndHorizontal();
-            GUILayout.Label("<color=#aaaaaa>只对玩家座舰生效（GetMax 是全舰船共用的，不加判据会把敌舰护盾也翻倍）。</color>");
+            GUILayout.Label(L.T("<color=#aaaaaa>只对玩家座舰生效（GetMax 是全舰船共用的，不加判据会把敌舰护盾也翻倍）。</color>"));
             GUILayout.BeginHorizontal();
-            GUILayout.Label("装甲减伤 +%  巡洋", GUILayout.Width(130));
+            GUILayout.Label(L.T("装甲减伤 +%  巡洋"), GUILayout.Width(130));
             Settings.ShipCruiserArmourPct = (int)GUILayout.HorizontalSlider(Settings.ShipCruiserArmourPct, 0f, 200f, GUILayout.Width(140));
             GUILayout.Label(Settings.ShipCruiserArmourPct + "%", GUILayout.Width(46));
-            GUILayout.Label("大巡", GUILayout.Width(40));
+            GUILayout.Label(L.T("大巡"), GUILayout.Width(40));
             Settings.ShipGrandArmourPct = (int)GUILayout.HorizontalSlider(Settings.ShipGrandArmourPct, 0f, 300f, GUILayout.Width(140));
             GUILayout.Label(Settings.ShipGrandArmourPct + "%", GUILayout.Width(46));
             GUILayout.EndHorizontal();
             GUILayout.BeginHorizontal();
-            GUILayout.Label("撞角行程 +%  巡洋", GUILayout.Width(130));
+            GUILayout.Label(L.T("撞角行程 +%  巡洋"), GUILayout.Width(130));
             Settings.ShipCruiserRamPct = (int)GUILayout.HorizontalSlider(Settings.ShipCruiserRamPct, 0f, 400f, GUILayout.Width(140));
             GUILayout.Label(Settings.ShipCruiserRamPct + "%", GUILayout.Width(46));
-            GUILayout.Label("大巡", GUILayout.Width(40));
+            GUILayout.Label(L.T("大巡"), GUILayout.Width(40));
             Settings.ShipGrandRamPct = (int)GUILayout.HorizontalSlider(Settings.ShipGrandRamPct, 0f, 400f, GUILayout.Width(140));
             GUILayout.Label(Settings.ShipGrandRamPct + "%", GUILayout.Width(46));
             GUILayout.EndHorizontal();
             // ---------- 射程加成（原来只能改 XML）----------
             // 六项加成里唯一没滑条的一族。护盾/装甲/撞角/多打都有，就它没有。
             GUILayout.BeginHorizontal();
-            GUILayout.Label("射程 +格　巡洋(非舷炮)", GUILayout.Width(160));
+            GUILayout.Label(L.T("射程 +格　巡洋(非舷炮)"), GUILayout.Width(160));
             Settings.ShipCruiserRange = (int)GUILayout.HorizontalSlider(Settings.ShipCruiserRange, 0f, 8f, GUILayout.Width(110));
             GUILayout.Label(Settings.ShipCruiserRange.ToString(), GUILayout.Width(26));
-            GUILayout.Label("大巡·舷炮", GUILayout.Width(70));
+            GUILayout.Label(L.T("大巡·舷炮"), GUILayout.Width(110));
             Settings.ShipGrandRangeBroadside = (int)GUILayout.HorizontalSlider(Settings.ShipGrandRangeBroadside, 0f, 8f, GUILayout.Width(110));
             GUILayout.Label(Settings.ShipGrandRangeBroadside.ToString(), GUILayout.Width(26));
-            GUILayout.Label("大巡·船脊/舰首", GUILayout.Width(100));
+            GUILayout.Label(L.T("大巡·船脊/舰首"), GUILayout.Width(100));
             Settings.ShipGrandRangeProw = (int)GUILayout.HorizontalSlider(Settings.ShipGrandRangeProw, 0f, 8f, GUILayout.Width(110));
             GUILayout.Label(Settings.ShipGrandRangeProw.ToString(), GUILayout.Width(26));
             GUILayout.EndHorizontal();
@@ -454,35 +471,36 @@ namespace KgdRetinue
             // ---------- 船坞（原来整块只能改 XML）----------
             GUILayout.Space(8);
             Settings.ShipDialogEntry = GUILayout.Toggle(Settings.ShipDialogEntry,
-                "<b>在 NPC 对话里加「船坞」选项</b>（用废料买改装，可还原退款）");
+                L.T("<b>在 NPC 对话里加「船坞」选项</b>（用废料买改装，可还原退款）"));
             GUILayout.BeginHorizontal();
-            GUILayout.Label("巡洋总价", GUILayout.Width(70));
+            GUILayout.Label(L.T("巡洋总价"), GUILayout.Width(70));
             Settings.ShipPriceCruiser = (int)GUILayout.HorizontalSlider(Settings.ShipPriceCruiser, 0f, 5000f, GUILayout.Width(150));
             GUILayout.Label(Settings.ShipPriceCruiser.ToString(), GUILayout.Width(50));
-            GUILayout.Label("大巡总价", GUILayout.Width(70));
+            GUILayout.Label(L.T("大巡总价"), GUILayout.Width(70));
             Settings.ShipPriceGrand = (int)GUILayout.HorizontalSlider(Settings.ShipPriceGrand, 0f, 5000f, GUILayout.Width(150));
             GUILayout.Label(Settings.ShipPriceGrand.ToString(), GUILayout.Width(50));
             GUILayout.EndHorizontal();
-            GUILayout.Label("<color=#aaaaaa>★这是<b>总价</b>不是差价★ 实际收费 = 目标总价 − 已投入总价，"
-                          + "所以巡洋→大巡只补差额，降级/还原按同一条规则退钱。</color>");
+            GUILayout.Label(L.T("<color=#aaaaaa>★这是<b>总价</b>不是差价★ 实际收费 = 目标总价 − 已投入总价，"
+                              + "所以巡洋→大巡只补差额，降级/还原按同一条规则退钱。</color>"));
             if (Settings.ShipPriceGrand < Settings.ShipPriceCruiser)
-                GUILayout.Label("<color=#ff8080>大巡总价低于巡洋总价 —— 会出现「升级反而退钱」。已自动拉平，"
-                              + "要更低的大巡价请先调低巡洋价。</color>");
+                GUILayout.Label(L.T("<color=#ff8080>大巡总价低于巡洋总价 —— 会出现「升级反而退钱」。已自动拉平，"
+                                  + "要更低的大巡价请先调低巡洋价。</color>"));
             Settings.ShipYardUnlockAll = GUILayout.Toggle(Settings.ShipYardUnlockAll,
-                "解除船体限制（连未校准的船体也允许更换）　<color=#aaaaaa>挂点位置和缩放只在 Gothic / Dictator 上验过</color>");
+                L.T("解除船体限制（连未校准的船体也允许更换）　<color=#aaaaaa>挂点位置和缩放只在 Gothic / Dictator 上验过</color>"));
 
-            GUILayout.Label("<color=#aaaaaa>撞角没有可乘的「基础距离」常量（行程来自寻路），"
-                          + "所以按「速度 × 百分比」折算成额外格数。机动性不动。</color>");
-            GUILayout.Label("<color=#ffaa66>注意：舰船分档是 [JsonProperty]，会写进存档。"
-                          + "它是 vanilla 枚举、不碰存档红线，卸载 mod 后存档照样能开，"
-                          + "但船会保持在你切过去的那一档 —— 要还原就切回护卫舰再存一次。</color>");
+            GUILayout.Label(L.T("<color=#aaaaaa>撞角没有可乘的「基础距离」常量（行程来自寻路），"
+                              + "所以按「速度 × 百分比」折算成额外格数。机动性不动。</color>"));
+            GUILayout.Label(L.T("<color=#ffaa66>注意：舰船分档是 [JsonProperty]，会写进存档。"
+                              + "它是 vanilla 枚举、不碰存档红线，卸载 mod 后存档照样能开，"
+                              + "但船会保持在你切过去的那一档 —— 要还原就切回护卫舰再存一次。</color>"));
 
             // ---------- 换船模（真外观）----------
             GUILayout.Space(6);
-            GUILayout.Label("<b>换船模</b>（真外观。点了会同时把分档设成对应档位）");
+            GUILayout.Label(L.T("<b>换船模</b>（真外观。点了会同时把分档设成对应档位）"));
             var _curPrefab = StarshipViewTool.CurrentPrefab;
             var _curModel = string.IsNullOrEmpty(_curPrefab) ? null : ShipModelCatalog.ByPrefab(_curPrefab);
-            GUILayout.Label("当前：" + (_curModel != null ? _curModel.ToString() : "<color=#aaaaaa>原版模型</color>"));
+            GUILayout.Label(L.F("当前：{0}", _curModel != null ? _curModel.ToString()
+                                                              : "<color=#aaaaaa>" + L.T("原版模型") + "</color>"));
             foreach (var _tier in new[] { Kingmaker.Enums.Size.GrandCruiser_3x6,
                                           Kingmaker.Enums.Size.Cruiser_2x4,
                                           Kingmaker.Enums.Size.Frigate_1x2 })
@@ -505,171 +523,202 @@ namespace KgdRetinue
                 }
                 GUILayout.EndHorizontal();
             }
-            if (GUILayout.Button("还原原版船模", GUILayout.Width(140))) StarshipViewTool.RevertAll();
-            if (GUILayout.Button("挂点诊断", GUILayout.Width(110))) ShipSlotProbe.Dump();
-            if (GUILayout.Button("挂点几何诊断", GUILayout.Width(130))) ShipSlotGeometryProbe.Dump();
+            if (GUILayout.Button(L.T("还原原版船模"), GUILayout.Width(140))) StarshipViewTool.RevertAll();
+            if (GUILayout.Button(L.T("挂点诊断"), GUILayout.Width(110))) ShipSlotProbe.Dump();
+            if (GUILayout.Button(L.T("挂点几何诊断"), GUILayout.Width(150))) ShipSlotGeometryProbe.Dump();
             Settings.ShipMountFallback = GUILayout.Toggle(Settings.ShipMountFallback,
-                "换船模后自动补上缺失的武器挂点（修「光矛/鱼雷在虚空开火」）");
+                L.T("换船模后自动补上缺失的武器挂点（修「光矛/鱼雷在虚空开火」）"));
             GUILayout.BeginHorizontal();
-            GUILayout.Label("舰首挂点微调　前后", GUILayout.Width(130));
+            GUILayout.Label(L.T("舰首挂点微调　前后"), GUILayout.Width(130));
             Settings.ShipProwOffsetPct = (int)GUILayout.HorizontalSlider(Settings.ShipProwOffsetPct, -50f, 50f, GUILayout.Width(130));
             GUILayout.Label(Settings.ShipProwOffsetPct + "%", GUILayout.Width(42));
-            GUILayout.Label("上下", GUILayout.Width(40));
+            GUILayout.Label(L.T("上下"), GUILayout.Width(40));
             Settings.ShipProwUpPct = (int)GUILayout.HorizontalSlider(Settings.ShipProwUpPct, -60f, 60f, GUILayout.Width(130));
             GUILayout.Label(Settings.ShipProwUpPct + "%", GUILayout.Width(42));
             // 拖歪了没法凭记忆拖回来 —— 这个按钮就是"默认值是多少"的答案
-            if (GUILayout.Button("归零", GUILayout.Width(60)))
+            if (GUILayout.Button(L.T("归零"), GUILayout.Width(60)))
             { Settings.ShipProwOffsetPct = 0; Settings.ShipProwUpPct = 0; Log("[挂点] 微调已归零，回到算出来的位置。"); }
             GUILayout.EndHorizontal();
             // 学到的舰首挂点 —— 这是整条链上唯一的地面真值，值得单独一行
             GUILayout.BeginHorizontal();
             if (Settings.ProwLearned)
-                GUILayout.Label("<color=#80ff80>舰首比例已学自「" + Settings.ProwLearnedFrom + "」</color>　"
-                              + "下沉 " + Settings.ProwDropRatio.ToString("F3")
-                              + "　后收 " + Settings.ProwZBackRatio.ToString("F3"), GUILayout.Width(520));
+                GUILayout.Label(L.F("<color=#80ff80>舰首比例已学自「{0}」</color>　下沉 {1}　后收 {2}",
+                                    Settings.ProwLearnedFrom,
+                                    Settings.ProwDropRatio.ToString("F3"),
+                                    Settings.ProwZBackRatio.ToString("F3")), GUILayout.Width(520));
             else
-                GUILayout.Label("<color=#aaaaaa>舰首比例用 Dictator 实测默认值</color>　"
-                              + "下沉 " + Settings.ProwDropRatio.ToString("F3")
-                              + "　后收 " + Settings.ProwZBackRatio.ToString("F3")
-                              + "　<color=#888888>（切一次大巡会重新实测并覆盖）</color>", GUILayout.Width(520));
-            Settings.ShipProwUseLearned = GUILayout.Toggle(Settings.ShipProwUseLearned, "用学到的", GUILayout.Width(90));
-            if (Settings.ProwLearned && GUILayout.Button("忘掉", GUILayout.Width(60)))
+                GUILayout.Label(L.F("<color=#aaaaaa>舰首比例用 Dictator 实测默认值</color>　下沉 {0}　后收 {1}"
+                                  + "　<color=#888888>（切一次大巡会重新实测并覆盖）</color>",
+                                    Settings.ProwDropRatio.ToString("F3"),
+                                    Settings.ProwZBackRatio.ToString("F3")), GUILayout.Width(520));
+            Settings.ShipProwUseLearned = GUILayout.Toggle(Settings.ShipProwUseLearned, L.T("用学到的"), GUILayout.Width(90));
+            if (Settings.ProwLearned && GUILayout.Button(L.T("忘掉"), GUILayout.Width(60)))
             { Settings.ProwLearned = false; Settings.ProwLearnedFrom = ""; Log("[挂点] 已忘掉学到的舰首挂点，退回公式。"); }
             GUILayout.EndHorizontal();
-            GUILayout.Label("<color=#aaaaaa>0% = 用算出来的船艏位置。合成挂点挂在 StarshipView 下、旋转归零，"
-                          + "坐标系的 +Z=船艏 有实据（StarshipFxHitMask 按 mesh.z 分前后舱室）。"
-                          + "定位分三层：包围盒+舷炮中线 → 挂点跨度外推 → 借船脊原位；"
-                          + "轴向闸门（Port 在 −x、Starboard 在 +x）不通过时直接退到最后一层，不会从船尾开火。"
-                          + "这个滑条是在算出来的位置上再沿 +Z 微调，单位是船体 z 向长度。</color>");
-            GUILayout.Label("<color=#c8a45c>实测挂点（决定武器美术挂不挂得上，挂不上就会「在虚空里开火」）：</color>\n"
-                          + "  <color=#7ec8ff>Dictator</color> 20 个：Prow ✓ Keel ✓ Dorsal ✓ Port×4 Starboard×4 —— <color=#7ec8ff>四个里唯一齐全的，大巡默认</color>\n"
-                          + "  Gothic 9 个：Port×4 Starboard×4 Dorsal×1 —— <color=#ff8080>缺 Prow，光矛会在虚空开火</color>\n"
-                          + "  Universe 运输舰 23 个 / 混沌战列巡洋舰 27 个 —— <color=#ff8080>同样缺 Prow</color>\n"
-                          + "<color=#aaaaaa>光矛装在 Prow 槽位。武器美术是挂到船体 prefab 上同类型的 StarshipItemSlot 下面的，"
-                          + "匹配不到就退回原点。两个原生大巡船模反而都缺 Prow，所以大巡用放大的 Dictator。</color>");
+            GUILayout.Label(L.T("<color=#aaaaaa>0% = 用算出来的船艏位置。合成挂点挂在 StarshipView 下、旋转归零，"
+                              + "坐标系的 +Z=船艏 有实据（StarshipFxHitMask 按 mesh.z 分前后舱室）。"
+                              + "定位分三层：包围盒+舷炮中线 → 挂点跨度外推 → 借船脊原位；"
+                              + "轴向闸门（Port 在 −x、Starboard 在 +x）不通过时直接退到最后一层，不会从船尾开火。"
+                              + "这个滑条是在算出来的位置上再沿 +Z 微调，单位是船体 z 向长度。</color>"));
+            GUILayout.Label(L.T("<color=#c8a45c>实测挂点（决定武器美术挂不挂得上，挂不上就会「在虚空里开火」）：</color>") + "\n"
+                          + L.T("  <color=#7ec8ff>Dictator</color> 20 个：Prow ✓ Keel ✓ Dorsal ✓ Port×4 Starboard×4 —— <color=#7ec8ff>四个里唯一齐全的，大巡默认</color>") + "\n"
+                          + L.T("  Gothic 9 个：Port×4 Starboard×4 Dorsal×1 —— <color=#ff8080>缺 Prow，光矛会在虚空开火</color>") + "\n"
+                          + L.T("  Universe 运输舰 23 个 / 混沌战列巡洋舰 27 个 —— <color=#ff8080>同样缺 Prow</color>") + "\n"
+                          + L.T("<color=#aaaaaa>光矛装在 Prow 槽位。武器美术是挂到船体 prefab 上同类型的 StarshipItemSlot 下面的，"
+                              + "匹配不到就退回原点。两个原生大巡船模反而都缺 Prow，所以大巡用放大的 Dictator。</color>"));
             Settings.ShipStretchModel = GUILayout.Toggle(Settings.ShipStretchModel,
-                "船模档位低于分档时等比放大撑满（比如把 Gothic 巡洋舰当大巡用 ×1.52）");
+                L.T("船模档位低于分档时等比放大撑满（比如把 Gothic 巡洋舰当大巡用 ×1.52）"));
             GUILayout.BeginHorizontal();
-            GUILayout.Label("改装界面船模缩放", GUILayout.Width(130));
+            GUILayout.Label(L.T("改装界面船模缩放"), GUILayout.Width(130));
             Settings.ShipDollScale = (int)GUILayout.HorizontalSlider(Settings.ShipDollScale, 30f, 200f, GUILayout.Width(140));
             GUILayout.Label(Settings.ShipDollScale + "%", GUILayout.Width(46));
             GUILayout.EndHorizontal();
-            GUILayout.Label("<color=#aaaaaa>100% = 归一到原版护卫舰的观感。那个展示房间的机位/灯光/背景"
-                          + "全是按护卫舰构图的，换大船不归一就会撑出画面。只影响改装界面，战场模型不受影响。</color>");
-            GUILayout.Label("<color=#aaaaaa>视觉尺寸与格子占位是两条独立的路："
-                          + "分档决定占位/多打判据，prefab 决定外观，"
-                          + "DisableSizeScaling 让模型保持原生大小、不被再放大一次。</color>");
+            GUILayout.Label(L.T("<color=#aaaaaa>100% = 归一到原版护卫舰的观感。那个展示房间的机位/灯光/背景"
+                              + "全是按护卫舰构图的，换大船不归一就会撑出画面。只影响改装界面，战场模型不受影响。</color>"));
+            GUILayout.Label(L.T("<color=#aaaaaa>视觉尺寸与格子占位是两条独立的路："
+                              + "分档决定占位/多打判据，prefab 决定外观，"
+                              + "DisableSizeScaling 让模型保持原生大小、不被再放大一次。</color>"));
 
             }
 
-            if (Fold(ref Settings.PanelShowRules, "规则", "士气池 / 镜头 / 成长 / 装备 / 解除限制"))
+            if (Fold(ref Settings.PanelShowRules, L.T("规则"), L.T("士气池 / 镜头 / 成长 / 装备 / 解除限制")))
             {
             // ---------- 规则 ----------
             GUILayout.Space(8);
-            GUILayout.Label("<b>规则</b>");
-            Settings.AttachFollow     = GUILayout.Toggle(Settings.AttachFollow, "跟随队长");
-            Settings.AlignExperience  = GUILayout.Toggle(Settings.AlignExperience, "招募时按主角经验设起点");
-            Settings.AutoLevelUp      = GUILayout.Toggle(Settings.AutoLevelUp, "自动成长（每次进区域按当前阶位补升级）");
-            Settings.ScaleGuardXp     = GUILayout.Toggle(Settings.ScaleGuardXp, "卫兵经验按比例缩放（不影响队友那份）");
-            Settings.IsolateMomentum  = GUILayout.Toggle(Settings.IsolateMomentum, "士气隔离（卫兵受伤/倒地不扣队伍士气）");
-            Settings.SeparateMomentumPool = GUILayout.Toggle(Settings.SeparateMomentumPool, "卫队独立士气池（大招花自己的；代价是卫兵的 Resolve 也不再进你的池子）");
-            Settings.GuardKillFeedsOwnPool = GUILayout.Toggle(Settings.GuardKillFeedsOwnPool, "卫兵杀敌也给卫队池加分（不动你那份，否则卫队只出力不进账）");
-            Settings.GuardPsykerNoVeil = GUILayout.Toggle(Settings.GuardPsykerNoVeil, "卫兵灵能不推高亚空间威胁（帷幕是区域唯一值、做不了独立池，只能选计不计入）");
-            Settings.NoCameraFollowGuards = GUILayout.Toggle(Settings.NoCameraFollowGuards, "卫兵行动时镜头不跟随（含技能演出特写；你自己队伍不受影响）");
+            GUILayout.Label(L.T("<b>规则</b>"));
+            Settings.AttachFollow     = GUILayout.Toggle(Settings.AttachFollow, L.T("跟随队长"));
+            Settings.AlignExperience  = GUILayout.Toggle(Settings.AlignExperience, L.T("招募时按主角经验设起点"));
+            Settings.AutoLevelUp      = GUILayout.Toggle(Settings.AutoLevelUp, L.T("自动成长（每次进区域按当前阶位补升级）"));
+            Settings.ScaleGuardXp     = GUILayout.Toggle(Settings.ScaleGuardXp, L.T("卫兵经验按比例缩放（不影响队友那份）"));
+            Settings.IsolateMomentum  = GUILayout.Toggle(Settings.IsolateMomentum, L.T("士气隔离（卫兵受伤/倒地不扣队伍士气）"));
+            Settings.SeparateMomentumPool = GUILayout.Toggle(Settings.SeparateMomentumPool, L.T("卫队独立士气池（大招花自己的；代价是卫兵的 Resolve 也不再进你的池子）"));
+            Settings.GuardKillFeedsOwnPool = GUILayout.Toggle(Settings.GuardKillFeedsOwnPool, L.T("卫兵杀敌也给卫队池加分（不动你那份，否则卫队只出力不进账）"));
+            Settings.GuardPsykerNoVeil = GUILayout.Toggle(Settings.GuardPsykerNoVeil, L.T("卫兵灵能不推高亚空间威胁（帷幕是区域唯一值、做不了独立池，只能选计不计入）"));
+            Settings.NoCameraFollowGuards = GUILayout.Toggle(Settings.NoCameraFollowGuards, L.T("卫兵行动时镜头不跟随（含技能演出特写；你自己队伍不受影响）"));
+            Settings.GuardsCanShootInMelee = GUILayout.Toggle(Settings.GuardsCanShootInMelee,
+                L.T("卫兵被近战缠住时也能开火　<color=#aaaaaa>原版规则里重武器射击在缠斗中不可用，"
+                  + "玩家能手动走位规避、AI 卫兵不能 —— 关掉的话远程卫兵要么整回合忙着退位、要么一枪不开。</color>"));
             // 「发放装备」这四个字太省，作者本人都问过它是干嘛的 ——
             // 作者看不懂的标签，玩家一定看不懂。改成把**两边的后果**都写出来。
             // ---------- 界面语言 ----------
             GUILayout.BeginHorizontal();
-            GUILayout.Label("界面语言", GUILayout.Width(70));
-            string[] _langs = { "跟随游戏", "中文", "English" };
+            GUILayout.Label(L.T("界面语言"), GUILayout.Width(70));
+            string[] _langs = { L.T("跟随游戏"), "中文", "English" };
             for (int i = 0; i < _langs.Length; i++)
                 if (GUILayout.Toggle(Settings.Language == i, _langs[i], "Button", GUILayout.Width(i == 0 ? 90 : 70))
                     && Settings.Language != i)
                     L.Apply(i);   // 立刻生效：重读译文 + 重命名卫兵 + 刷新已开的窗口
-            GUILayout.Label("<color=#aaaaaa>默认跟随游戏语言（LocalizationManager.CurrentLocale）。"
-                          + "译文在 l10n_en.json 里，热加载 —— 查不到的条目原样显示中文，不会空白。"
-                          + "卫兵军衔/精英位阶/人名池另有英文版，在 archetypes.json 的 *_en 字段。</color>");
+            GUILayout.Label(L.T("<color=#aaaaaa>默认跟随游戏语言（LocalizationManager.CurrentLocale）。"
+                              + "译文在 l10n_en.json 里，热加载 —— 查不到的条目原样显示中文，不会空白。"
+                              + "卫兵军衔/精英位阶/人名池另有英文版，在 archetypes.json 的 *_en 字段。</color>"));
             GUILayout.EndHorizontal();
             GUILayout.Space(6);
 
             Settings.EquipGraduationGear = GUILayout.Toggle(Settings.EquipGraduationGear,
-                "<b>给卫兵发装备</b>　<color=#aaaaaa>开：按 archetypes.json 的配表凭空生成一整套"
-              + "（普通卫兵按 T1/T2/T3 三档，精英用专属套），不动你的仓库。"
-              + "关：一件不发，卫兵只有单位蓝图自带的那身 —— 嫌 mod 发的装备太强就关掉。</color>");
+                L.T("<b>给卫兵发装备</b>　<color=#aaaaaa>开：按 archetypes.json 的配表凭空生成一整套"
+                  + "（普通卫兵按 T1/T2/T3 三档，精英用专属套），不动你的仓库。"
+                  + "关：一件不发，卫兵只有单位蓝图自带的那身 —— 嫌 mod 发的装备太强就关掉。</color>"));
+            // ★这一行原来在开发区★ 它是上面那个总开关的强弱旋钮（决定发哪一档），
+            // 只改玩法数值、不生成不销毁、装备也是凭空生成不动仓库 —— 属于难度调节而非测试工具。
+            GUILayout.BeginHorizontal();
+            GUILayout.Label(L.T("　└ 普通卫兵发哪一档"), GUILayout.Width(150));
+            for (int i = 0; i < 4; i++)
+                // ★L.T 要贴着字面量写★ 写成 L.T(new[]{"自动",...}[i]) 的话，
+                // tools/check_l10n.py 的字面量扫描会整条跳过（参数不是字符串常量），
+                // 于是"自动"既进不了译文表、也不会被报成漏译 —— 静默漏一格。
+                if (GUILayout.Toggle(Settings.GearTierOverride == i,
+                        new[] { L.T("自动"), "T1", "T2", "T3" }[i], "Button",
+                        GUILayout.Width(i == 0 ? 60 : 44)))
+                    Settings.GearTierOverride = i;
+            GUILayout.Label(L.T("<color=#aaaaaa>「自动」= 按主角等级推。精英不受影响（他们走专属套）。"
+                              + "★不追溯★ 只影响之后新生成或补发的，已经穿在身上的不会被扒掉。</color>"));
+            GUILayout.EndHorizontal();
             Settings.EliteCanBeDowned = GUILayout.Toggle(Settings.EliteCanBeDowned,
-                "精英倒地可救（0 血进昏迷而非死亡）　<color=#aaaaaa>普通卫兵始终永久死亡 —— "
-                + "那是原版对 ExCompanion 的默认行为（UnitLifeController.CalculateLifeState），不需要我们做任何事</color>");
-            GUILayout.Label("<b>解除限制</b>　<color=#aaaaaa>三件互不相干的事，分开控制</color>");
+                L.T("精英倒地可救（0 血进昏迷而非死亡）　<color=#aaaaaa>普通卫兵始终永久死亡 —— "
+                  + "那是原版对 ExCompanion 的默认行为（UnitLifeController.CalculateLifeState），不需要我们做任何事</color>"));
+            GUILayout.Label(L.T("<b>解除限制</b>　<color=#aaaaaa>互不相干的几件事，分开控制</color>"));
             GUILayout.BeginHorizontal();
             Settings.UnlockPfGate   = GUILayout.Toggle(Settings.UnlockPfGate,
-                "解除利润因子限制", GUILayout.Width(160));
+                L.T("解除利润因子限制"), GUILayout.Width(160));
             Settings.UnlockCountCap = GUILayout.Toggle(Settings.UnlockCountCap,
-                "解除数量上限", GUILayout.Width(140));
+                L.T("解除数量上限"), GUILayout.Width(140));
             Settings.UnlockLevelCap = GUILayout.Toggle(Settings.UnlockLevelCap,
-                "解除等级上限", GUILayout.Width(140));
+                L.T("解除等级上限"), GUILayout.Width(140));
             Settings.UnlockTierLimits = GUILayout.Toggle(Settings.UnlockTierLimits,
-                "<b>全部解除</b>", GUILayout.Width(110));
+                L.T("<b>全部解除</b>"), GUILayout.Width(110));
             GUILayout.EndHorizontal();
-            GUILayout.Label("<color=#aaaaaa>"
+            // ★这两个原来在开发区★ 它们只改玩法数值、没有副作用，属于作弊而非测试工具，
+            // 玩家该能碰。更实际的理由：招募窗口的灰字提示按名字引用它们
+            // （"面板可勾「解除精英数量上限」"），藏在默认不显示的开发区里等于让玩家
+            // 照着提示去找一个看不见的选项。
+            GUILayout.BeginHorizontal();
+            Settings.UnlockEliteLimit = GUILayout.Toggle(Settings.UnlockEliteLimit,
+                L.T("解除精英数量上限"), GUILayout.Width(160));
+            Settings.EliteIgnoreUnlock = GUILayout.Toggle(Settings.EliteIgnoreUnlock,
+                L.T("无视 T3 解锁条件"), GUILayout.Width(160));
+            GUILayout.EndHorizontal();
+            GUILayout.Label(L.T("<color=#aaaaaa>"
                 + "解除<b>利润因子</b>：名额退回按职业阶位算（T1=2 / T2=4 / T3=6）　"
                 + "解除<b>数量</b>：招多少个都行（利润因子和阶位数量一起无视）　"
-                + "解除<b>等级</b>：直接顶 55 级、职业链走满三段"
-                + "</color>");
+                + "解除<b>等级</b>：直接顶 55 级、职业链走满三段　"
+                + "解除<b>精英数量</b>：每条线的精英不限 2 名　"
+                + "无视 <b>T3 解锁</b>：不用先练出 T3 就能招精英"
+                + "</color>"));
 
 
             GUILayout.BeginHorizontal();
-            GUILayout.Label("<b>命名</b>　<color=#aaaaaa>「军衔·人名」，军衔随本人等级三档自动晋升，人名跟他一辈子</color>", GUILayout.Width(520));
-            if (GUILayout.Button("重新命名全部", GUILayout.Width(120))) RetinueTest.RenameAll();
+            GUILayout.Label(L.T("<b>命名</b>　<color=#aaaaaa>「军衔·人名」，军衔随本人等级三档自动晋升，人名跟他一辈子</color>"), GUILayout.Width(520));
+            if (GUILayout.Button(L.T("重新命名全部"), GUILayout.Width(120))) RetinueTest.RenameAll();
             GUILayout.EndHorizontal();
-            GUILayout.Label("<i>军衔取自 archetypes.json 的 guardNames（每条线三档），人名取自根级 guardNamePool；"
-                          + "精英用自己的专属军衔。你手改过的名字不会被覆盖 —— 想让 mod 重新接管就点【重新命名全部】。</i>");
+            GUILayout.Label(L.T("<i>军衔取自 archetypes.json 的 guardNames（每条线三档），人名取自根级 guardNamePool；"
+                              + "精英用自己的专属军衔。你手改过的名字不会被覆盖 —— 想让 mod 重新接管就点【重新命名全部】。</i>"));
 
             GUILayout.BeginHorizontal();
-            GUILayout.Label("创伤:", GUILayout.Width(60));
-            string[] _tm = { "无创伤", "跟队恢复", "原版" };
+            GUILayout.Label(L.T("创伤:"), GUILayout.Width(60));
+            string[] _tm = { L.T("无创伤"), L.T("跟队恢复"), L.T("原版") };
             for (int i = 0; i < _tm.Length; i++)
             {
                 bool on = (Settings.TraumaMode == i);
                 if (GUILayout.Toggle(on, _tm[i], GUILayout.Width(100)) && !on) Settings.TraumaMode = i;
             }
-            GUILayout.Label("    经验比例:", GUILayout.Width(80));
+            GUILayout.Label(L.T("    经验比例:"), GUILayout.Width(80));
             Settings.XpRatio = GUILayout.TextField(Settings.XpRatio, GUILayout.Width(60));
             GUILayout.EndHorizontal();
-            GUILayout.Label("<i>无创伤=不进创伤流水线；跟队恢复=队友被治时一起治；原版=每倒地一次永久掉最大生命，且重伤阈值写死 50% 不吃难度减免</i>");
+            GUILayout.Label(L.T("<i>无创伤=不进创伤流水线；跟队恢复=队友被治时一起治；原版=每倒地一次永久掉最大生命，且重伤阈值写死 50% 不吃难度减免</i>"));
 
             // ---------- 经验追赶 ----------
             GUILayout.BeginHorizontal();
             Settings.XpCatchUp = GUILayout.Toggle(Settings.XpCatchUp,
-                "经验追赶（落后越多拿越多）", GUILayout.Width(200));
-            GUILayout.Label("落后", GUILayout.Width(34));
+                L.T("经验追赶（落后越多拿越多）"), GUILayout.Width(200));
+            GUILayout.Label(L.T("落后"), GUILayout.Width(34));
             Settings.XpCatchUpSpan = (int)GUILayout.HorizontalSlider(Settings.XpCatchUpSpan, 1f, 40f, GUILayout.Width(110));
-            GUILayout.Label(Settings.XpCatchUpSpan + " 级吃满", GUILayout.Width(70));
-            GUILayout.Label("上限", GUILayout.Width(34));
+            GUILayout.Label(L.F("{0} 级吃满", Settings.XpCatchUpSpan), GUILayout.Width(70));
+            GUILayout.Label(L.T("上限"), GUILayout.Width(34));
             Settings.XpCatchUpMax = (int)GUILayout.HorizontalSlider(Settings.XpCatchUpMax, 80f, 500f, GUILayout.Width(110));
             GUILayout.Label("×" + (Settings.XpCatchUpMax / 100f).ToString("F1"), GUILayout.Width(46));
             GUILayout.EndHorizontal();
-            GUILayout.Label("<color=#aaaaaa>固定比例的问题是**差距只会单调拉大** —— 越往后招的卫兵越追不上。"
-                          + "追赶制：落后 0 级拿「经验比例」那个地板值，落后到设定级数拿满上限，中间线性插值；"
-                          + "追平后回落到地板，所以卫兵<b>永远不会反超主角</b>。</color>");
+            GUILayout.Label(L.T("<color=#aaaaaa>固定比例的问题是**差距只会单调拉大** —— 越往后招的卫兵越追不上。"
+                              + "追赶制：落后 0 级拿「经验比例」那个地板值，落后到设定级数拿满上限，中间线性插值；"
+                              + "追平后回落到地板，所以卫兵<b>永远不会反超主角</b>。</color>"));
 
             }
 
             // ---------- 反馈（玩家可见）----------
             GUILayout.Space(8);
             GUILayout.BeginHorizontal();
-            if (GUILayout.Button("导出诊断包", GUILayout.Width(120)))
+            if (GUILayout.Button(L.T("导出诊断包"), GUILayout.Width(120)))
             {
                 var _p = DiagnosticReport.Export();
                 if (!string.IsNullOrEmpty(_p)) Log("[诊断包] 请把这个文件发给作者：" + _p);
             }
-            GUILayout.Label("<color=#aaaaaa>反馈问题时点这个 —— 会把版本、你改过的设置、在册情况、舰船状态"
-                          + "和日志尾部打包成**一个文件**，用户名已抹掉。比直接发 kgd_log.txt 小得多也全得多。</color>");
+            GUILayout.Label(L.T("<color=#aaaaaa>反馈问题时点这个 —— 会把版本、你改过的设置、在册情况、舰船状态"
+                              + "和日志尾部打包成**一个文件**，用户名已抹掉。比直接发 kgd_log.txt 小得多也全得多。</color>"));
             GUILayout.EndHorizontal();
             if (!string.IsNullOrEmpty(DiagnosticReport.LastPath))
-                GUILayout.Label("<color=#7ec8ff>最近导出：" + DiagnosticReport.LastPath + "</color>");
+                GUILayout.Label(L.F("<color=#7ec8ff>最近导出：{0}</color>", DiagnosticReport.LastPath));
 
             if (DevMode)
-            if (Fold(ref Settings.PanelShowDev, "开发 · 测试", "装备档位 / 诊断 / 热键　★注意：好几个按钮会清空全部卫兵★"))
+            if (Fold(ref Settings.PanelShowDev, "开发 · 测试", "探针 / 诊断 / 热键　★注意：好几个按钮会清空全部卫兵★"))
             {
             // ---------- 工具 ----------
             GUILayout.Space(8);
@@ -686,6 +735,26 @@ namespace KgdRetinue
             GUILayout.EndHorizontal();
             GUILayout.Space(8);
 
+            // ---------- 实战测试：批量摆人 ----------
+            // 和上面两个按钮的区别：这些**只生成、不清场**。一键全测跑完会 Teardown
+            // （遣散全部 + 还原座舰），手上一个兵都不剩，没法接着去打。
+            GUILayout.Label("<b>实战测试</b>　<color=#aaaaaa>只生成、不清场；生成完去打一场，"
+                          + "战斗结束会自动打一份「战斗行为总账」（谁动了、放了什么技能、还是只普攻）</color>");
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("生成 5 个普通", GUILayout.Width(130)))  RetinueTest.SpawnAll(true,  false);
+            if (GUILayout.Button("生成 10 个精英", GUILayout.Width(130))) RetinueTest.SpawnAll(false, true);
+            if (GUILayout.Button("全生成（15 个）", GUILayout.Width(140))) RetinueTest.SpawnAll(true,  true);
+            GUILayout.Label("<color=#ffaa66>会绕过名额上限。装备档位用【规则】区那个设，"
+                          + "但它不追溯 —— 要先设好再生成。</color>");
+            GUILayout.EndHorizontal();
+            GUILayout.BeginHorizontal();
+            Settings.AutoEndPlayerTurn = GUILayout.Toggle(Settings.AutoEndPlayerTurn,
+                "自动结束我的回合", GUILayout.Width(150));
+            GUILayout.Label("<color=#ff8080>★你自己的角色会整场什么都不做★ 只为省去反复手点，"
+                          + "看完卫兵行为记得关掉。（CanEndTurn 内含 !AnyUnitIsBusy，不会打断动画）</color>");
+            GUILayout.EndHorizontal();
+            GUILayout.Space(8);
+
             GUILayout.Label("<b>工具</b>");
             GUILayout.BeginHorizontal();
             // ★这两个按钮已合并进【一键全测（会清空卫兵）】★
@@ -698,8 +767,12 @@ namespace KgdRetinue
             if (GUILayout.Button("批量试算方案", GUILayout.Width(120))) PlanProbe.Run();
             if (GUILayout.Button("导出天赋名录", GUILayout.Width(120))) ItemTool.ExportFeatures();
             GUILayout.EndHorizontal();
-            GUILayout.Label("<i>一键测装备：5 分型 × T1/T2/T3 = 15 组普通卫兵 <b>+ 全部 10 个精英</b>，一次跑完，写 geartest.tsv。"
-                          + "　一键全测：额外收集命中率/属性，写 autotest.tsv。两个都会自动清场并还原限制。</i>");
+            // ★这里原来挂着一条描述【一键测装备】/【一键全测】的说明★，但那两个入口
+            // 一个已合并、一个（AutoTest.RunAll → autotest.tsv）已是死代码。更糟的是它紧贴在
+            // 上面这四个**只读**按钮下面，于是"两个都会自动清场并还原限制"看起来像在说它们。
+            // 会清场的是下面【一键全测】那个，标签就写在它自己身上。
+            GUILayout.Label("<i>以上四个都是只读探针：读当前状态、写 kgd_log.txt 或导出文件，"
+                          + "不生成单位、不清场、不改存档。</i>");
 
             GUILayout.BeginHorizontal();
             GUILayout.Label("经验数:", GUILayout.Width(60));
@@ -768,15 +841,8 @@ namespace KgdRetinue
             }
 
             GUILayout.BeginHorizontal();
-            GUILayout.Label("装备档位", GUILayout.Width(70));
-            for (int i = 0; i < 4; i++)
-                if (GUILayout.Toggle(Settings.GearTierOverride == i,
-                        new[] { "自动", "T1", "T2", "T3" }[i], "Button", GUILayout.Width(i == 0 ? 60 : 44)))
-                    Settings.GearTierOverride = i;
             GUILayout.Label("默认单位 AssetId", GUILayout.Width(110));
             Settings.UnitAssetId = GUILayout.TextField(Settings.UnitAssetId, GUILayout.Width(240));
-            Settings.UnlockEliteLimit = GUILayout.Toggle(Settings.UnlockEliteLimit, "解除精英数量上限", GUILayout.Width(150));
-            Settings.EliteIgnoreUnlock = GUILayout.Toggle(Settings.EliteIgnoreUnlock, "无视 T3 解锁条件", GUILayout.Width(150));
             if (GUILayout.Button("在游戏内面板打开选中卫兵", GUILayout.Width(200))) RetinueTest.OpenNativePanel();
             GUILayout.EndHorizontal();
             GUILayout.BeginHorizontal();
@@ -961,11 +1027,30 @@ namespace KgdRetinue
         public int RecruitMaxGuards = 6;
 
         // ---------------- 面板分区折叠状态（纯 UI，不影响任何玩法）----------------
-        public bool PanelShowRecruit = true;
-        public bool PanelShowShip    = true;
+        // 默认只展开「规则」：那一区是常用开关（死亡规则/士气/镜头/成长/解除限制），
+        // 而「招募」和「舰船」的日常入口都在游戏内（NPC 对话 + 两个 uGUI 窗口），
+        // 面板里那两区主要是配置和诊断，不必一开面板就糊一屏。
+        public bool PanelShowRecruit = false;
+        public bool PanelShowShip    = false;
         public bool PanelShowRules   = true;
         /// <summary>开发/测试区。默认**折叠** —— 那些按钮玩家用不到，而且好几个会清场。</summary>
         public bool PanelShowDev     = false;
+
+        /// <summary>
+        /// 卫兵在被近战缠住时也能开火。
+        ///
+        /// 原版规则（AbilityData.cs:884）：缠斗中不能用 UsingInThreateningArea=CannotUse 的技能，
+        /// 而重武器射击基本都是这一类。玩家可以手动走位规避，卫兵是 AI 控制、不能微操 ——
+        /// 实测结果是远程卫兵要么把回合全花在退位上（29 动作只打 5 次），
+        /// 要么干脆一枪不开站着被打死。所以默认开。
+        /// </summary>
+        public bool GuardsCanShootInMelee = true;
+
+        /// <summary>
+        /// 自动结束玩家回合。**纯测试用**：观察卫兵 AI 时不用一直手点结束回合。
+        /// 只在开发模式下生效且默认关闭 —— 它会让你自己的角色整场什么都不做。
+        /// </summary>
+        public bool AutoEndPlayerTurn = false;
 
         /// <summary>换船模后，给船体补上缺失的武器挂点（否则光矛/鱼雷会从舰船原点开火）。</summary>
         public bool ShipMountFallback = true;

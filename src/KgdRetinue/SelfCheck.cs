@@ -77,6 +77,7 @@ namespace KgdRetinue
             Files();
             Archetypes_();
             GearGuids();
+            GearCoverage();
             SettingsSanity();
             ShipState();
             Report();
@@ -187,6 +188,78 @@ namespace KgdRetinue
                         foreach (var s in e.Gear) if (!string.IsNullOrEmpty(s)) yield return s;
         }
 
+        // ---------------------------------------------------------------- 档位覆盖
+
+        /// <summary>
+        /// T3 槽位空洞：某个装备**类型**在 T1/T2 配了、T3 没配。
+        ///
+        /// ★为什么这条必须单独查★
+        /// 【一键测装备】报的「12/12、0 槽位装不上」意思是"**配表里写了的**都成功穿上了"，
+        /// 它不验"配表本身全不全" —— 没配的东西当然不会报错。于是可以同时出现
+        /// 「100% 通过」和「四个槽位空着」。
+        ///
+        /// 而这在 T3 上特别致命，因为 GearFor（GearTool.cs:595-597）返回的是
+        /// **单独一档数组、不累加**，且 55 级存档恒为 T3 —— 也就是说
+        /// **新招的卫兵只会拿到 gearT3，压根不经过 T1/T2**。
+        /// 「删掉后档那条，前档那件靠只增不减留着」只对**逐级长大**的卫兵成立；
+        /// 对直接招在 T3 的卫兵，那一格就是空的，而且没有任何提示。
+        /// </summary>
+        private static void GearCoverage()
+        {
+            try
+            {
+                int holes = 0;
+                var detail = new List<string>();
+                foreach (var a in Archetypes.All)
+                {
+                    var t1 = TypeCount(a.GearT1);
+                    var t2 = TypeCount(a.GearT2);
+                    var t3 = TypeCount(a.GearT3);
+                    foreach (var kv in t1) Merge(t2, kv.Key, kv.Value);   // 前档取两者较多的那个
+                    foreach (var kv in t2)
+                    {
+                        int has;
+                        t3.TryGetValue(kv.Key, out has);
+                        if (has < kv.Value)
+                        {
+                            holes++;
+                            if (detail.Count < 8)
+                                detail.Add(a.Name + " " + kv.Key + " T3=" + has + " 前档=" + kv.Value);
+                        }
+                    }
+                }
+                if (holes == 0) Ok("档位覆盖", "T3 覆盖了前档的所有装备类型，无空洞");
+                else Warn("档位覆盖", holes + " 处 T3 空洞 —— ★T3 直招的卫兵这些槽会是空的★\n      "
+                                    + string.Join("\n      ", detail.ToArray()));
+            }
+            catch (Exception e) { Warn("档位覆盖", "查不了: " + e.Message); }
+        }
+
+        private static void Merge(Dictionary<string, int> d, string k, int v)
+        {
+            int cur; d.TryGetValue(k, out cur);
+            if (v > cur) d[k] = v;
+        }
+
+        /// <summary>把一档配表按**蓝图类型**计数 —— GearTool 是按类型定槽的，下标不代表槽位。</summary>
+        private static Dictionary<string, int> TypeCount(string[] tier)
+        {
+            var d = new Dictionary<string, int>(StringComparer.Ordinal);
+            if (tier == null) return d;
+            foreach (var entry in tier)
+            {
+                if (string.IsNullOrEmpty(entry)) continue;
+                var first = entry.Split('|')[0].Trim();       // 候选链只看首选
+                if (string.IsNullOrEmpty(first)) continue;
+                object bp = null;
+                try { bp = ResourcesLibrary.TryGetBlueprint(first); } catch { }
+                if (bp == null) continue;                     // 解析不到的归 GearGuids 那条管
+                string t = bp.GetType().Name;
+                int c; d.TryGetValue(t, out c); d[t] = c + 1;
+            }
+            return d;
+        }
+
         // ---------------------------------------------------------------- 设置不变式
 
         private static void SettingsSanity()
@@ -204,7 +277,11 @@ namespace KgdRetinue
                 Warn("招募上限", "为 " + st.RecruitMaxGuards + "，一个都招不了");
             else Ok("招募上限", st.RecruitMaxGuards + " 名，每名 " + st.RecruitPfPerGuard + " 利润因子");
 
-            bool unlocked = st.NoCountCap() || st.NoPfGate() || st.NoLevelCap();
+            // 这五个都是"作弊"性质的开关，发布默认应当全关。
+            // ★精英那两个原来漏在这里★ 它们本来待在开发区，于是写这条检查时没想到；
+            // 挪进玩家区之后，带着它们发包和带着前三个发包是同一类错误。
+            bool unlocked = st.NoCountCap() || st.NoPfGate() || st.NoLevelCap()
+                         || st.UnlockEliteLimit || st.EliteIgnoreUnlock;
             if (unlocked) Warn("解除限制", "有开关处于打开状态 —— 发布默认应当全关，"
                                         + "别把本机配置当成玩家的默认体验");
             else Ok("解除限制", "全关（发布默认形态）");
