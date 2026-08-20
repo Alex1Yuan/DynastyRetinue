@@ -8,7 +8,7 @@ import {
 } from "remotion";
 import { Audio, Video } from "@remotion/media";
 import { TitleCard } from "./TitleCard";
-import { FeatureBars } from "./FeatureBars";
+import { FeatureBars, GROWTH_ITEMS } from "./FeatureBars";
 import { ShipStats } from "./ShipStats";
 import { UninstallCard, EndCard } from "./Cards";
 import { Subtitle, HardSub } from "./Subtitle";
@@ -133,8 +133,10 @@ export const Film: React.FC = () => {
               </Series.Sequence>
               <Series.Sequence durationInFrames={F(14)}>
                 <Clip src="b_combat5.mp4" zoom={0.0035} origin="46% 48%" />
+                {/* 只放前两条：另外两条是「精英」和「座舰」两段的内容，
+                    提前打出来跟正在念的旁白对不上，也把后面的揭示提前用掉了 */}
                 <Sequence from={F(1)} layout="none">
-                  <FeatureBars />
+                  <FeatureBars items={GROWTH_ITEMS} />
                 </Sequence>
               </Series.Sequence>
             </Series>
@@ -170,11 +172,11 @@ export const Film: React.FC = () => {
                 <Clip src="c_void1.mp4" zoom={0.003} origin="center" />
               </Series.Sequence>
             </Series>
-            {/* 数值对照压在虚空战开头：配音念到"护盾和装甲翻倍"时正好滚到那两行 */}
+            {/* 数值对照压在虚空战开头：配音念到"护盾和装甲翻倍"时正好滚到那两行。
+                ★必须走 overlay 模式★ —— ShipStats 默认那个 INK 底是实心的，
+                直接叠上去等于切一整帧黑屏，虚空战完全看不见 */}
             <Sequence from={F(15)} durationInFrames={F(8)} layout="none">
-              <AbsoluteFill name="StatsOverlay" style={{ opacity: 0.94 }}>
-                <ShipStats />
-              </AbsoluteFill>
+              <ShipStats overlay />
             </Sequence>
           </Seg>
         </Series.Sequence>

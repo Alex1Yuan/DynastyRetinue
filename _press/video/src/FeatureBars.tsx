@@ -26,6 +26,9 @@ const ITEMS = [
   { k: "座舰改装", v: "护卫舰 → 巡洋舰 → 大巡洋舰，外观真的会变" },
 ];
 
+/** 成片「招募与成长」那段用的两条。整份 ITEMS 留给独立渲染的插入片段用。 */
+export const GROWTH_ITEMS = ITEMS.slice(0, 2);
+
 const PER = 2; // 每条秒数
 
 const Bar: React.FC<{ k: string; v: string }> = ({ k, v }) => {
@@ -105,7 +108,14 @@ const Bar: React.FC<{ k: string; v: string }> = ({ k, v }) => {
   );
 };
 
-export const FeatureBars: React.FC = () => {
+export const FeatureBars: React.FC<{
+  /**
+   * 只放其中几条。成片里「招募与成长」那段只放前两条 ——
+   * 剩下两条（十名精英、座舰改装）是后面两段的内容，
+   * 提前打出来会跟正在念的旁白对不上，也把后面的揭示提前用掉了。
+   */
+  items?: typeof ITEMS;
+}> = ({ items = ITEMS }) => {
   const { fps } = useVideoConfig();
 
   return (
@@ -115,7 +125,7 @@ export const FeatureBars: React.FC = () => {
     // 渲成 mp4 会得到黑底（mp4 没有透明通道），那就只能当切换卡用了。
     // Studio 里预览时背景显示为棋盘格，是正常的。
     <AbsoluteFill name="FeatureBars">
-      {ITEMS.map((it, i) => (
+      {items.map((it, i) => (
         <Sequence
           key={it.k}
           from={i * PER * fps}

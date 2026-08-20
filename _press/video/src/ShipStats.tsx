@@ -108,20 +108,43 @@ const StatRow: React.FC<{ row: Row; index: number }> = ({ row, index }) => {
   );
 };
 
-export const ShipStats: React.FC = () => {
+export const ShipStats: React.FC<{
+  /**
+   * 压在实机画面上放（成片里压在虚空战上）。
+   *
+   * ★为什么需要这个开关★
+   *   默认那个不透明的 INK 底当独立片段用没问题，但压在画面上时
+   *   它会把下面的虚空战全部盖掉 —— 外层给 0.94 的 opacity 也没用，
+   *   底本身是实心的，等于切了一个黑屏。而且切入的那一帧标题还没淡入，
+   *   观众看到的是一整帧纯黑。
+   *   叠加模式下改成会淡入的半透明遮罩：数值看得清，船也还在。
+   */
+  overlay?: boolean;
+}> = ({ overlay = false }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
+
+  // 8 秒的叠加窗口：0.5s 淡入，末尾 0.6s 淡出，避免硬切回画面
+  const scrim = overlay
+    ? interpolate(frame, [0, 0.5 * fps, 7.4 * fps, 8 * fps], [0, 0.82, 0.82, 0], {
+        extrapolateLeft: "clamp",
+        extrapolateRight: "clamp",
+        easing: Easing.bezier(0.16, 1, 0.3, 1),
+      })
+    : 1;
 
   return (
     <AbsoluteFill
       name="ShipStats"
       style={{
-        backgroundColor: INK,
+        backgroundColor: overlay ? `rgba(10,11,13,${scrim})` : INK,
         fontFamily: FONT,
         padding: "110px 150px",
         display: "flex",
         flexDirection: "column",
         justifyContent: "center",
+        // 叠加模式下整体跟着遮罩一起收尾，不然表格会挂在画面上突然消失
+        opacity: overlay ? Math.min(1, scrim / 0.82) : 1,
       }}
     >
       <Interactive.Div
@@ -171,9 +194,15 @@ export const ShipStats: React.FC = () => {
         <StatRow key={r.label} row={r} index={i} />
       ))}
 
-      <Sequence from={Math.round((HEAD + ROWS.length * STEP + 0.4) * fps)} layout="none">
-        <Foot />
-      </Sequence>
+      {/* ★叠加模式下不画脚注★
+          两个原因：一是它落在字幕带上，两行字会撞在一起；
+          二是它说的「改装可随时还原并退回废料」正好是旁白同一刻在念的那句，
+          画面重复一遍旁白只是在抢注意力。独立片段没有旁白，那时它是必要的。 */}
+      {!overlay && (
+        <Sequence from={Math.round((HEAD + ROWS.length * STEP + 0.4) * fps)} layout="none">
+          <Foot />
+        </Sequence>
+      )}
     </AbsoluteFill>
   );
 };
