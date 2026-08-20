@@ -40,3 +40,8 @@ src/KgdRetinue/_*.py
 _press/*
 !_press/*.md
 _backup/
+
+# Remotion 的 agent skills（做宣传视频用的第三方工具，跟 mod 本身无关）
+.agents/
+.claude/skills/
+skills-lock.json
