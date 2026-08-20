@@ -351,7 +351,7 @@ M7+ —— 出战开关、squad 先攻收敛、模式 B、军衔展示。
 
 原版明文蓝图：模板 tar 内共 181,584 个 .jbp，**但实际只解压了 412 个**（当时按需抽取，
 没有全量展开）。要 grep 全库 AssetId 必须先补解压，否则会漏。已解压部分在：
-  D:\RT_RetinueMod\ref\rt_probe\extracted\WhRtModificationTemplate\Blueprints\   (412 个)
+  <仓库根>\ref\rt_probe\extracted\WhRtModificationTemplate\Blueprints\   (412 个)
 蓝图索引（{Name,Guid,TypeFullName}）：
   H:\SteamLibrary\steamapps\common\Warhammer 40,000 Rogue Trader\Bundles\cheatdata.json
 游戏程序集：
@@ -359,13 +359,13 @@ M7+ —— 出战开关、squad 先攻收敛、模式 B、军衔展示。
     Code.dll (13.9MB) / RogueTrader.GameCore.dll / 0Harmony.dll (2.2.2.0) / mscorlib.dll / netstandard.dll
   注意：主程序集是 Code.dll，不是常见的 Assembly-CSharp.dll，网上多数教程对不上
 Code.dll 反编译产物：
-  D:\RT_RetinueMod\ref\rt_probe\dec\
+  <仓库根>\ref\rt_probe\dec\
 BodyGuard 反编译源码（零混淆，15,151 行，含作者原始文件路径行号，作侦察用不抄）：
-  C:\Users\kyua805\bg_decomp\
+  %USERPROFILE%\bg_decomp\
 UMM 程序集：
-  C:\Users\kyua805\AppData\LocalLow\Owlcat Games\Warhammer 40000 Rogue Trader\UnityModManager\UnityModManager.dll
+  %USERPROFILE%\AppData\LocalLow\Owlcat Games\Warhammer 40000 Rogue Trader\UnityModManager\UnityModManager.dll
 数据 patch 骨架（已实测跑通）：
-  C:\Users\kyua805\AppData\LocalLow\Owlcat Games\Warhammer 40000 Rogue Trader\Modifications\ShipPatchTest\
+  %USERPROFILE%\AppData\LocalLow\Owlcat Games\Warhammer 40000 Rogue Trader\Modifications\ShipPatchTest\
 
 构建注意：**必须引用游戏自带的 BCL**（mscorlib/netstandard/System.Memory 等），
 不能用微软 net472 参考程序集 —— 否则 MathF / Math.Clamp / System.Index 全部报错。

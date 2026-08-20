@@ -33,7 +33,10 @@ R=src/DynastyRetinue
 # 英文玩家界面上就多一句中文，且没有任何报错。
 py tools/check_l10n.py || { echo "x 本地化校验未通过，已中止。"; exit 1; }
 BIN=$R/bin/Release
-D="C:/Users/kyua805/AppData/LocalLow/Owlcat Games/Warhammer 40000 Rogue Trader/UnityModManager/DynastyRetinue"
+# 部署目录。默认按 Windows 上 UMM 给这个游戏的标准位置推导（$HOME 就是 C:\Users\你）。
+# 装在别处的话，跑之前设一下环境变量即可：
+#   DR_DEPLOY="/e/Games/.../UnityModManager/DynastyRetinue" sh bump.sh 1.0.0
+D="${DR_DEPLOY:-$HOME/AppData/LocalLow/Owlcat Games/Warhammer 40000 Rogue Trader/UnityModManager/DynastyRetinue}"
 
 # ★先生成数据文件指纹，再编译★ 顺序不能反 —— BuildManifest.cs 要参与编译。
 # 指纹只用于诊断包里标注"这份配表被改过没有"，不做任何拦截，正常玩家无感。

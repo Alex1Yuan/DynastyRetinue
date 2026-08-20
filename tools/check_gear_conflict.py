@@ -22,7 +22,7 @@ import io, json, os, re, subprocess, sys
 
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
-ROOT = r"D:\RT_RetinueMod"
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ARCH = os.path.join(ROOT, r"src\DynastyRetinue\archetypes.json")
 PY = os.path.join(ROOT, r"ref\bbp\py")
 

@@ -18,7 +18,7 @@ try:                      # Windows 控制台默认 GBK，中文/− 号会直�
 except Exception:
     pass
 
-SRC = r"D:\RT_RetinueMod\src\DynastyRetinue"
+SRC = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src", "DynastyRetinue")
 TAB = os.path.join(SRC, "l10n_en.json")
 
 # L.T(TextValue) —— 参数是 const 标识符，正则扫不到，但运行时确实会查这个 key

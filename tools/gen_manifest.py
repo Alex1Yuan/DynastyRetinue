@@ -15,7 +15,7 @@
 """
 import hashlib, io, os, sys
 
-SRC = r"D:\RT_RetinueMod\src\DynastyRetinue"
+SRC = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src", "DynastyRetinue")
 OUT = os.path.join(SRC, "BuildManifest.cs")
 FILES = ["archetypes.json", "plans.json", "l10n_en.json"]
 

@@ -6,7 +6,7 @@
 """
 import json, io, os, sys, re
 
-OUT = r"D:\RT_RetinueMod\src\DynastyRetinue\l10n_en.json"
+OUT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src", "DynastyRetinue", "l10n_en.json")
 
 
 def load_pairs(path):
