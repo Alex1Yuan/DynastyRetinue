@@ -662,17 +662,63 @@ namespace DynastyRetinue
         /// 原版跟随系统。FollowerSettings / FormationPersonalSettings 都是普通
         /// [Serializable] C# 类，运行时 new 即可，不产生 AssetId ⇒ 零存档足迹。
         /// 代价：读档/过图后必须重挂（原版 MakeUnitFollowUnit 也是这么做的）。
+        ///
+        /// ★偏移必须按卫兵各自算，不能全用同一个★
+        ///   原来所有卫兵都是 (2, -2) —— 五个人的跟随目标是**同一个坐标**，
+        ///   于是全挤在队长右后方那一格里，实机看上去就是一坨人叠在一起。
+        ///   现在按注册表里的序号排成队长背后的方阵（三列 × 若干排）。
         /// </summary>
         public static void AttachFollow(BaseUnitEntity guard, BaseUnitEntity leader)
         {
             var personal = new FormationPersonalSettings
             {
-                m_Offset = new Vector2(2f, -2f),   // X=队长右方, Y=队长前方（负=后方）
+                m_Offset = FormationOffset(guard),
                 m_RepathDistance = 4f,
                 m_LookAngleRandomSpread = 90f,
             };
             guard.GetOrCreate<UnitPartFollowUnit>()
                  .Init(leader, new FollowerSettings(personal));
+        }
+
+        /// <summary>每排几个人。三列在窄走廊里还塞得下，再宽就容易卡门框。</summary>
+        private const int FormationCols = 3;
+        /// <summary>左右间距（格）。</summary>
+        private const float FormationGapX = 2.0f;
+        /// <summary>第一排离队长多远，以及排与排的间距。</summary>
+        private const float FormationFirstRow = 2.0f;
+        private const float FormationGapY = 2.0f;
+
+        /// <summary>
+        /// 按卫兵在注册表里的序号算它在方阵里的位置。
+        ///
+        /// 坐标系（和原版 FormationPersonalSettings 一致）：
+        ///   X 正 = 队长右方，Y 负 = 队长后方。
+        /// 序号 0..2 是第一排（左/中/右），3..5 第二排，依此类推 ——
+        /// 名额上限是 6，正好两排；上限被解锁后也不会乱，行数自动往后加。
+        ///
+        /// 序号取自 RetinueRegistry.All()。它的顺序在一次会话里是稳的；
+        /// 就算因为死亡/遣散变了，重新挂载时整队跟着平移一格，
+        /// 比五个人叠在一格里好得多。
+        /// </summary>
+        private static Vector2 FormationOffset(BaseUnitEntity guard)
+        {
+            int idx = 0;
+            try
+            {
+                var all = RetinueRegistry.All(false);
+                for (int i = 0; i < all.Count; i++)
+                {
+                    if (ReferenceEquals(all[i], guard)) { idx = i; break; }
+                }
+            }
+            catch { /* 拿不到序号就当第 0 个，至少不会崩 */ }
+
+            int row = idx / FormationCols;
+            int col = idx % FormationCols;
+            // 让每排以队长正后方为中心：3 列 ⇒ col 0/1/2 映射到 -1/0/+1
+            float centered = col - (FormationCols - 1) * 0.5f;
+            return new Vector2(centered * FormationGapX,
+                               -(FormationFirstRow + row * FormationGapY));
         }
 
         /// <summary>

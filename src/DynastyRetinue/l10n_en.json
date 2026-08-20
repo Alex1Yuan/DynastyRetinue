@@ -230,5 +230,8 @@
   "恢复默认设置": "Restore defaults",
   "<color=#aaaaaa>把上面所有选项恢复成初始值。调乱了、或者不确定改过什么的时候点它，比翻 Settings.xml 快。不影响存档里已有的卫兵和座舰。</color>": "<color=#aaaaaa>Resets every option above to its initial value. Faster than digging through Settings.xml when you have changed things you can no longer recall. Guards and ships already in your save are untouched.</color>",
   "卫兵灵能不推高亚空间威胁　<color=#d0a050>建议保持默认（开）</color><color=#aaaaaa>　帷幕是区域唯一值、做不了独立池，只能选计不计入。关掉后五个 AI 每回合乱放技能，帷幕会迅速失控。</color>": "Guard psykers do not raise the Warp threat　<color=#d0a050>keep the default (on)</color><color=#aaaaaa>　The Veil is a single per-area value, so a separate pool is impossible — it can only be counted or not. With this off, five AI units casting every round make the Veil spiral.</color>",
-  "换船模后自动补上缺失的武器挂点　<color=#d0a050>建议保持默认（开）</color><color=#aaaaaa>　有些船模没有舰首槽位，关掉后光矛和鱼雷会「在虚空里开火」。</color>": "Synthesise missing weapon mounts after a hull swap　<color=#d0a050>keep the default (on)</color><color=#aaaaaa>　Some hulls have no prow socket; with this off, lances and torpedoes fire from the void.</color>"
+  "换船模后自动补上缺失的武器挂点　<color=#d0a050>建议保持默认（开）</color><color=#aaaaaa>　有些船模没有舰首槽位，关掉后光矛和鱼雷会「在虚空里开火」。</color>": "Synthesise missing weapon mounts after a hull swap　<color=#d0a050>keep the default (on)</color><color=#aaaaaa>　Some hulls have no prow socket; with this off, lances and torpedoes fire from the void.</color>",
+  "改名": "Rename",
+  "还原": "Reset",
+  "<i>改完的名字会一直保留，mod 的自动命名不会再覆盖它。【还原】= 交回给 mod 按「军衔·人名」重新推导。</i>": "<i>A name you set here sticks — the mod's automatic naming will not overwrite it. [Reset] hands the guard back to the mod, which re-derives \"Rank·Name\".</i>"
 }

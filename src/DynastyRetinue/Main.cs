@@ -1,4 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
+using Kingmaker.EntitySystem.Entities;   // BaseUnitEntity（逐个改名那段用）
+using Kingmaker.UnitLogic.Parts;         // PartUnitDescription
 using UnityEngine;
 using UnityModManagerNet;
 using HarmonyLib;
@@ -214,6 +217,11 @@ namespace DynastyRetinue
                 }
                 catch { }
             }
+            // ★关掉 mod 时把攒着的日志写干净★
+            // 日志是缓冲写的（见 WriteFile）；关掉之后 OnUpdate 不再跑，
+            // 缓冲区里最后那几行——恰好包含上面那两条"仍有卫兵/座舰"的警告——
+            // 就再也没人负责落盘了。玩家去翻日志找卸载提示时会看不到。
+            FlushLog(true);
             return true;
         }
 
@@ -284,9 +292,94 @@ namespace DynastyRetinue
                 RetinueLifecycle.TickPending();
                 CombatWatch.Tick();          // 一帧一个 bool 比较，战斗结束那一帧才干活
                 if (Settings.WatchMomentum) MomentumWatch.Tick();
+
+                // 日志攒在内存里，靠这里定期落盘。没有这一下，安静时段最后那几行
+                // 会一直卡在缓冲区里，玩家去翻日志看不到最新的内容。
+                // FlushLog(false) 自己判断是否到时候，缓冲为空时直接返回，开销可以忽略。
+                FlushLog(false);
             }
             catch (Exception e) { LogError(e); }
         }
+
+        /// <summary>
+        /// 逐个卫兵改名。
+        ///
+        /// ★为什么补这个★
+        ///   原来只有【重新命名全部】一个按钮，而它做的是"清空自定义名、按同一套规则
+        ///   重新推导" —— 推出来的还是原来那个名字，所以玩家点下去看不出任何变化，
+        ///   合理地以为按钮坏了。真正缺的是"我想把这个人叫别的名字"，
+        ///   而那个入口一直不存在。
+        ///
+        ///   改名只写 PartUnitDescription.CustomName，是个普通字符串，
+        ///   不涉及任何 AssetId ⇒ 不碰存档红线。
+        ///
+        /// ★输入内容为什么攒在字典里而不是直接写回单位★
+        ///   IMGUI 每帧重画。直接 SetName(TextField(...)) 的话，你每敲一个字母
+        ///   都会立刻改名一次，中文输入法的候选阶段还会把拼音本身写进去。
+        ///   所以先攒在 _renameBuf，按【改名】才落到单位上。
+        /// </summary>
+        private static readonly Dictionary<string, string> _renameBuf =
+            new Dictionary<string, string>(StringComparer.Ordinal);
+
+        private static void DrawRenameList()
+        {
+            List<BaseUnitEntity> list;
+            try { list = RetinueRegistry.All(false); }
+            catch { return; }
+            if (list == null || list.Count == 0) return;
+
+            foreach (var g in list)
+            {
+                if (g == null) continue;
+                string id;
+                try { id = g.UniqueId; } catch { continue; }
+                if (string.IsNullOrEmpty(id)) continue;
+
+                string cur = null;
+                try
+                {
+                    var d = g.GetOptional<PartUnitDescription>();
+                    if (d != null) cur = d.CustomName;
+                }
+                catch { }
+                if (string.IsNullOrEmpty(cur)) cur = "?";
+
+                string buf;
+                if (!_renameBuf.TryGetValue(id, out buf)) buf = cur;
+
+                GUILayout.BeginHorizontal();
+                GUILayout.Label("　" + cur, GUILayout.Width(220));
+                _renameBuf[id] = GUILayout.TextField(buf ?? "", 40, GUILayout.Width(220));
+                if (GUILayout.Button(L.T("改名"), GUILayout.Width(60)))
+                {
+                    string want = (_renameBuf[id] ?? "").Trim();
+                    if (want.Length > 0 && want != cur)
+                    {
+                        try
+                        {
+                            g.GetOrCreate<PartUnitDescription>().SetName(want);
+                            Log("手动改名: " + cur + " -> " + want);
+                        }
+                        catch (Exception e) { LogError("手动改名失败: " + e.Message); }
+                    }
+                }
+                if (GUILayout.Button(L.T("还原"), GUILayout.Width(60)))
+                {
+                    // 清掉自定义名再让 mod 按规则重推 —— 相当于对单个人做【重新命名全部】
+                    try
+                    {
+                        g.GetOrCreate<PartUnitDescription>().SetName(null);
+                        RetinueTest.ApplyName(g);
+                        _renameBuf.Remove(id);
+                    }
+                    catch (Exception e) { LogError("还原名字失败: " + e.Message); }
+                }
+                GUILayout.EndHorizontal();
+            }
+            GUILayout.Label(L.T("<i>改完的名字会一直保留，mod 的自动命名不会再覆盖它。"
+                              + "【还原】= 交回给 mod 按「军衔·人名」重新推导。</i>"));
+        }
+
 
         /// <summary>
         /// 分区折叠头。返回是否展开。
@@ -851,6 +944,7 @@ namespace DynastyRetinue
             GUILayout.EndHorizontal();
             GUILayout.Label(L.T("<i>军衔取自 archetypes.json 的 guardNames（每条线三档），人名取自根级 guardNamePool；"
                               + "精英用自己的专属军衔。你手改过的名字不会被覆盖 —— 想让 mod 重新接管就点【重新命名全部】。</i>"));
+            DrawRenameList();
 
             GUILayout.BeginHorizontal();
             GUILayout.Label(L.T("创伤:"), GUILayout.Width(60));
@@ -1115,15 +1209,59 @@ namespace DynastyRetinue
         private static string LogPath =>
             System.IO.Path.Combine(ModEntry?.Path ?? ".", "dynasty_log.txt");
 
+        /// <summary>
+        /// ★日志必须攒着写，不能一行一次 File.AppendAllText★
+        ///
+        /// AppendAllText 每调一次就是「打开文件 → 写 → 关闭」一整轮，还要过一遍
+        /// 杀软的文件监控。平时无所谓，但「详细日志」打开后，帷幕/士气那几条是
+        /// **每个卫兵的每条指令各一行** —— 战斗里五六个卫兵轮流行动，等于在
+        /// 游戏主线程上持续刷文件系统，实机表现就是明显的卡顿。
+        ///
+        /// 现在攒进内存，够 32 KB 或距上次落盘超过 2 秒才真正写一次，
+        /// 把几千次开关文件压成几次。日志内容一行不少。
+        /// </summary>
+        private static readonly System.Text.StringBuilder _logBuf = new System.Text.StringBuilder(1 << 16);
+        private static readonly object _logLock = new object();
+        private static DateTime _logFlushedAt = DateTime.MinValue;
+        private const int LogFlushBytes = 32 * 1024;
+        private const double LogFlushSeconds = 2.0;
+
         private static void WriteFile(string level, string msg)
         {
             try
             {
-                System.IO.File.AppendAllText(LogPath,
-                    $"[{DateTime.Now:HH:mm:ss}][{level}] {msg}{Environment.NewLine}",
-                    System.Text.Encoding.UTF8);
+                string line = $"[{DateTime.Now:HH:mm:ss}][{level}] {msg}{Environment.NewLine}";
+                lock (_logLock) { _logBuf.Append(line); }
+                // ERROR 立刻落盘：真出事的时候进程可能下一刻就没了，攒着等于丢了
+                if (level == "ERROR") FlushLog(true); else FlushLog(false);
             }
             catch { /* 日志失败不能影响主流程 */ }
+        }
+
+        /// <summary>
+        /// 把攒下的日志写到磁盘。
+        /// <paramref name="force"/> 为 false 时只在「攒够 32 KB」或「距上次落盘超过 2 秒」
+        /// 时才真写 —— 每帧从 OnUpdate 调用的就是这一路，不加判定等于没有缓冲。
+        /// 卸载、关 mod、报错时用 force=true，保证一行不丢。
+        /// </summary>
+        public static void FlushLog(bool force)
+        {
+            string chunk;
+            lock (_logLock)
+            {
+                if (_logBuf.Length == 0) return;
+                if (!force
+                    && _logBuf.Length < LogFlushBytes
+                    && (DateTime.UtcNow - _logFlushedAt).TotalSeconds < LogFlushSeconds) return;
+                chunk = _logBuf.ToString();
+                _logBuf.Length = 0;
+                _logFlushedAt = DateTime.UtcNow;
+            }
+            try
+            {
+                System.IO.File.AppendAllText(LogPath, chunk, System.Text.Encoding.UTF8);
+            }
+            catch { /* 写不进去就算了，不能因为日志把游戏搞崩 */ }
         }
 
         public static void Log(string msg)

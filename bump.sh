@@ -32,6 +32,9 @@ R=src/DynastyRetinue
 # 于是「新加一句 L.T(...) 忘了补译文」会一路绿灯发出去，
 # 英文玩家界面上就多一句中文，且没有任何报错。
 py tools/check_l10n.py || { echo "x 本地化校验未通过，已中止。"; exit 1; }
+# 名字用字门禁：游戏中文字体是子集，生僻字在名条上会渲染成方框，
+# 而 mod 面板用 Unity 默认字体显示正常 —— 对着面板永远查不出来。
+py tools/check_names.py || { echo "x 名字用字校验未通过，已中止。"; exit 1; }
 BIN=$R/bin/Release
 # 部署目录。默认按 Windows 上 UMM 给这个游戏的标准位置推导（$HOME 就是 C:\Users\你）。
 # 装在别处的话，跑之前设一下环境变量即可：
