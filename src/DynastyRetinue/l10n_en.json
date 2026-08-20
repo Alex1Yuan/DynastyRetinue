@@ -80,7 +80,6 @@
   "劫掠舰": "Raider",
   "升级只补差价 —— 已经花过的不重复收。还原按当前档全额退还。": "Upgrades bill only the difference; reverting refunds your current class in full.",
   "卫兵杀敌也给卫队池加分（不动你那份，否则卫队只出力不进账）": "Guard kills feed the retinue pool (yours untouched; otherwise the retinue only ever spends)",
-  "卫兵灵能不推高亚空间威胁（帷幕是区域唯一值、做不了独立池，只能选计不计入）": "Guard psykers don't raise Warp threat (the Veil is one value per area — no separate pool, only count or don't)",
   "卫兵经验按比例缩放（不影响队友那份）": "Scale guard XP (companion XP unaffected)",
   "卫兵行动时镜头不跟随（含技能演出特写；你自己队伍不受影响）": "Camera doesn't follow guards (including ability cutaways; your own party unaffected)",
   "卫兵被近战缠住时也能开火　<color=#aaaaaa>原版规则里重武器射击在缠斗中不可用，玩家能手动走位规避、AI 卫兵不能 —— 关掉的话远程卫兵要么整回合忙着退位、要么一枪不开。</color>": "Guards can shoot while engaged in melee　<color=#aaaaaa>Vanilla blocks heavy-weapon fire while engaged. You can reposition manually; an AI guard cannot — with this off, ranged guards either spend every turn disengaging or never fire at all.</color>",
@@ -134,7 +133,6 @@
   "挂点几何诊断": "Mount Geometry Diagnostics",
   "挂点诊断": "Mount Diagnostics",
   "换大船后同一槽位可多次开火（当前舰船分档: {0}）": "Bigger hulls fire the same slot more than once (current size: {0})",
-  "换船模后自动补上缺失的武器挂点（修「光矛/鱼雷在虚空开火」）": "Auto-add missing weapon mounts after a hull swap (fixes lances/torpedoes firing into the void)",
   "换船（默认：巡洋/大巡都用 Gothic）": "Swap hull (default Gothic)",
   "撞角行程 +%  巡洋": "Ram dist +%  Cruiser",
   "改装": "Refit",
@@ -226,5 +224,11 @@
   "精英倒地可救（0 血进昏迷而非死亡）　<color=#aaaaaa>普通卫兵始终永久死亡</color>": "Elites go down instead of dying (unconscious at 0 HP)　<color=#aaaaaa>Regular guards always die permanently</color>",
   "<color=#aaaaaa>只对你的座舰生效，敌舰不受影响。</color>": "<color=#aaaaaa>Applies to your own voidship only; enemy ships are unaffected.</color>",
   "<color=#ffaa66>注意：舰船分档会写进存档。卸载 mod 后存档照样能开，但船会保持在你切过去的那一档 —— 要还原就切回护卫舰再存一次。</color>": "<color=#ffaa66>Note: the hull tier is written into your save. Your save still opens after uninstalling, but the ship stays at whatever tier you left it — switch back to Frigate and save once to revert.</color>",
-  "预览玩家视角": "Preview as player"
+  "预览玩家视角": "Preview as player",
+  "<color=#d0a050>取消勾选即可回到开发视图</color>": "<color=#d0a050>Untick to return to the developer view</color>",
+  "<color=#aaaaaa>勾上后隐藏玩家区里所有开发者专属内容，开发区也只剩一行开关 —— 面板即玩家所见。拍发布截图用，不必删 flag 重启。</color>": "<color=#aaaaaa>Hides every developer-only extra in the player sections and collapses this one to a single row — the panel becomes exactly what a player sees. For release screenshots; no need to delete the flag and restart.</color>",
+  "恢复默认设置": "Restore defaults",
+  "<color=#aaaaaa>把上面所有选项恢复成初始值。调乱了、或者不确定改过什么的时候点它，比翻 Settings.xml 快。不影响存档里已有的卫兵和座舰。</color>": "<color=#aaaaaa>Resets every option above to its initial value. Faster than digging through Settings.xml when you have changed things you can no longer recall. Guards and ships already in your save are untouched.</color>",
+  "卫兵灵能不推高亚空间威胁　<color=#d0a050>建议保持默认（开）</color><color=#aaaaaa>　帷幕是区域唯一值、做不了独立池，只能选计不计入。关掉后五个 AI 每回合乱放技能，帷幕会迅速失控。</color>": "Guard psykers do not raise the Warp threat　<color=#d0a050>keep the default (on)</color><color=#aaaaaa>　The Veil is a single per-area value, so a separate pool is impossible — it can only be counted or not. With this off, five AI units casting every round make the Veil spiral.</color>",
+  "换船模后自动补上缺失的武器挂点　<color=#d0a050>建议保持默认（开）</color><color=#aaaaaa>　有些船模没有舰首槽位，关掉后光矛和鱼雷会「在虚空里开火」。</color>": "Synthesise missing weapon mounts after a hull swap　<color=#d0a050>keep the default (on)</color><color=#aaaaaa>　Some hulls have no prow socket; with this off, lances and torpedoes fire from the void.</color>"
 }

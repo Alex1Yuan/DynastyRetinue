@@ -305,7 +305,7 @@ namespace DynastyRetinue
         /// 用两段式而不是弹窗：IMGUI 里做模态对话框要接管输入、还要处理面板关闭时的残留状态，
         /// 而两段式只需要一个 float，且不打断操作流。
         /// </summary>
-        private static float _armDismiss, _armShipRevert;
+        private static float _armDismiss, _armShipRevert, _armReset;
         private const float ArmWindow = 3f;
         private static void DangerButton(ref float armedAt, string label, float width,
                                          int affected, System.Action action)
@@ -331,6 +331,43 @@ namespace DynastyRetinue
             {
                 armedAt = now;
             }
+        }
+
+        /// <summary>
+        /// 把所有设置恢复成代码里的默认值。
+        ///
+        /// ★用反射从一个新建的 Settings 实例拷，而不是手写一串赋值★
+        /// 手写的版本每加一个设置项就要记得同步一次，而漏掉是没有任何提示的 ——
+        /// 玩家点了"恢复默认"，结果某几项纹丝不动，比没有这个按钮更糟。
+        /// 反射版永远覆盖全部字段，加新设置不用管它。
+        ///
+        /// 不还原的东西：
+        ///   · PreviewAsPlayer —— 那是开发者的临时视图状态，不是玩法设置
+        ///   · ProwLearned* —— 那是实测学到的挂点数据，不是偏好；重学一次要切一趟大巡
+        /// </summary>
+        private static void ResetSettingsToDefault()
+        {
+            try
+            {
+                var fresh = new Settings();
+                var keep = new System.Collections.Generic.HashSet<string>(StringComparer.Ordinal)
+                {
+                    "PreviewAsPlayer", "ProwLearned", "ProwLearnedFrom",
+                    "ProwDropRatio", "ProwZBackRatio",
+                };
+                int n = 0;
+                foreach (var f in typeof(Settings).GetFields(
+                             System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance))
+                {
+                    if (f.IsInitOnly || keep.Contains(f.Name)) continue;
+                    var def = f.GetValue(fresh);
+                    if (!object.Equals(f.GetValue(Settings), def)) { f.SetValue(Settings, def); n++; }
+                }
+                L.Reset();   // 语言可能被改回「自动」，缓存要跟着失效
+                Log("[设置] 已恢复默认值，改动了 " + n + " 项。"
+                  + "（保留了开发者视图状态和学到的舰首挂点比例）");
+            }
+            catch (Exception e) { LogError("[设置] 恢复默认失败: " + e.Message); }
         }
 
         private static bool Fold(ref bool open, string title, string hint)
@@ -645,7 +682,8 @@ namespace DynastyRetinue
             }
             DangerButton(ref _armShipRevert, L.T("还原原版船模"), 140f, 0, () => StarshipViewTool.RevertAll());
             Settings.ShipMountFallback = GUILayout.Toggle(Settings.ShipMountFallback,
-                L.T("换船模后自动补上缺失的武器挂点（修「光矛/鱼雷在虚空开火」）"));
+                L.T("换船模后自动补上缺失的武器挂点　<color=#d0a050>建议保持默认（开）</color>"
+                  + "<color=#aaaaaa>　有些船模没有舰首槽位，关掉后光矛和鱼雷会「在虚空里开火」。</color>"));
 
             // ★以下整块收进开发区★ 判据是「玩家拿它能做什么决定」：
             //   · 挂点诊断 / 几何诊断 —— 纯 dump 到日志，玩家看不懂也用不上
@@ -727,7 +765,8 @@ namespace DynastyRetinue
             Settings.IsolateMomentum  = GUILayout.Toggle(Settings.IsolateMomentum, L.T("士气隔离（卫兵受伤/倒地不扣队伍士气）"));
             Settings.SeparateMomentumPool = GUILayout.Toggle(Settings.SeparateMomentumPool, L.T("卫队独立士气池（大招花自己的；代价是卫兵的 Resolve 也不再进你的池子）"));
             Settings.GuardKillFeedsOwnPool = GUILayout.Toggle(Settings.GuardKillFeedsOwnPool, L.T("卫兵杀敌也给卫队池加分（不动你那份，否则卫队只出力不进账）"));
-            Settings.GuardPsykerNoVeil = GUILayout.Toggle(Settings.GuardPsykerNoVeil, L.T("卫兵灵能不推高亚空间威胁（帷幕是区域唯一值、做不了独立池，只能选计不计入）"));
+            Settings.GuardPsykerNoVeil = GUILayout.Toggle(Settings.GuardPsykerNoVeil, L.T("卫兵灵能不推高亚空间威胁　<color=#d0a050>建议保持默认（开）</color>"
+                  + "<color=#aaaaaa>　帷幕是区域唯一值、做不了独立池，只能选计不计入。关掉后五个 AI 每回合乱放技能，帷幕会迅速失控。</color>"));
             Settings.NoCameraFollowGuards = GUILayout.Toggle(Settings.NoCameraFollowGuards, L.T("卫兵行动时镜头不跟随（含技能演出特写；你自己队伍不受影响）"));
             Settings.GuardsCanShootInMelee = GUILayout.Toggle(Settings.GuardsCanShootInMelee,
                 L.T("卫兵被近战缠住时也能开火　<color=#aaaaaa>原版规则里重武器射击在缠斗中不可用，"
@@ -866,27 +905,43 @@ namespace DynastyRetinue
                               + "平时不用开（日志会涨很快）；作者让你复现问题时再打开。</color>"));
             GUILayout.EndHorizontal();
 
-            if (DevMode)
-            if (Fold(ref Settings.PanelShowDev, "开发 · 测试", "探针 / 诊断 / 热键　★注意：好几个按钮会清空全部卫兵★"))
-            {
+            // 一键还原 —— 调坏了不用去翻 Settings.xml，也不用重装
+            GUILayout.BeginHorizontal();
+            DangerButton(ref _armReset, L.T("恢复默认设置"), 130f, 0, ResetSettingsToDefault);
+            GUILayout.Label(L.T("<color=#aaaaaa>把上面所有选项恢复成初始值。"
+                              + "调乱了、或者不确定改过什么的时候点它，比翻 Settings.xml 快。"
+                              + "不影响存档里已有的卫兵和座舰。</color>"));
+            GUILayout.EndHorizontal();
+
             // ★预览玩家视角★ 勾上之后，玩家区里所有「只有开发者看得到」的额外内容
             // （配表字段说明、dump 按钮、挂点诊断与微调、内部实现的解释……）全部隐藏，
             // 面板就是玩家装上后看到的样子。拍发布截图用。
             //
-            // 这个开关**故意不受自己影响** —— 它用的是 DevMode 而不是 DevUI。
-            // 否则勾上之后连它自己都藏起来了，只能去删 flag 重启才能恢复。
-            // 同理，预览期间开发区其余内容整块折叠，只留这一行。
+            // 预览时**连开发区的折叠头都不画** —— 那行「开发 · 测试　探针/诊断/热键…」
+            // 是硬编码中文（玩家看不到所以没做翻译），留在英文面板里会突兀地夹一行中文，
+            // 而且它本身就不属于玩家所见。只留一行极简开关，作为回到开发视图的唯一入口。
+            //
+            // 这个开关用 DevMode 而不是 DevUI：否则勾上之后连它自己都藏了，
+            // 只能去删 flag 重启才能恢复。
+            if (DevMode && Settings.PreviewAsPlayer)
+            {
+                GUILayout.Space(10);
+                GUILayout.BeginHorizontal();
+                Settings.PreviewAsPlayer = GUILayout.Toggle(true, L.T("预览玩家视角"), GUILayout.Width(130));
+                GUILayout.Label(L.T("<color=#d0a050>取消勾选即可回到开发视图</color>"));
+                GUILayout.EndHorizontal();
+                return;
+            }
+
+            if (DevMode)
+            if (Fold(ref Settings.PanelShowDev, "开发 · 测试", "探针 / 诊断 / 热键　★注意：好几个按钮会清空全部卫兵★"))
+            {
             GUILayout.BeginHorizontal();
             Settings.PreviewAsPlayer = GUILayout.Toggle(Settings.PreviewAsPlayer,
                 L.T("预览玩家视角"), GUILayout.Width(130));
-            GUILayout.Label(Settings.PreviewAsPlayer
-                ? "<color=#d0a050>正在以玩家视角显示 —— 开发区其余内容已折叠。拍完截图取消勾选即可恢复。</color>"
-                : "<color=#aaaaaa>勾上后隐藏玩家区里所有开发者专属内容，面板变成玩家看到的样子。不用删 flag 重启。</color>");
+            GUILayout.Label(L.T("<color=#aaaaaa>勾上后隐藏玩家区里所有开发者专属内容，"
+                              + "开发区也只剩一行开关 —— 面板即玩家所见。拍发布截图用，不必删 flag 重启。</color>"));
             GUILayout.EndHorizontal();
-            // Fold 自己开合 BeginHorizontal/EndHorizontal，走到这里没有未闭合的 layout group，
-            // 所以直接 return 是安全的（EndVertical 反而会导致 unbalanced）。
-            // 开发区是 OnGUI 的最后一块，提前返回也不会跳过别的内容。
-            if (Settings.PreviewAsPlayer) return;
             GUILayout.Space(6);
 
             // ---------- 工具 ----------
