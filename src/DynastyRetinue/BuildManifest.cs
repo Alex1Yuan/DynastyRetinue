@@ -13,7 +13,7 @@ namespace DynastyRetinue
     /// </summary>
     public static class BuildManifest
     {
-        public const string Version = "0.85.0";
+        public const string Version = "1.0.0";
 
         public static readonly Dictionary<string, string> Hashes =
             new Dictionary<string, string>
