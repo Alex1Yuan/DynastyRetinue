@@ -2,8 +2,8 @@
 
 Dynasty Retinue & Refit（家族卫队 · 座舰改装）1.0 发布相关的全部材料。
 
-代码仓库：https://github.com/Alex1Yuan/DynastyRetinue　（tag `v1.0.5`）
-发布包：`D:\RT_RetinueMod\dist\DynastyRetinue-1.0.5.zip`
+代码仓库：https://github.com/Alex1Yuan/DynastyRetinue　（tag `v1.0.15`）
+发布包：`D:\RT_RetinueMod\dist\DynastyRetinue-1.0.15.zip`
 
 ---
 
@@ -14,6 +14,7 @@ Dynasty Retinue & Refit（家族卫队 · 座舰改装）1.0 发布相关的全�
 | `nexus_zh.md` | Nexus 页面 · 中文 | ✅ 可直接贴 |
 | `nexus_en.md` | Nexus 页面 · 英文 | ✅ 可直接贴 |
 | `bilibili.md` | B站标题 / 简介 | ✅ |
+| `changelog_1.0.15.md` | 1.0.15 更新日志 · 中英双语 | ✅ 可直接贴 |
 | `配音稿_TTS.md` | 配音文稿（已用 edge-tts 生成）| ✅ |
 | `vo/` | 六段中文女声 mp3 + srt | ✅ |
 | `screenshots/` | 11 张，含封面 | ✅ |
