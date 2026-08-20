@@ -5,7 +5,6 @@
   "  Universe 运输舰 23 个 / 混沌战列巡洋舰 27 个 —— <color=#ff8080>同样缺 Prow</color>": "  Universe transport 23 / Chaos battlecruiser 27 —— <color=#ff8080>also no Prow</color>",
   "(未命名)": "(unnamed)",
   "<b>全部解除</b>": "<b>Unlock all</b>",
-  "<b>分型</b>   当前 = <color=#80ff80>{0}</color>    <i>（模板 archetypes.json：unit=模型/装备, brain=AI行为, plan=天赋方案, chain=职业链）</i>": "<b>Archetype</b>   Current = <color=#80ff80>{0}</color>    <i>(archetypes.json: unit=model/gear, brain=AI, plan=talent build, chain=career path)</i>",
   "<b>卫队</b>   在册 {0}   {1}": "<b>Retinue</b>   Roster {0}   {1}",
   "<b>命名</b>　<color=#aaaaaa>「军衔·人名」，军衔随本人等级三档自动晋升，人名跟他一辈子</color>": "<b>Naming</b>　<color=#aaaaaa>'Rank · Name'. Rank promotes over three level bands; the name is for life</color>",
   "<b>在 NPC 对话里加「船坞」选项</b>（用废料买改装，可还原退款）": "<b>Add a 'Shipyard' option to NPC dialogue</b> (buy refits with Scrap, refundable)",
@@ -221,5 +220,7 @@
   "质量运输舰（巡洋尺度）": "Mass Conveyor (cruiser-scale)",
   "Sword 级护卫舰": "Sword-class Frigate",
   "Falchion 级护卫舰": "Falchion-class Frigate",
-  "Firestorm/Tempest 级护卫舰": "Firestorm/Tempest-class Frigate"
+  "Firestorm/Tempest 级护卫舰": "Firestorm/Tempest-class Frigate",
+  "<b>分型</b>   当前 = <color=#80ff80>{0}</color>{1}": "<b>Archetype</b>   current = <color=#80ff80>{0}</color>{1}",
+  "    <i>（模板 archetypes.json：unit=模型/装备, brain=AI行为, plan=天赋方案, chain=职业链）</i>": "    <i>(template archetypes.json: unit=model/gear, brain=AI behaviour, plan=talent build, chain=career path)</i>"
 }

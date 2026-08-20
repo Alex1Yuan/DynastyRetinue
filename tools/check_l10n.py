@@ -24,6 +24,21 @@ TAB = os.path.join(SRC, "l10n_en.json")
 # L.T(TextValue) —— 参数是 const 标识符，正则扫不到，但运行时确实会查这个 key
 KNOWN_NONLITERAL = [
     u"（护卫队）关于我的护卫队……",
+    # ShipModelCatalog.HullName 走 L.T(Hull)，Hull 是 ShipModel 的只读字段，
+    # 取值就是下面这 11 个字面量（见 ShipModelCatalog.All 的初始化列表）。
+    # 没有把 L.T 贴到字面量上，是因为 Hull 同时还被当**数据**用
+    # （存进 Settings.ProwLearnedFrom、拼 GameObject 名），本地化了会让存的值随语言变。
+    u"混沌战列巡洋舰",
+    u"帝国 Universe 级质量运输舰",
+    u"帝国 Gothic 级巡洋舰",
+    u"帝国 Dictator 级巡洋舰",
+    u"混沌 Carnage 级巡洋舰",
+    u"黑暗灵族轻巡洋舰",
+    u"灵族巡洋舰",
+    u"质量运输舰（巡洋尺度）",
+    u"Sword 级护卫舰",
+    u"Falchion 级护卫舰",
+    u"Firestorm/Tempest 级护卫舰",
 ]
 
 # 语言自己的名字不该被翻译

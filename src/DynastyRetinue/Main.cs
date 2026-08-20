@@ -396,9 +396,10 @@ namespace DynastyRetinue
             {
             // ---------- 分型 ----------
             GUILayout.Space(8);
-            GUILayout.Label(L.F("<b>分型</b>   当前 = <color=#80ff80>{0}</color>"
-                              + "    <i>（模板 archetypes.json：unit=模型/装备, brain=AI行为, plan=天赋方案, chain=职业链）</i>",
-                                _archs[_cur].Name));
+            GUILayout.Label(L.F("<b>分型</b>   当前 = <color=#80ff80>{0}</color>{1}",
+                                _archs[_cur].Name,
+                                // 配表字段说明只对改配表的人有意义，玩家看了只会更困惑
+                                DevMode ? L.T("    <i>（模板 archetypes.json：unit=模型/装备, brain=AI行为, plan=天赋方案, chain=职业链）</i>") : ""));
             GUILayout.BeginHorizontal();
             for (int i = 0; i < _archs.Length; i++)
             {
@@ -408,15 +409,14 @@ namespace DynastyRetinue
             }
             GUILayout.EndHorizontal();
 
+            // 这两个都是「把内容 dump 进日志」的作者工具：玩家不改配表，也看不懂加点方案的内部名。
+            if (DevMode)
+            {
             GUILayout.BeginHorizontal();
             if (GUILayout.Button(L.T("重载模板"), GUILayout.Width(110))) Archetypes.Reload();
-            // ★【导入 RTAutoBuilder】已挪进开发区★ 它会**整份覆盖** archetypes.json，
-            // 而产物只有 name/plan/chain —— unit / unitFallback / brain / elites / gearT1-3 /
-            // guardNames / grantFeatures 全部丢失。对玩家没有任何使用场景（他要的是现成配表，
-            // 不是把配表降级成加点方案的投影），只有作者自己调方案时用得上。
-            // 原来它夹在两个纯只读按钮中间，观感上完全无害，是个典型的误触陷阱。
             if (GUILayout.Button(L.T("列出加点方案"), GUILayout.Width(130))) BuildPlans.Reload();
             GUILayout.EndHorizontal();
+            }
 
             // ---------- 招募入口 ----------
             GUILayout.Space(8);
@@ -428,13 +428,15 @@ namespace DynastyRetinue
             Settings.RecruitNpcKeys = GUILayout.TextField(Settings.RecruitNpcKeys ?? "", GUILayout.Width(220));
             if (GUILayout.Button(L.T("挂到当前区域"), GUILayout.Width(110)))
             { RecruitEntry.AttachInArea(true); RecruitDialog.InjectInArea(true); }
-            if (GUILayout.Button(L.T("列出可挂载 NPC"), GUILayout.Width(130))) RecruitEntry.ListCandidates();
+            // 「列出可挂载 NPC」只往日志里 dump 一串蓝图名，玩家拿到也不知道该干嘛
+            if (DevMode && GUILayout.Button(L.T("列出可挂载 NPC"), GUILayout.Width(130))) RecruitEntry.ListCandidates();
             if (GUILayout.Button(L.T("直接开窗"), GUILayout.Width(90))) OpenRecruitUI(null);
             GUILayout.EndHorizontal();
             // 这里原来还有一个【预览新窗口】按钮，调 UI.RetinueUI.Open()。
             // 而【直接开窗】走的 OpenRecruitUI 第一句就是 try { UI.RetinueUI.Open(); return; } ——
             // 也就是说它是【直接开窗】的**真子集**（少了异常兜底）。两个按钮并排只会让人猜区别。
-            GUILayout.Label(L.T("<color=#aaaaaa>名单打在 dynasty_log.txt 里。本船的高阶顾问蓝图名是 HighFactotum，音阵大师是 VoxMaster。</color>"));
+            if (DevMode)
+                GUILayout.Label(L.T("<color=#aaaaaa>名单打在 dynasty_log.txt 里。本船的高阶顾问蓝图名是 HighFactotum，音阵大师是 VoxMaster。</color>"));
 
             // ---------- 招募上限：利润因子 ----------
             GUILayout.Space(6);
@@ -578,6 +580,8 @@ namespace DynastyRetinue
             Settings.ShipYardUnlockAll = GUILayout.Toggle(Settings.ShipYardUnlockAll,
                 L.T("解除船体限制（连未校准的船体也允许更换）　<color=#aaaaaa>挂点位置和缩放只在 Gothic / Dictator 上验过</color>"));
 
+            // 这两条解释的是"内部怎么算的"，不是"你该怎么用"，收进开发区
+            if (DevMode)
             GUILayout.Label(L.T("<color=#aaaaaa>撞角没有可乘的「基础距离」常量（行程来自寻路），"
                               + "所以按「速度 × 百分比」折算成额外格数。机动性不动。</color>"));
             GUILayout.Label(L.T("<color=#ffaa66>注意：舰船分档是 [JsonProperty]，会写进存档。"
@@ -614,10 +618,23 @@ namespace DynastyRetinue
                 GUILayout.EndHorizontal();
             }
             DangerButton(ref _armShipRevert, L.T("还原原版船模"), 140f, 0, () => StarshipViewTool.RevertAll());
-            if (GUILayout.Button(L.T("挂点诊断"), GUILayout.Width(110))) ShipSlotProbe.Dump();
-            if (GUILayout.Button(L.T("挂点几何诊断"), GUILayout.Width(150))) ShipSlotGeometryProbe.Dump();
             Settings.ShipMountFallback = GUILayout.Toggle(Settings.ShipMountFallback,
                 L.T("换船模后自动补上缺失的武器挂点（修「光矛/鱼雷在虚空开火」）"));
+
+            // ★以下整块收进开发区★ 判据是「玩家拿它能做什么决定」：
+            //   · 挂点诊断 / 几何诊断 —— 纯 dump 到日志，玩家看不懂也用不上
+            //   · 舰首挂点微调滑条 —— 调错了船看起来会变怪，而正确值本来就是自动算的；
+            //     这是作者标定挂点时的工具，不是玩法选项
+            //   · "学到的舰首比例" / 三层定位法 / 各船模挂点清单 —— 解释的是内部实现，
+            //     不是"你该怎么用"。留在玩家区只会让面板显得像调试器。
+            // 保留在上面的 ShipMountFallback 开关则相反：它修的是玩家真能看见的 bug
+            // （武器在虚空里开火），是个玩法开关。
+            if (DevMode)
+            {
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button(L.T("挂点诊断"), GUILayout.Width(110))) ShipSlotProbe.Dump();
+            if (GUILayout.Button(L.T("挂点几何诊断"), GUILayout.Width(150))) ShipSlotGeometryProbe.Dump();
+            GUILayout.EndHorizontal();
             GUILayout.BeginHorizontal();
             GUILayout.Label(L.T("舰首挂点微调　前后"), GUILayout.Width(130));
             Settings.ShipProwOffsetPct = (int)GUILayout.HorizontalSlider(Settings.ShipProwOffsetPct, -50f, 50f, GUILayout.Width(130));
@@ -656,6 +673,7 @@ namespace DynastyRetinue
                           + L.T("  Universe 运输舰 23 个 / 混沌战列巡洋舰 27 个 —— <color=#ff8080>同样缺 Prow</color>") + "\n"
                           + L.T("<color=#aaaaaa>光矛装在 Prow 槽位。武器美术是挂到船体 prefab 上同类型的 StarshipItemSlot 下面的，"
                               + "匹配不到就退回原点。两个原生大巡船模反而都缺 Prow，所以大巡用放大的 Dictator。</color>"));
+            }
             Settings.ShipStretchModel = GUILayout.Toggle(Settings.ShipStretchModel,
                 L.T("船模档位低于分档时等比放大撑满（比如把 Gothic 巡洋舰当大巡用 ×1.52）"));
             GUILayout.BeginHorizontal();
