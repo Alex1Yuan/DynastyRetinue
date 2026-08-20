@@ -228,6 +228,7 @@ namespace DynastyRetinue
                             var def = new ChainProbe.EliteDef
                             {
                                 UnitId   = (string)e["unit"],
+                                UnitFallback = ReadGuidList(e["unitFallback"]),
                                 BrainId  = (string)e["brain"],   // 可选：不填沿用分型的
                                 Name     = (string)e["name"],
                                 Rank     = (string)e["rank"],

@@ -247,7 +247,7 @@
           "_race注": "EldarStandardRace — 伊瑞莉特方案里的灵族天赋有种族门控，起源补不了。SetRace 是实体级(PartUnitProgression.cs:196)，不动蓝图，不污染其它单位。"
         },
         {
-          "unit": "53281ae602a34756a47c3e23f66c06cd",
+          "unit": "aa02b505be774674ae924f19dc17e6f6",
           "name": "赏金 · 猎首",
           "rank": "赏金猎手",
           "rank_en": "Bounty Hunter",
@@ -312,9 +312,12 @@
             "9dea103b7d9d41238a318142cf057273",
             "fd1da14cd1f54ef0a280ce1160dde3e6"
           ],
-          "_unit注": "FootfallAnverSniper_Ranged_Elite：人类（NewHumanBanditsArmy），保住「避开灵族种族门控」的原设计意图",
+          "_unit注": "★换蓝图是为了修血量断层★ 原来是 FootfallAnverSniper_Ranged_Elite（53281ae6），基础血 96 —— 狙击线另一个精英「寂静之眼」是 256，同一条线上的两个精英差 2.7 倍。换成机械教刺客 Sicarian Ruststalker（224），跟 256 同档，主题上「刺客」也比「赏金猎手」更贴『猎首』。这是 DLC3 蓝图，所以配了本体兜底 RadicalBodyguard（124）——★精英原来根本不走兜底链★（RetinueTest 里 _elite==null 才用），没 DLC3 的玩家会招到一个普通甲板卫兵冒充猎首。身份不受兜底影响：EliteDefOf 优先读 kgd.e: 标记，蓝图只是旧存档的退路，所以名字/军衔/职业链/装备/加点全部照常，退化的只有模型。",
           "_注": "「士兵赏金」攻略: 背景要塞 / 属性弹道+感知+任意 / 链=Soldier->Hunter。攻略只给要点没给完整点法,所以靠 keyTalents+attrPriority 做优先回退。",
-          "_keyTalents注": "专家技艺/猎手伏击/传奇猎物/射穿目标/致命精准/聚焦猎潮/战壕工事/紧随其后/索取赏金"
+          "_keyTalents注": "专家技艺/猎手伏击/传奇猎物/射穿目标/致命精准/聚焦猎潮/战壕工事/紧随其后/索取赏金",
+          "unitFallback": [
+            "8f4a5a87fdd74e21b9d9300708fc31e6"
+          ]
         }
       ],
       "gearT1": [
@@ -504,7 +507,7 @@
     },
     {
       "name": "灵能 Psy/Exec",
-      "unit": "5bc8b3a8fb834977a3692a2325aff0f6",
+      "unit": "1df7ad7561ca47a08a2c2b0a8152871e",
       "unitFallback": [
         "d1287134a3e64a4dbdae16b58d21bd8b",
         "1fb60c0ef5fe459980c34a271dfad088"
@@ -530,7 +533,7 @@
       ],
       "elites": [
         {
-          "unit": "d1287134a3e64a4dbdae16b58d21bd8b",
+          "unit": "5bc8b3a8fb834977a3692a2325aff0f6",
           "name": "亚空间审判者",
           "rank": "灵能判官",
           "rank_en": "Warp Arbiter",
@@ -556,9 +559,12 @@
             "354cbd5a61c440aaa2f23c392467a09b",
             "3103e1561110474d89a4b7ce1c13824e"
           ],
-          "_unit注": "Ch05Inquisitor_Psyker_unit：审判庭灵能者，对得上神圣系",
+          "_unit注": "★1040 太高，挪到传奇档★ 原来是 Ch05Inquisitor_Psyker_unit（d1287134），基础血 1040 —— 精英区间是 96–282，它高出 3.7 倍，是全表唯一的异常。换成 DLC3_DL_Inquisitor_Unit（700）：仍然偏高，但比 1040 温和得多，而 1040 那个留给「传奇」档（上限 1 的 Boss 级卫兵）——它本来就该在那一档，而不是跟 96–282 的精英并列。★这个 700 就是原来灵能普通兵用的蓝图★ 玩家实机 4 级时显示 428 血，放在普通兵位置上离谱，放在精英位置上合适。DLC3 蓝图，兜底用本体的 Ch04Chorda_Pyromancer（180，火杖行刑者同款）。",
           "_aug注": "存档里该角色 6 个植入位全空,按\"忠实抄存档\"原则没配植入物。想加的话在 gear 里追加植入物 GUID 即可。",
-          "_armor注": "雷霆主宰 80/8 亚空间伤害-50% — 灵能路线吃亚空间反噬,对症;改装工匠的重武器-1AP对法杖无效"
+          "_armor注": "雷霆主宰 80/8 亚空间伤害-50% — 灵能路线吃亚空间反噬,对症;改装工匠的重武器-1AP对法杖无效",
+          "unitFallback": [
+            "638ab19bfae74bb99dacc93e7d6fe7f3"
+          ]
         },
         {
           "unit": "638ab19bfae74bb99dacc93e7d6fe7f3",
@@ -639,7 +645,8 @@
         "Psyker",
         "Psy-Warden",
         "Psy-Officer"
-      ]
+      ],
+      "_unit注": "★普通兵不能用 Boss 档 statblock★ 原来是 5bc8b3a8…（DLC3_DL_Inquisitor_Unit，审判官）—— lv4 就 428 血，同级近战 64、军官 48、连射 146。那 400 多血是单位自带的，跟职业链无关，等于把一个 Boss 的血条塞进普通兵位置。换成 OfficersDeckGuardAstro（星语者），跟军官分型的甲板卫兵同族、灵能外观。brain 由分型的 brain 字段覆盖成 Ch04_Psyker_brain，不受单位自带脑影响。审判官那个蓝图更适合当精英 —— 但灵能两个精英位已满，要加得先决定顶掉谁。"
     },
     {
       "name": "军官 Officer",
@@ -827,11 +834,11 @@
     "朱莉安",
     "卡特琳",
     "露西尔",
-    "沈砚舟",
+    "沈舟远",
     "陆决明",
     "顾长风",
-    "裴照",
-    "萧鹤野",
+    "柳照",
+    "楚鹤野",
     "江辰",
     "谢无咎",
     "程知远",
@@ -839,23 +846,23 @@
     "苏问渠",
     "白洛川",
     "宋停云",
-    "秦让",
+    "程让",
     "梁孤舟",
     "崔怀安",
     "叶惊蛰",
     "唐九思",
     "钟屿",
     "冯听澜",
-    "邵齐",
-    "温砚",
+    "孟齐",
+    "温言",
     "许南枝",
     "简岩",
     "楼见山",
-    "袁清野",
-    "袁执",
+    "方清野",
+    "方执",
     "颜昭",
     "颜临舟",
-    "王砚青",
+    "王青云",
     "王决",
     "李云",
     "李清川",
@@ -865,7 +872,7 @@
     "李归宁",
     "张栖迟",
     "颜北望",
-    "袁停舟"
+    "向停舟"
   ],
   "guardNamePool_en": [
     "Kelton",
@@ -929,11 +936,11 @@
     "Juliana",
     "Katrin",
     "Lucille",
-    "Shen Yanzhou",
+    "Shen Zhouyuan",
     "Lu Jueming",
     "Gu Changfeng",
-    "Pei Zhao",
-    "Xiao Heye",
+    "Liu Zhao",
+    "Chu Heye",
     "Jiang Chen",
     "Xie Wujiu",
     "Cheng Zhiyuan",
@@ -941,23 +948,23 @@
     "Su Wenqu",
     "Bai Luochuan",
     "Song Tingyun",
-    "Qin Rang",
+    "Cheng Rang",
     "Liang Guzhou",
     "Cui Huai'an",
     "Ye Jingzhe",
     "Tang Jiusi",
     "Zhong Yu",
     "Feng Tinglan",
-    "Shao Qi",
+    "Meng Qi",
     "Wen Yan",
     "Xu Nanzhi",
     "Jian Yan",
     "Lou Jianshan",
-    "Yuan Qingye",
-    "Yuan Zhi",
+    "Fang Qingye",
+    "Fang Zhi",
     "Yan Zhao",
     "Yan Linzhou",
-    "Wang Yanqing",
+    "Wang Qingyun",
     "Wang Jue",
     "Li Yun",
     "Li Qingchuan",
@@ -967,6 +974,6 @@
     "Li Guining",
     "Zhang Qichi",
     "Yan Beiwang",
-    "Yuan Tingzhou"
+    "Xiang Tingzhou"
   ]
 }

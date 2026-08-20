@@ -115,7 +115,11 @@ namespace DynastyRetinue
                 if (bp == null)
                 {
                     var tried = new List<string> { unitId };
-                    string[] fb = (_elite == null && _arch0 != null) ? _arch0.UnitFallback : null;
+                    // 精英走自己的兜底链，普通兵走分型的。原来精英这一支写死 null ——
+                    // DLC3 精英蓝图解析不到时直接掉到全局兜底，玩家招到的
+                    // 「赏金 · 猎首」其实是个普通甲板卫兵。
+                    string[] fb = (_elite != null) ? _elite.UnitFallback
+                                : (_arch0 != null ? _arch0.UnitFallback : null);
                     if (fb != null)
                         foreach (var alt in fb)
                         {

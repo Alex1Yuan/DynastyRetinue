@@ -1090,6 +1090,8 @@ namespace DynastyRetinue
             // brain 已并进 GearTool 的每组日志。留一个入口，少一次误点、少一半时间。
             if (GUILayout.Button("探测 brain", GUILayout.Width(110))) BrainTool.Probe();
             if (GUILayout.Button("探测候选单位", GUILayout.Width(120))) Probe.ProbeUnits();
+            // 开发区的按钮不进本地化表 —— 这里的文案只给作者看
+            if (GUILayout.Button("字体覆盖检查", GUILayout.Width(120))) FontCheck.Run();
             if (GUILayout.Button("批量试算方案", GUILayout.Width(120))) PlanProbe.Run();
             if (GUILayout.Button("导出天赋名录", GUILayout.Width(120))) ItemTool.ExportFeatures();
             GUILayout.EndHorizontal();
