@@ -441,19 +441,25 @@ namespace DynastyRetinue
             if (g == null || arch == null || arch.Elites == null) return null;
             try
             {
-                // ① 精英标记最优先（写在 CustomPetName 里，见 RetinueRegistry.SetEliteTag）。
-                //    有了它，多个精英就能共用同一个单位蓝图 —— 蓝图不再是身份判据。
+                // 精英标记是**唯一**判据（写在 CustomPetName 里，见 RetinueRegistry.SetEliteTag）。
+                // 有了它，多个精英就能共用同一个单位蓝图 —— 蓝图不是身份判据。
                 int ta, te;
                 RetinueRegistry.GetEliteTag(g, out ta, out te);
                 if (te >= 0 && te < arch.Elites.Length) return arch.Elites[te];
 
-                // ② 旧存档里没标记的卫兵，退回蓝图匹配
-                var bp = g.OriginalBlueprint ?? g.Blueprint;
-                if (bp == null) return null;
-                string guid = bp.AssetGuid.ToString();
-                foreach (var d in arch.Elites)
-                    if (d != null && string.Equals(d.UnitId, guid, StringComparison.OrdinalIgnoreCase))
-                        return d;
+                // ★这里原来还有第②步「没标记就退回蓝图匹配」，已经删掉★
+                //
+                //   它本来是给 v0.83.0（引入标记那一版）之前的存档兜底的。
+                //   而 1.0.0 才是首个公开版本，标记比它更早 ——
+                //   对任何真实玩家来说这段都是死代码。
+                //
+                //   但它会主动造成误判：换精英蓝图时，只要新 UnitId 恰好是
+                //   **老存档里普通卫兵用过的蓝图**，那些普通卫兵就会被认成精英。
+                //   实际踩到的一次：亚空间审判者换成 DLC3_DL_Inquisitor_Unit(700)，
+                //   而那个蓝图正是老版本灵能普通兵用的 —— 于是存量的普通灵能兵
+                //   平白拿到倒地豁免、占掉精英名额、改名时套上精英军衔。
+                //
+                //   身份判据必须是显式标记，不能是"长得像"。蓝图会换，标记不会。
             }
             catch { }
             return null;
