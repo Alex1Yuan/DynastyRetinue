@@ -1092,6 +1092,14 @@ namespace DynastyRetinue
             if (GUILayout.Button("探测候选单位", GUILayout.Width(120))) Probe.ProbeUnits();
             // 开发区的按钮不进本地化表 —— 这里的文案只给作者看
             if (GUILayout.Button("字体覆盖检查", GUILayout.Width(120))) FontCheck.Run();
+            GUILayout.EndHorizontal();
+            // 区域单位一览：走到目标面前点一下，游戏自己告诉你它的蓝图名。
+            // 比按中文译名反查靠谱 —— 译名和蓝图名经常毫无关系。
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("区域单位一览　关键词", GUILayout.Width(150));
+            Settings.InspectFilter = GUILayout.TextField(Settings.InspectFilter ?? "", GUILayout.Width(160));
+            if (GUILayout.Button("列出", GUILayout.Width(80))) UnitInspect.Run(Settings.InspectFilter);
+            GUILayout.Label("<color=#aaaaaa>留空=列全部；中英文都能匹配（蓝图名 + 游戏内显示名）</color>");
             if (GUILayout.Button("批量试算方案", GUILayout.Width(120))) PlanProbe.Run();
             if (GUILayout.Button("导出天赋名录", GUILayout.Width(120))) ItemTool.ExportFeatures();
             GUILayout.EndHorizontal();
@@ -1341,6 +1349,9 @@ namespace DynastyRetinue
         /// 玩家既关不掉也不知道有这回事。
         /// </summary>
         public bool WatchMomentum = false;
+
+        /// <summary>开发区「区域单位一览」的关键词。纯 UI 状态，存起来免得每次重打。</summary>
+        public string InspectFilter = "";
         // 创伤三档：0=无创伤  1=跟队恢复（队友被治时卫兵一起治）  2=原版
         public int TraumaMode = 0;
         // 卫兵按 XpRatio 缩放拿到的经验（队友那份一分不动，原版每人各拿一份完整值，不存在稀释）
