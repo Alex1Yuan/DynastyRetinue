@@ -1,0 +1,37 @@
+MIT License
+
+Copyright (c) 2026 Alex1Yuan — Dynasty Retinue & Refit
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+---
+
+以下为面向 mod 社区的中文说明，与上述 MIT 条款一致，冲突时以英文原文为准。
+
+允许：
+  · 自用修改（改配表、改数值、改代码，随便）
+  · 二次分发，包括整合包、汉化/其它语言版本、魔改版
+
+要求：
+  · 保留原作者署名与本许可文件
+  · 注明原始来源（不要让别人以为你的版本就是原版）
+  · 如果你改动过，请说明改了什么 —— 否则用户拿着你的版本来找原作者报 bug，
+    双方都白费时间
+
+不提供任何担保。用它把存档搞坏了，作者不负责 —— 所以请照 README 的卸载流程走。

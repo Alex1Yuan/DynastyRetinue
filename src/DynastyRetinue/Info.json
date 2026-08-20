@@ -1,0 +1,11 @@
+﻿{
+  "Id": "DynastyRetinue",
+  "DisplayName": "Dynasty Retinue & Refit",
+  "Author": "kyua805",
+  "Version": "0.85.0",
+  "ManagerVersion": "0.23.0",
+  "Requirements": [],
+  "AssemblyName": "DynastyRetinue.dll",
+  "EntryMethod": "DynastyRetinue.Main.Load",
+  "HomePage": ""
+}

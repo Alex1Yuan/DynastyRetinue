@@ -1,0 +1,71 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <AssemblyName>DynastyRetinue</AssemblyName>
+    <RootNamespace>DynastyRetinue</RootNamespace>
+    <!-- 关键三行：必须用游戏自带的 BCL，不能用微软 net472 参考程序集。
+         否则 MathF / Math.Clamp / System.Index 一律 CS0103/CS0117/CS0518。 -->
+    <NoStdLib>true</NoStdLib>
+    <NoConfig>true</NoConfig>
+    <DisableImplicitFrameworkReferences>true</DisableImplicitFrameworkReferences>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <EnableDefaultItems>true</EnableDefaultItems>
+    <DebugType>portable</DebugType>
+  </PropertyGroup>
+
+  <!--
+    构建前请按你自己的安装位置改这两行，或者在环境变量里设同名变量覆盖：
+      GameManaged  游戏的 Managed 目录（引用游戏自带 BCL 和 Code.dll，
+                   ★不能换成微软的 net472 参考程序集★，否则 MathF / Math.Clamp /
+                   System.Index 会全部报错）
+      UmmDir       Unity Mod Manager 目录（引用 UnityModManager.dll 和 0Harmony.dll）
+    示例（Steam 默认位置）：
+      <GameManaged>C:\Program Files (x86)\Steam\steamapps\common\Warhammer 40,000 Rogue Trader\WH40KRT_Data\Managed</GameManaged>
+      <UmmDir>$(USERPROFILE)\AppData\LocalLow\Owlcat Games\Warhammer 40000 Rogue Trader\UnityModManager</UmmDir>
+  -->
+  <PropertyGroup>
+    <GameManaged Condition="'$(GameManaged)'==''">C:\Program Files (x86)\Steam\steamapps\common\Warhammer 40,000 Rogue Trader\WH40KRT_Data\Managed</GameManaged>
+    <UmmDir Condition="'$(UmmDir)'==''">$(USERPROFILE)\AppData\LocalLow\Owlcat Games\Warhammer 40000 Rogue Trader\UnityModManager</UmmDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- 游戏自带 BCL -->
+    <Reference Include="mscorlib"><HintPath>$(GameManaged)\mscorlib.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="netstandard"><HintPath>$(GameManaged)\netstandard.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="System"><HintPath>$(GameManaged)\System.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="System.Core"><HintPath>$(GameManaged)\System.Core.dll</HintPath><Private>false</Private></Reference>
+    <!-- 游戏与引擎 -->
+    <Reference Include="Code"><HintPath>$(GameManaged)\Code.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Kingmaker.UnitLogic.Enums"><HintPath>$(GameManaged)\Kingmaker.UnitLogic.Enums.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Kingmaker.Enums"><HintPath>$(GameManaged)\Kingmaker.Enums.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Kingmaker.PubSubSystem.Core.Interfaces"><HintPath>$(GameManaged)\Kingmaker.PubSubSystem.Core.Interfaces.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="RogueTrader.GameCore"><HintPath>$(GameManaged)\RogueTrader.GameCore.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="ContextData"><HintPath>$(GameManaged)\ContextData.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Kingmaker.EntitySystem.Stats.Base"><HintPath>$(GameManaged)\Kingmaker.EntitySystem.Stats.Base.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="0Harmony"><HintPath>$(GameManaged)\0Harmony.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Newtonsoft.Json"><HintPath>$(GameManaged)\Newtonsoft.Json.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Utility.DotNetExtensions"><HintPath>$(GameManaged)\Utility.DotNetExtensions.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="StateHasher"><HintPath>$(GameManaged)\StateHasher.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine"><HintPath>$(GameManaged)\UnityEngine.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.CoreModule"><HintPath>$(GameManaged)\UnityEngine.CoreModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.IMGUIModule"><HintPath>$(GameManaged)\UnityEngine.IMGUIModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.InputLegacyModule"><HintPath>$(GameManaged)\UnityEngine.InputLegacyModule.dll</HintPath><Private>false</Private></Reference>
+    <!-- 游戏内 uGUI 窗口（路线 B）。Canvas/RenderMode 在 UIModule，不加会 CS1069 "已转发到"。
+         EventSystem/StandaloneInputModule 也在 UnityEngine.UI.dll 里，不需要单独模块。
+         UnityEngine.TextRenderingModule 不需要 —— 我们只用 TMP，不用旧 Font。 -->
+    <Reference Include="UnityEngine.UI"><HintPath>$(GameManaged)\UnityEngine.UI.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.UIModule"><HintPath>$(GameManaged)\UnityEngine.UIModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Unity.TextMeshPro"><HintPath>$(GameManaged)\Unity.TextMeshPro.dll</HintPath><Private>false</Private></Reference>
+    <!-- 原版 UI 控件（OwlcatButton / OwlcatSelectable）。克隆原版按钮必须要它。 -->
+    <Reference Include="Owlcat.Runtime.UI"><HintPath>$(GameManaged)\Owlcat.Runtime.UI.dll</HintPath><Private>false</Private></Reference>
+    <!-- 换船模需要：UnitEntityView 实现了 IResource，定义在这个程序集里 -->
+    <Reference Include="Kingmaker.ResourceLinks.BaseInterfaces"><HintPath>$(GameManaged)\Kingmaker.ResourceLinks.BaseInterfaces.dll</HintPath><Private>false</Private></Reference>
+    <!-- UnitAugments.Disabled 的类型是 CountableFlag，读它必须引用这个程序集 -->
+    <Reference Include="Kingmaker.Utility.FlagCountable"><HintPath>$(GameManaged)\Kingmaker.Utility.FlagCountable.dll</HintPath><Private>false</Private></Reference>
+    <!-- UnityModManager -->
+    <Reference Include="UnityModManager"><HintPath>$(UmmDir)\UnityModManager.dll</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
+
+</Project>

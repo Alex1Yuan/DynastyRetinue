@@ -1,0 +1,960 @@
+{
+  "_说明": "unit=普通卫兵蓝图  eliteUnit=精英专用蓝图(兼作精英身份判据)  brain=AI行为  plan=RTAutoBuilder天赋方案  chain=职业链(T1->T2->T3)  gear=毕业套装(仅精英,凭空生成)  playerGear=玩家面板自配(普通卫兵,也是生成副本)",
+  "_精英": "每条路线限 1 个,且需该路线先有卫兵练到 T3 职业才解锁。两个限制都能在面板取消。",
+  "_装备": "gear 里的 GUID 由加点方案描述里的中文名匹配而来(items_zh.tsv + 存档实际拥有物品交叉验证)。解析不到的条目(未启用DLC)会静默跳过,不影响其余。",
+  "_eliteUnit待定": "下面四个 eliteUnit 是我按'看起来够特别'挑的占位,你在游戏里看到模型后可以随时换成更喜欢的。",
+  "archetypes": [
+    {
+      "name": "近战 Melee",
+      "unit": "270b3e09cf424209b126b236f1655108",
+      "unitFallback": ["30e6364a1d7a425b93d877122c6eed40", "1fb60c0ef5fe459980c34a271dfad088"],
+      "_unitFallback注": "主单位是 DLC3 蓝图；没启用 DLC3 时依次退到 VC2_Arbitres_Melee（本体，近战精英在用）→ OfficersDeckGuard（本体）。功能不受影响，只是外观和自带能力会跟精英同款。",
+      "brain": "b81b43296c3346bfb6bd4d18d424d4bc",
+      "plan": "rt_abelard_vanguard",
+      "chain": [
+        "974496d72fbe4329b438ee15cf004bd2",
+        "fec9cd09f11b4615b7a17f441350d2d4",
+        "bcefe9c41c7841c9a99b1dbac1793025"
+      ],
+      "_注": "两个精英都用阿贝拉德: ①先锋路线(Fighter->Vanguard)装备来自攻略截图 ②首席战士路线(Fighter->Veteran)装备直接抄你存档 Manual_25 里阿贝拉德本人的。",
+      "_gear注": "按阿贝拉德先锋攻略截图配（原来错配成火杖战士行刑者那套灵能装备，已换掉）。主手候选: 崇高虔诚(雷锤)->痛苦尖叫->哀恸之刃->自主攻击能量剑；副手: 碎骨霰弹枪(PistolShotgunCH04Unique,攻略的'霰弹手枪')；动力甲: 人类拥护者。靴子候选: 惯性之靴->虚空老兵战靴(两者攻略都列了,只能穿一双)。植入物三件均带低阶回退: 眼=聚焦发射器(猎人->MK-II->MK-I,按攻略排除士兵版)、腿=相位振荡器(战术家->MK-II->MK-I)、系统=大脑逆变器特工->MK-II->MK-I。头/项链攻略没写,留单位默认。",
+      "grantFeatures": [
+        "5069a24051354e50a663da0125e19b02",
+        "684c766dc9c24fcf856dc1d6f01d9290",
+        "e19301be9dc14d89b656c60a6c4f8e04",
+        "1dbbd844e25b447e99f247c3a88aa5d4",
+        "1bc89bf8232c4254919bd11fbab15344"
+      ],
+      "elites": [
+        {
+          "unit": "4a02a1bee6f84892b3cb7a3f8c818c69",
+          "name": "铁壁 · 先锋队长",
+          "rank": "铁壁卫长",
+          "rank_en": "Ironwall Warden",
+          "plan": "rt_abelard_vanguard",
+          "chain": [
+            "974496d72fbe4329b438ee15cf004bd2",
+            "fec9cd09f11b4615b7a17f441350d2d4",
+            "bcefe9c41c7841c9a99b1dbac1793025"
+          ],
+          "gear": [
+            [
+              "8ca60374722b4eeea27d99c3b17fb09e",
+              "8c304b20633145f39577a392201d2047",
+              "eaa742e43d8e48a3a450c4d59431b03e"
+            ],
+            "e0e76a258d844385a16c9dc602caa316",
+            [
+              "8b13aef5103a4719980774c0d4a12506",
+              "1fede9d9621f437c92832e239426bbcf"
+            ],
+            "8992baa7047e4736b43fa1b94b0407b6",
+            "abb1cff0af5748898bad93a355817e4c",
+            "819721a3da0740b6943b36f5d3d6dfd3",
+            [
+              "b5a23e5ce00248efb454d07871f5b3d4",
+              "4b06abc0736449eb8adecad43a2b37df"
+            ],
+            [
+              "18b727b71c794b558d229a7831ef7bee",
+              "8d598bfec7e042029ab0c2a2ec8c478b",
+              "587c9d09efc4481282271ee0db9df7c1"
+            ],
+            [
+              "13757f3863ec47929fd914b7f306fa31",
+              "3abc1cf2a493471b938dc1b7106dc481",
+              "7656626a2e23485eb8c2fe1017e4ae46"
+            ],
+            [
+              "7e2b91b8cc944f4c951fb2058fcb2f22",
+              "fa121ed0f18c4017a53c7adb6036a552",
+              "fe6060602c6d4b71be16808f05368242"
+            ],
+            "6dea12d77d1f4cb6a5797439f4a2fb7c|68619c5a70e04c54b250e2307b548629|c22406ff733b403ea8b4b4b78c47cda9",
+            "66b4604570e9409792bce6d8d5e4a676|4733a2e3bce3437a890d98ed499570b4|ccc03cf23d0e4681a7bedf3d2c14f22c"
+          ],
+          "_unit注": "TreasureWorld_Arbites_ShieldNShotgun：自带真盾牌+盾击能力+法务部重甲，比原 pregen 更贴「铁壁」；0 个 ApplyCareerPath",
+          "_armor注": "雕血师 85/12 击杀回血10% +30力量 — 换掉人类拥护者(效果要求队伍无异形,你有伊瑞莉特,条件不满足)"
+        },
+        {
+          "unit": "30e6364a1d7a425b93d877122c6eed40",
+          "name": "磐石 · 首席战士",
+          "rank": "磐石首席",
+          "rank_en": "Bedrock Primus",
+          "plan": "abelard_fighter_veteran",
+          "chain": [
+            "974496d72fbe4329b438ee15cf004bd2",
+            "651684417def4c258c72ba91f481b817",
+            "bcefe9c41c7841c9a99b1dbac1793025"
+          ],
+          "gear": [
+            [
+              "8c304b20633145f39577a392201d2047",
+              "9c190bd2019742db8697ac91da1d985e"
+            ],
+            "1c7a3dcf6afa4b48a7028642e596ab61",
+            "bb427b937c304ece913793a020aea87f",
+            [
+              "c1c07d80309c47de99b055ba9eb43a07",
+              "e84349dae8bb4a818fa4473ce32dcd9a",
+              "8b13aef5103a4719980774c0d4a12506",
+              "1fede9d9621f437c92832e239426bbcf"
+            ],
+            "f6f3b301deb5474c92de0560e8ac2f22",
+            "78d1a75785df4d638b813d5b8e32d817",
+            "db9cd531f9914828915fa4158d07f6d0",
+            "470ac5563173442c858b767d68e27836",
+            "819721a3da0740b6943b36f5d3d6dfd3|e16a1788d69040328ac3b706cd873e06|4b2b5f6ab84a40d4a807d57bf3c9916c",
+            "5f77ec7d55304efc9c7eb92748d3ba17",
+            "6b85b79132e140a7a52d9fe32d8f5c36",
+            [
+              "8d598bfec7e042029ab0c2a2ec8c478b",
+              "587c9d09efc4481282271ee0db9df7c1"
+            ]
+          ],
+          "_unit注": "VC2_Arbitres_Melee：全池最干净（仅 9 条引用），动力剑+盾+法务部甲",
+          "_plan注": "方案名更正: RTAutoBuilder 里阿贝拉德的两套是「先锋阿贝拉德」(Fighter->Vanguard) 和「DLC3」(Fighter->Veteran)，首席战士对应后者。之前我编了个不存在的名字。",
+          "_aug注": "补上存档里阿贝拉德实际装的植入物: 总领的单筒望远镜",
+          "_armor注": "雕血师 85/12 — 换掉外层胸甲(40/2,阿贝拉德存档里穿的,数值太低)"
+        }
+      ],
+      "gearT1": [
+        "d1fcb447486c4163b178e248f9ebc929",
+        "c19182971ae54259ba718566486ef204",
+        "65dc29038b9f4a9e8d0da5581dbab8b1",
+        "ea59a67b09e2454e98c95c069993600d",
+        "10d7a4f74c9b4d1e98c3678fe71f00b7",
+        "796b83ebb385460889c0a8ff9c2e9138",
+        "d599481b53504578abb84f967df07741",
+        "86bc9833350c406f85531f4c4d2e65c8",
+        "9f512940203c4d15b243b7a20d289415",
+        "faa38ecde3ac4b3ea6c843a95b6138fa"
+      ],
+      "gearT2": [
+        "7b79b4991269412db0e112ae93f34b62",
+        "2802cf103af344f8b9d780ae4fb74a25",
+        "35844167264c40449ef10a89d7eb63d5",
+        "86be5119b66f457b9e6ff13b0301998d",
+        "10d7a4f74c9b4d1e98c3678fe71f00b7",
+        "43b6db54d56c4e89b5bb7ebefeda0180",
+        "7cc40088132c4d7884a962e22d30b50e",
+        "6cddf55f77d94067bf64af3b62b18afe",
+        "9f512940203c4d15b243b7a20d289415",
+        "faa38ecde3ac4b3ea6c843a95b6138fa"
+      ],
+      "gearT3": [
+        "0d864d6cca6a4233a3f68e62e5883a34",
+        "faa1d25f61284c1d9e10623ec49dfe6d",
+        "d081b0d5d44a48fb89b6adb7173c53d1",
+        "9c29e48ed0e341cf8a00ed4ae303c8ee",
+        "4733a2e3bce3437a890d98ed499570b4",
+        "a2639877686f48f3b659f4c6b95709d8",
+        "351a6d1bcf32412c85340005a44db34b",
+        "1209014b491841b0b226bd3d036b0ae2",
+        "710ecc018ff14207842910fcd0f9f466|c08512df303f42ab9b0c633a1882db24",
+        "8cd258b21e974216bbbe2b2bf943a48e|9d9ffeda704e468b8e92df6f5d2ff75b",
+        "9f512940203c4d15b243b7a20d289415",
+        "faa38ecde3ac4b3ea6c843a95b6138fa"
+      ],
+      "guardNames": [
+        "近卫兵",
+        "近卫长",
+        "近卫官"
+      ],
+      "guardNames_en": [
+        "Household Guard",
+        "Household Sergeant",
+        "Household Officer"
+      ]
+    },
+    {
+      "name": "狙击 Sniper",
+      "unit": "36e39788d1c648c8a75fbf36371f35f9",
+      "unitFallback": ["53281ae602a34756a47c3e23f66c06cd", "1fb60c0ef5fe459980c34a271dfad088"],
+      "_unitFallback注": "主单位是 DLC3 蓝图；没启用 DLC3 时依次退到 FootfallAnverSniper_Ranged_Elite（本体，狙击精英在用）→ OfficersDeckGuard（本体）。功能不受影响，只是外观和自带能力会跟精英同款。",
+      "brain": "6bfff31e4223456db500de4efe560b6a",
+      "plan": "yrliet_adept_hunter",
+      "chain": [
+        "1529e5a0e7844bf3bb8d0cc0501264d4",
+        "6f276e8a8e2c4a548504ae39d2a7f22a",
+        "bcefe9c41c7841c9a99b1dbac1793025"
+      ],
+      "_注": "Guard_Sniper(狙击枪) + RangedPositionalSniper(列表0) + Adept->Hunter,与 Yrliet 方案链完全对齐",
+      "_gear注": "按「士兵赏金」攻略截图配。★第一格是嵌套数组=候选组,依次尝试到能装上为止★ 顺序: 库诺斯之礼(第四章) -> 纱芮尔摇篮曲(第三章) -> 残酷命运 -> 流浪者之兆 -> 赫卡顿之眼(灵族,可能因种族限制装不上,所以排最后)。植入物=弹道计算器(眼,跳弹,攻略重点提到)+大脑逆变器MK猎人。其余槽位按主题补: 弹道计算单筒镜/神射手护腕/暗影潜伏斗篷/散兵战靴。",
+      "grantFeatures": [
+        "5069a24051354e50a663da0125e19b02",
+        "684c766dc9c24fcf856dc1d6f01d9290",
+        "e19301be9dc14d89b656c60a6c4f8e04",
+        "365ad1a4ef1b4a47be74509c33b2be3b",
+        "5de2d70b4ac9468ca723e84c57524eae"
+      ],
+      "elites": [
+        {
+          "unit": "aca1e823dbf64d6999d2132e3198dd5a",
+          "name": "寂静之眼",
+          "rank": "寂静之眼",
+          "rank_en": "The Silent Eye",
+          "plan": "yrliet_adept_hunter",
+          "_注preGrant": "伊莉耶特的两条专属天赋（迅捷视觉 Yrliet_Talent01 / 流浪者道途 WayOfTheWanderer）。它们只挂在她本人身上，别的单位升级时永远不会出现在候选池里，只能直接授予。都是原版蓝图。 追加 穿透洞见=Yrliet_Talent02 / 预知远景=Yrliet_Talent03，同样是她本人专属。",
+          "preGrant": [
+            "a8a919250f28499199e5f0d1122aa4e8",
+            "39e0d1de97e44e67bd15e2dddd3352a3",
+            "07be5f794f6b4f54b91b0904e0c50e4b",
+            "c332d4c355ea40a6b8bb0bd454a2fdac"
+          ],
+          "chain": [
+            "1529e5a0e7844bf3bb8d0cc0501264d4",
+            "6f276e8a8e2c4a548504ae39d2a7f22a",
+            "bcefe9c41c7841c9a99b1dbac1793025"
+          ],
+          "gear": [
+            [
+              "9fbd2aaded9948e483295466830fab1f",
+              "f0a4e0192871429f9dadc0eb779c6294",
+              "34612ed374a74558815bc594244eb1b2",
+              "a223f91296d24d65a3390651c247ed83",
+              "d043a2289a1f45f784a415057c725cb5"
+            ],
+            "e202201c375a45b697d7bba5ac68c6ee",
+            [
+              "ddd6d0a5bdfc4fefaed5f247cf46e852|d081b0d5d44a48fb89b6adb7173c53d1|5bee6a60c37341b6a4cb39995498546e|9598d953dd4e4af3a4fbd2b2940dbf33",
+              "9c8d4a592a284b20a9e2fcf4673135e4",
+              "51fad212bca146f889ae8d6e2be4d2fd"
+            ],
+            "1b447777d38f43baa643fc2e915d6ef3",
+            "2c37192f73bf4b89abd89d12e4040d75",
+            "50c5be09ff9942969db57298b1beb4cb",
+            "47b52da77a194da2837e6d6ebfb9e918",
+            "774361e6945849889568fae24be57450",
+            "9dea103b7d9d41238a318142cf057273",
+            "fd1da14cd1f54ef0a280ce1160dde3e6",
+            [
+              "d16dbc47d0fc46c0833b3549f9be82f0",
+              "fa121ed0f18c4017a53c7adb6036a552",
+              "fe6060602c6d4b71be16808f05368242"
+            ]
+          ],
+          "_unit注": "Quetza_EldarRangerHard：灵族游侠，对得上灵族长步枪路线",
+          "_aug注": "存档里该角色 6 个植入位全空,按\"忠实抄存档\"原则没配植入物。想加的话在 gear 里追加植入物 GUID 即可。",
+          "_armor注": "雕血师 85/12 击杀回血10% — 换掉人类拥护者",
+          "race": "22c49d7901b140b681c52dd985921561",
+          "_race注": "EldarStandardRace — 伊瑞莉特方案里的灵族天赋有种族门控，起源补不了。SetRace 是实体级(PartUnitProgression.cs:196)，不动蓝图，不污染其它单位。"
+        },
+        {
+          "unit": "53281ae602a34756a47c3e23f66c06cd",
+          "name": "赏金 · 猎首",
+          "rank": "赏金猎手",
+          "rank_en": "Bounty Hunter",
+          "chain": [
+            "06f4f78a9c1a472b85cd79a9a142153d",
+            "6f276e8a8e2c4a548504ae39d2a7f22a",
+            "bcefe9c41c7841c9a99b1dbac1793025"
+          ],
+          "_planSegments注": "攻略「士兵赏金」只给了要点没给完整点法，所以按段拼: Soldier 段抄国教士兵首席连射(它的背景世界正好是攻略要求的「要塞」)，Hunter 段抄伊莉耶特(全库只有她那套有 Hunter 数据)。Ascension 段按 FeatureGroup 分桶 —— FirstCareer* 必须取士兵源(伊莉耶特的 First 是 Adept，士兵起手点不出来)，SecondCareer* 取伊莉耶特源(都是 Hunter)。 ★FirstOrSecondCareer 单独一桶并给两个源: 这类条目两边都可能合法，只给士兵源的话拿到的全是 Veteran_* 天赋(急速闪焰/毁灭攻势/适应战场)，猎首链点不出来。候选合并后 PickOne 会挑能选上的那个。",
+          "planSegments": {
+            "06f4f78a9c1a472b85cd79a9a142153d": "rt_soldier_suppress",
+            "6f276e8a8e2c4a548504ae39d2a7f22a": "yrliet_adept_hunter",
+            "bcefe9c41c7841c9a99b1dbac1793025": {
+              "FirstCareer": "rt_soldier_suppress",
+              "SecondCareer": "yrliet_adept_hunter",
+              "default": "rt_soldier_suppress",
+              "FirstOrSecondCareer": [
+                "yrliet_adept_hunter",
+                "rt_soldier_suppress"
+              ]
+            }
+          },
+          "_excludeFeatures注": "流浪者道途 = Yrliet_WayOfTheWanderer_Feature，只挂在伊莉耶特本人身上，别人永远点不出来。注意 致命精准(TrueSight) 不剔除 —— 它要灵族武器熟练度，而本套主武器就是赫卡顿之眼(灵族狙)，成立。",
+          "excludeFeatures": [
+            "39e0d1de97e44e67bd15e2dddd3352a3"
+          ],
+          "keyTalents": [
+            "e0dcfc42ff494a7ead8cd3a788ff7516",
+            "e563248d882948d5989599a54f388dbc",
+            "7c3a7e64f2c74b7d9e48ca8845934793",
+            "df6c348d0bbc490a8d6483ddaf99740b",
+            "0b113627def5404cb1d94310c85edfb8",
+            "63122dc624e949609f5b160058dbbbcc",
+            "f509573bad85478b8f36e6bd97c943e4",
+            "159c49b97fee471b8b9af9570d17087b",
+            "8930d6ba62ca4bc3a30a9900e741d87c"
+          ],
+          "attrPriority": [
+            "BallisticSkill",
+            "Perception",
+            "Agility"
+          ],
+          "gear": [
+            [
+              "d043a2289a1f45f784a415057c725cb5",
+              "9fbd2aaded9948e483295466830fab1f",
+              "f0a4e0192871429f9dadc0eb779c6294",
+              "34612ed374a74558815bc594244eb1b2",
+              "a223f91296d24d65a3390651c247ed83"
+            ],
+            "e202201c375a45b697d7bba5ac68c6ee",
+            [
+              "ddd6d0a5bdfc4fefaed5f247cf46e852|d081b0d5d44a48fb89b6adb7173c53d1|5bee6a60c37341b6a4cb39995498546e|9598d953dd4e4af3a4fbd2b2940dbf33",
+              "fab54297dc854f4aa917ce185b97062a",
+              "8b7a450f05fe46bc99b776625291b14d"
+            ],
+            "1b447777d38f43baa643fc2e915d6ef3",
+            "2c37192f73bf4b89abd89d12e4040d75",
+            "50c5be09ff9942969db57298b1beb4cb",
+            "47b52da77a194da2837e6d6ebfb9e918",
+            "774361e6945849889568fae24be57450",
+            "9dea103b7d9d41238a318142cf057273",
+            "fd1da14cd1f54ef0a280ce1160dde3e6"
+          ],
+          "_unit注": "FootfallAnverSniper_Ranged_Elite：人类（NewHumanBanditsArmy），保住「避开灵族种族门控」的原设计意图",
+          "_注": "「士兵赏金」攻略: 背景要塞 / 属性弹道+感知+任意 / 链=Soldier->Hunter。攻略只给要点没给完整点法,所以靠 keyTalents+attrPriority 做优先回退。",
+          "_keyTalents注": "专家技艺/猎手伏击/传奇猎物/射穿目标/致命精准/聚焦猎潮/战壕工事/紧随其后/索取赏金"
+        }
+      ],
+      "gearT1": [
+        "db96ff8975434c40b78705377291ff4e",
+        "74a91d0251d447c798efab2f72c604dc",
+        "aefff08c4a7843c4982c66fbd423674e|9598d953dd4e4af3a4fbd2b2940dbf33",
+        "06c9cace056641b6843f43c514a99189",
+        "f37dd20306d34bdcbc5a3edac3775fad",
+        "0c26742029854f6fbca188bf1354fd2e",
+        "ff66d1a21d9b4d54b40c7930733708ac",
+        "e4d169e23d894df699fa2bc76b985f28",
+        "8a74cb37c4d44537a0921c3ff1f03cc6"
+      ],
+      "gearT2": [
+        "c8f3d4d57f6b490d8b55aa5a7ca7acca|6679bda02e994ebb96710a52ce27e3a2|bb427b937c304ece913793a020aea87f",
+        "1025b5850b95477296280af42b1c31f8",
+        "eacceef2db4d41fb9ab46faf8f011a28|8fe1068ed34746ba83d2388efc97c79f",
+        "b48e40d87ac0417abeb1b7ab3fc7c781",
+        "1b447777d38f43baa643fc2e915d6ef3",
+        "ff66d1a21d9b4d54b40c7930733708ac",
+        "116f9387b5ec4a0c8ce2728ab84bace6",
+        "8a74cb37c4d44537a0921c3ff1f03cc6",
+        "89b407114dda4c0b895ca2c9ee0bf03f"
+      ],
+      "gearT3": [
+        "9fff749bf072433fac15cc2907f4e266",
+        "3535abdbb30543bbaa395ef07059dbc1",
+        "44555bd3e9b149408470cefb5da1c9ba|5bee6a60c37341b6a4cb39995498546e|2d262a9870604d3e88260a11c984d725",
+        "78787ef16bb84f28b68f71b98c726260",
+        "31d4ecc2b4ff4fa48c0414687d2d6844",
+        "ff66d1a21d9b4d54b40c7930733708ac",
+        "de2f5ce2589b4952a9b036ab7e2ccc02",
+        "fd1da14cd1f54ef0a280ce1160dde3e6",
+        "d16dbc47d0fc46c0833b3549f9be82f0|fa121ed0f18c4017a53c7adb6036a552|fe6060602c6d4b71be16808f05368242",
+        "1b447777d38f43baa643fc2e915d6ef3",
+        "8a74cb37c4d44537a0921c3ff1f03cc6",
+        "89b407114dda4c0b895ca2c9ee0bf03f"
+      ],
+      "guardNames": [
+        "斥候兵",
+        "神射手",
+        "狙击官"
+      ],
+      "guardNames_en": [
+        "Scout",
+        "Marksman",
+        "Sharpshooter"
+      ]
+    },
+    {
+      "name": "连射 Suppress",
+      "unit": "5fc80452fb6a4e2db02cd0a305715446",
+      "unitFallback": ["9bc515c1b1b84c3ab0f65544807e22ee", "1fb60c0ef5fe459980c34a271dfad088"],
+      "_unitFallback注": "主单位是 DLC3 蓝图；没启用 DLC3 时依次退到 TaintedStreets_Arbites_SolomonSquad_V1（本体，连射精英在用）→ OfficersDeckGuard（本体）。功能不受影响，只是外观和自带能力会跟精英同款。",
+      "brain": "c3b4b0e56cec4a99b448bc7102971bd3",
+      "_brain注": "ArgentaAlternative_Brain —— 阿洁塔（连射爆弹枪同伴）被 AI 接管时用的脑子，和我们「玩家方单位交给 AI 打」是同一场景。判据(全部来自 ref/rt_probe/q/_scan_all.json)：uol=false（不锁技能白名单，career 链练出来的技能 AI 才会考虑）、prio 为空（不绑定某件具体武器）、序=EnemyThreat>Hide>Closiness。★两个踩过的坑，别再回去★ (1) 8dc8edca=Melta 脑：uol 虽 false 但序里 EffectiveDistance 优先、Hide/StayingAway 全忽略，实测只打单发+反复装弹+移动 0。(2) 32111e7b=HBolter 脑：uol=TRUE 且三个白名单能力(HuntDownThePrey/ControlledShot/RapidFire)全部绑死在 DLC3_DL_Sororitas_HeavyBolter_Item 上，我们五套装备一件都没有；且 hit_unintended_penalty=0.0（完全不在乎误伤友军），给我方单位用会对着队友开火。",
+      "plan": "rt_soldier_suppress",
+      "chain": [
+        "06f4f78a9c1a472b85cd79a9a142153d",
+        "651684417def4c258c72ba91f481b817",
+        "bcefe9c41c7841c9a99b1dbac1793025"
+      ],
+      "_注": "eliteUnit 换成 Argenta35Yremeris 预设。链=Soldier->Veteran(内部名 Veteran = 中文首席战士 Arch-Militant)，与存档里阿洁塔实际路线一致。",
+      "_gear注": "「国教士兵首席连射」原套。武器候选组: 血腥礼赞(ArgentaBolterUnique,阿洁塔专武,存档里 x8 应为已装备)->泪如泉涌(CH05Unique)->英勇不灭(ArgentaStart)->改良重型爆矢枪->基础重型爆矢枪。不用阿斯塔特系。愤怒化身/胜利回响你现在还没有,会静默跳过。植入物用大脑逆变器MK战术家。 植入物按你指正改为: 聚焦发射器(MK士兵) + 武器优化仪(MK-II->首席战士->MK-I) + 公义之手；去掉了大脑逆变器战术家。",
+      "grantFeatures": [
+        "5069a24051354e50a663da0125e19b02",
+        "684c766dc9c24fcf856dc1d6f01d9290",
+        "e19301be9dc14d89b656c60a6c4f8e04",
+        "26376b596c474d67849613617ced7b04",
+        "19673fbc918241c6add6710025f67058",
+        "1dbbd844e25b447e99f247c3a88aa5d4"
+      ],
+      "elites": [
+        {
+          "unit": "9bc515c1b1b84c3ab0f65544807e22ee",
+          "name": "怒火 · 首席连射",
+          "rank": "怒火铳长",
+          "rank_en": "Wrathgun Master",
+          "plan": "rt_soldier_suppress",
+          "chain": [
+            "06f4f78a9c1a472b85cd79a9a142153d",
+            "651684417def4c258c72ba91f481b817",
+            "bcefe9c41c7841c9a99b1dbac1793025"
+          ],
+          "gear": [
+            "a9cb0b71c88043a886992fe55f1d9d77",
+            "3803098850504a7ebf80d6fbb70c37c6",
+            [
+              "594030b15093416c925dabc415eda101",
+              "0adaa28e654e4fd6a74830eed3f63390",
+              "b11dc12ae9e943c29cce0aa7d52bf980"
+            ],
+            "95c17d495720443fa840ea8886643e69",
+            "9050161424de439392bd6710898e0e4b",
+            "d39b28ade6844440833698efa3d8e2a7",
+            "e97a0c7f8b9544c4a53b2ff78d57aa45",
+            "8f1e2d1deb234d2688c2a3e7f9a4106e",
+            "9dea103b7d9d41238a318142cf057273",
+            "e807b19418564d1a8dedcc8b7def2d5b",
+            [
+              "80a9a29d43f04f98a57525d5e2ea57ff",
+              "abb367ffd0f944a1819d719e8eff8142",
+              "068cc4c34bcd483ebd018b206ba9a7a8"
+            ],
+            "846a2ae351a34cfd921d5f15d9c2445c"
+          ],
+          "_unit注": "TaintedStreets_Arbites_SolomonSquad_V1：法务部压制小队"
+        },
+        {
+          "unit": "2cf75c27e6d34681ab623101b0be1135",
+          "name": "圣焰 · 净罪修女",
+          "rank": "圣焰净罪",
+          "rank_en": "Sacred Flame",
+          "plan": "argenta_soldier_veteran",
+          "_brain注": "★不要因为 unit 是 DLC3_DL_Sororitas_Melta_Unit 就配熔火脑★ 这个精英手里是 ArgentaBolterUnique(血腥礼赞)/泪如泉涌 + AdvancedHeavyStubber，一把熔火都没有。unit 当初选 Melta 版只是因为它比 HBolter 版干净(那个带 CantMove+CombatBoss)，跟武器无关。判据是【最终手里拿什么枪】，不是【单位蓝图原生什么枪】——所以这里继承分型的 HBolter 脑才对。",
+          "chain": [
+            "06f4f78a9c1a472b85cd79a9a142153d",
+            "651684417def4c258c72ba91f481b817",
+            "bcefe9c41c7841c9a99b1dbac1793025"
+          ],
+          "gear": [
+            "0adaa28e654e4fd6a74830eed3f63390|1ba5fc1726374b2a856b53ca172a3460",
+            "594030b15093416c925dabc415eda101",
+            "eb8c58901bb049ec9ad3775c31eeabfe",
+            "026fd90c104c49e6954f942301db03bc",
+            "50ebc5b251654468a58ab50499730f10",
+            "e97a0c7f8b9544c4a53b2ff78d57aa45",
+            "bf14d8f09fc2408195714bddd33951f1",
+            "5a72eae8e3cd4190b6f8ccce98444a25",
+            "e9d624a784a24b7f9ff0a363481c285d",
+            "cd22628cc51f40dcb9383ceabee71453",
+            "e807b19418564d1a8dedcc8b7def2d5b",
+            "846a2ae351a34cfd921d5f15d9c2445c"
+          ],
+          "_unit注": "DLC3_DL_Sororitas_Melta_Unit：战斗修女；比现役 HBolter 版干净（那个带 CantMove+CombatBoss）",
+          "_gear注": "逐槽位抄自存档 Manual_25 里阿洁塔本人: 泪如泉涌@套组1 + 高级重型伐木枪@套组2 / 命运之星(甲) / 呢喃低语(头) / 受祝福的爆矢枪弹壳(项) / 补偿器手套 / 战斗修女之靴 / 防火斗篷 / 兴奋剂注射器+战祷之书(戒)",
+          "_aug注": "补上存档里阿洁塔实际装的植入物: 聚焦发射器(MK士兵) + 公义之手",
+          "_armor注": "命运之星(另一件) 80/7 暴击/击杀伤害+5% — 阿洁塔原本那件的效果依赖英雄壮举,AI用不好"
+        }
+      ],
+      "gearT1": [
+        "053074cada484310a920573477ebc7ed",
+        "df0daf689be7420fbc39e7ffaad8a508",
+        "65dc29038b9f4a9e8d0da5581dbab8b1",
+        "58fe6c1380dc49e790c11549d3314063",
+        "553d02360e5640bcad28d88b745c974a",
+        "96bcb56f3f1f4930b2eda5cfbb269042",
+        "e975e5cdf38f48ef9bf9b409c35bb184",
+        "3475135047dc4717b8860b8f611ccd39"
+      ],
+      "gearT2": [
+        "bc7201bf17ed4a8cb5018c83a05ff630",
+        "a50db54c76a44ac9a8986c8a602d66b4",
+        "35844167264c40449ef10a89d7eb63d5",
+        "f959c35b1c484435b8f60ad52dfe7d6f",
+        "5efe1b33826c43b3bceb38d9dadf0795",
+        "c7bb6c810e554f45a7cff0276940d1a0",
+        "7b7251116ea04590a109e317b1b06bd3",
+        "3475135047dc4717b8860b8f611ccd39"
+      ],
+      "gearT3": [
+        "96454b5f89a44a24baca3a940991f7a2",
+        "ddd6d0a5bdfc4fefaed5f247cf46e852",
+        "fbfbed0b49354b578afced5af717f7de",
+        "b3a6fed0355b455ea773a199378b5a6f",
+        "1b8f8b6fd7a54e74946eef66514eebb0",
+        "62ab680bb2214c30a10116d18d2b6336",
+        "3475135047dc4717b8860b8f611ccd39",
+        "04fbf60fe58d4da289a55f645969bb52|756e0384483540e8a160b1b5584440c9",
+        "710ecc018ff14207842910fcd0f9f466|c08512df303f42ab9b0c633a1882db24",
+        "553d02360e5640bcad28d88b745c974a",
+        "dec66b3861c64c088c5f38fd49024d44"
+      ],
+      "guardNames": [
+        "射击手",
+        "射击长",
+        "射击官"
+      ],
+      "guardNames_en": [
+        "Gunner",
+        "Gun Sergeant",
+        "Gun Officer"
+      ]
+    },
+    {
+      "name": "灵能 Psy/Exec",
+      "unit": "5bc8b3a8fb834977a3692a2325aff0f6",
+      "unitFallback": ["d1287134a3e64a4dbdae16b58d21bd8b", "1fb60c0ef5fe459980c34a271dfad088"],
+      "_unitFallback注": "主单位是 DLC3 蓝图；没启用 DLC3 时依次退到 Ch05Inquisitor_Psyker_unit（本体，灵能精英在用）→ OfficersDeckGuard（本体）。功能不受影响，只是外观和自带能力会跟精英同款。",
+      "brain": "e257fc0ffe054d569cde2b18723f7a4a",
+      "plan": "heinrix_fighter_assassin",
+      "_注preGrant": "分型级前置，普通卫兵走这条（它们没有 EliteDef）。Sanctic_Base_Feature：海因里希方案里的 英雄诗篇 只能从神圣系池出，而他那份神圣系是剧情特性表白给的，模板没有。",
+      "preGrant": [
+        "a6a38016b90148878593d977d96b8264"
+      ],
+      "chain": [
+        "974496d72fbe4329b438ee15cf004bd2",
+        "7b90955673a54136be9c11743943fdfe",
+        "bcefe9c41c7841c9a99b1dbac1793025"
+      ],
+      "_注": "两个精英: ①海因里希(Fighter->Assassin,装备抄他本人) ②火杖行刑者(Fighter->Executioner,装备抄你主控本人)。两条链都从存档实测得出。",
+      "_gear注": "直接抄自你存档 Manual_24 里海因里希的实际装备（他的毕业套）。烈阳法杖@套组1 + 致命信使@套组2 是两把双手武器分放两组。",
+      "grantFeatures": [
+        "5069a24051354e50a663da0125e19b02",
+        "684c766dc9c24fcf856dc1d6f01d9290",
+        "e19301be9dc14d89b656c60a6c4f8e04"
+      ],
+      "elites": [
+        {
+          "unit": "d1287134a3e64a4dbdae16b58d21bd8b",
+          "name": "亚空间审判者",
+          "rank": "灵能判官",
+          "rank_en": "Warp Arbiter",
+          "plan": "heinrix_fighter_assassin",
+          "_注preGrant": "Sanctic_Base_Feature。海因里希是生物系(起源=合法灵能者·生物系)，但他额外从剧情特性表 HeinrixFeatureList_Chapter1_Start 白拿了神圣系 —— 存档里那条 Sanctic_Base 的来源就是它的 AddFacts。方案里的 英雄诗篇 记录为 Ascension r1 / PathFeatureSource=Sanctic_Base，只能从神圣系池出。我们的模板没有那份剧情表，所以要补。原版蓝图。",
+          "preGrant": [
+            "a6a38016b90148878593d977d96b8264"
+          ],
+          "chain": [
+            "974496d72fbe4329b438ee15cf004bd2",
+            "7b90955673a54136be9c11743943fdfe",
+            "bcefe9c41c7841c9a99b1dbac1793025"
+          ],
+          "gear": [
+            "7da9005aaf4d49969ff989cf0b1619cb",
+            "2059b9aeefb24b1fb1072c08b9859439",
+            "ea60e97cfbe14231b8fdb8e1702b5f70",
+            "07dea798ee0f49e78efe25a7213e3717",
+            "2c37192f73bf4b89abd89d12e4040d75",
+            "f3c90d709b2b4bf58da8fc6704e08fdb",
+            "b5a23e5ce00248efb454d07871f5b3d4",
+            "819721a3da0740b6943b36f5d3d6dfd3",
+            "354cbd5a61c440aaa2f23c392467a09b",
+            "3103e1561110474d89a4b7ce1c13824e"
+          ],
+          "_unit注": "Ch05Inquisitor_Psyker_unit：审判庭灵能者，对得上神圣系",
+          "_aug注": "存档里该角色 6 个植入位全空,按\"忠实抄存档\"原则没配植入物。想加的话在 gear 里追加植入物 GUID 即可。",
+          "_armor注": "雷霆主宰 80/8 亚空间伤害-50% — 灵能路线吃亚空间反噬,对症;改装工匠的重武器-1AP对法杖无效"
+        },
+        {
+          "unit": "638ab19bfae74bb99dacc93e7d6fe7f3",
+          "name": "火杖行刑者",
+          "rank": "灵能刽子",
+          "rank_en": "Pyre Executioner",
+          "plan": "rt_fire_executioner",
+          "_注preGrant": "Pyromancy_Base_Feature —— 火系灵能学派。它带 9 个 AddFeaturesToLevelUp，不给的话方案里 7 条火系灵能一条都进不了候选池（怒焰迸射/烈焰风暴/烈焰焚尽…）。原版蓝图，不新增 AssetId。",
+          "preGrant": [
+            "b4d60f6a91b94d02840a58fd9df863cd"
+          ],
+          "chain": [
+            "974496d72fbe4329b438ee15cf004bd2",
+            "d6c0498a227040c891e4e2703eb55c13",
+            "bcefe9c41c7841c9a99b1dbac1793025"
+          ],
+          "gear": [
+            "7da9005aaf4d49969ff989cf0b1619cb",
+            "298bd4183b9048b296ae1367870be2bd",
+            "4127a489515c4b9b9181d9b61fd33ec7",
+            "ea60e97cfbe14231b8fdb8e1702b5f70",
+            "7f67bc4d7e1c4ef6b217b46e4f55bf0b",
+            "2c37192f73bf4b89abd89d12e4040d75|4733a2e3bce3437a890d98ed499570b4|ccc03cf23d0e4681a7bedf3d2c14f22c",
+            "f3c90d709b2b4bf58da8fc6704e08fdb",
+            "b5a23e5ce00248efb454d07871f5b3d4",
+            "819721a3da0740b6943b36f5d3d6dfd3",
+            "354cbd5a61c440aaa2f23c392467a09b",
+            "f9605255721848fdaa96c15fd30c54f2"
+          ],
+          "_unit注": "Ch04Chorda_Pyromancer_unit：火系灵能者",
+          "_aug注": "存档里该角色 6 个植入位全空,按\"忠实抄存档\"原则没配植入物。想加的话在 gear 里追加植入物 GUID 即可。",
+          "_armor注": "雷霆主宰 80/8 亚空间伤害-50% — 同上"
+        }
+      ],
+      "gearT1": [
+        "993996a4c0a24463aa400b9441d4caa8",
+        "c19182971ae54259ba718566486ef204",
+        "65dc29038b9f4a9e8d0da5581dbab8b1",
+        "85b84712fc30435ea73f3d45049f25f2",
+        "d2cc62c3c3ca49f897c03462f2853c67",
+        "26ee92e2e0884b5c9f535197f0790071",
+        "6fcb1096ef4443b1838d3e19855e9302",
+        "e06e0887d9d6494797ef681077f79a7b",
+        "45f1e2a97aea4788b05fea84cff054e2",
+        "0c3d2a3a6f8c4b8f9c372f5a34823cc9"
+      ],
+      "gearT2": [
+        "266766be7aab4142af87ba3e76e0ddce",
+        "c021b67cbf084ccba92c6faafdb44f29",
+        "5a6788bd6cec4195b6056ab7cae88dcb",
+        "fbfbed0b49354b578afced5af717f7de",
+        "f44d8c44d5044cbda7539cac89410670",
+        "26ee92e2e0884b5c9f535197f0790071",
+        "6fcb1096ef4443b1838d3e19855e9302",
+        "f77bfa73e8fe467e8b60eeac96adfa07",
+        "45f1e2a97aea4788b05fea84cff054e2",
+        "0c3d2a3a6f8c4b8f9c372f5a34823cc9"
+      ],
+      "gearT3": [
+        "d891b6e2ca284b32aa5cfeafb07bdd29",
+        "7f57ba5ee2cc4fc7bcdc9a9ededc1fb4",
+        "3f677383da874ab1ba5c8e106cfa9c72|ea60e97cfbe14231b8fdb8e1702b5f70|35844167264c40449ef10a89d7eb63d5|99d54e96fa724292890f41d29246159c",
+        "760f232b0d5947229b74c0ce9462fb3a",
+        "f44d8c44d5044cbda7539cac89410670",
+        "26ee92e2e0884b5c9f535197f0790071",
+        "6f43e63d9cb54ed3b782a9924f8975e9",
+        "49a0c35d9315459b8d0dd756049082cb",
+        "710ecc018ff14207842910fcd0f9f466|c08512df303f42ab9b0c633a1882db24",
+        "45f1e2a97aea4788b05fea84cff054e2",
+        "0c3d2a3a6f8c4b8f9c372f5a34823cc9"
+      ],
+      "guardNames": [
+        "灵能者",
+        "灵能卫",
+        "灵能官"
+      ],
+      "guardNames_en": [
+        "Psyker",
+        "Psy-Warden",
+        "Psy-Officer"
+      ]
+    },
+    {
+      "name": "军官 Officer",
+      "unit": "1fb60c0ef5fe459980c34a271dfad088",
+      "brain": "adcf80a5d2a344d3814dcf3bb6b127f7",
+      "chain": [
+        "33725d84e95e4323ac46d8fbf899b250",
+        "a31b390cabe7464fbfd0e1ba53c4112f",
+        "bcefe9c41c7841c9a99b1dbac1793025"
+      ],
+      "grantFeatures": [
+        "5069a24051354e50a663da0125e19b02",
+        "684c766dc9c24fcf856dc1d6f01d9290",
+        "e19301be9dc14d89b656c60a6c4f8e04"
+      ],
+      "elites": [
+        {
+          "unit": "bc5ca9badb2042b48afb13c1829619b3",
+          "name": "谕令 · 灵能军官",
+          "rank": "谕令参谋",
+          "rank_en": "Edict Adjutant",
+          "plan": "rt_psyker_officer",
+          "_注preGrant": "Biomancy_Base_Feature —— 生物系灵能学派。同理，不给的话方案里 9 条生物系（恢复生机/亚空神速/过度代谢/躯体转化…）全进不来。原版蓝图。",
+          "preGrant": [
+            "5fa599e5cffc4bab93d6b07f68e0e6ba"
+          ],
+          "chain": [
+            "33725d84e95e4323ac46d8fbf899b250",
+            "a31b390cabe7464fbfd0e1ba53c4112f",
+            "bcefe9c41c7841c9a99b1dbac1793025"
+          ],
+          "gear": [
+            "24a156a6132d46a982f2f3a7c794ecbd",
+            "5f4091e7ebae4cfea6831d72db37ba33",
+            "f44d8c44d5044cbda7539cac89410670",
+            "bc66c47af73e48b4b28c090808213182",
+            "d9c2e54b06e542919c56e1ea9e4bc959",
+            "4cef7e667b50432299e32f1db5e0878a",
+            "a6d0c20d7be04f4a969aa567c7bb7c7b",
+            "549d7fa415204658859486c29b2d6dbe"
+          ],
+          "_unit注": "VC2_Astropath：星语者，军官+灵能",
+          "_gear注": "灵能军官(辅助)方案原套: 政委帽/吸血法杖/星尘围巾/审判庭黑色图章/指挥官笔记/深渊织网者手套/悯慈的礼物/腐朽之靴。方案写明不穿护甲。"
+        },
+        {
+          "unit": "5990a9129d6648a68aa7b62ebe2cdc05",
+          "name": "铁律 · 政委军官",
+          "rank": "铁律政委",
+          "rank_en": "Iron Law Commissar",
+          "plan": "rt_commissar_officer",
+          "chain": [
+            "33725d84e95e4323ac46d8fbf899b250",
+            "604fa184d7d944c8ae5965f9700782b5",
+            "bcefe9c41c7841c9a99b1dbac1793025"
+          ],
+          "gear": [
+            "c22406ff733b403ea8b4b4b78c47cda9",
+            "3f677383da874ab1ba5c8e106cfa9c72",
+            "4127a489515c4b9b9181d9b61fd33ec7",
+            "ccc03cf23d0e4681a7bedf3d2c14f22c",
+            "50c5be09ff9942969db57298b1beb4cb",
+            "47b52da77a194da2837e6d6ebfb9e918",
+            "1b447777d38f43baa643fc2e915d6ef3",
+            "2c652a9bf6d94ee189ad13e7330fbe1a"
+          ],
+          "_unit注": "HumanCommissar_MeleeRanged_Prison_True：政委；显示名走 CustomName 覆盖，不会露馅",
+          "_gear注": "政委军官(辅助)方案原套: 外围面甲/人类拥护者/反载具左轮手枪/活力勋章/作战计划/指挥官计时器/神射手护腕/行商浪人斗篷"
+        }
+      ],
+      "_注": "用户要求补的辅助路线。两条都是 Leader 系: 灵能军官走 Strategist, 政委军官走 Tactician。",
+      "_注preGrant": "分型级前置，普通卫兵走这条。Biomancy_Base_Feature = 生物系灵能学派，灵能军官方案里那 6-9 条生物系灵能（恢复生机/亚空神速/过度代谢/躯体转化…）靠它才进候选池。",
+      "preGrant": [
+        "5fa599e5cffc4bab93d6b07f68e0e6ba"
+      ],
+      "plan": "rt_psyker_officer",
+      "gearT1": [
+        "2802cf103af344f8b9d780ae4fb74a25",
+        "c19182971ae54259ba718566486ef204",
+        "391d9d4120d64d81ad0314e444675817",
+        "f959c35b1c484435b8f60ad52dfe7d6f",
+        "2f86ac3fc26e4fdda239a72f621357e4",
+        "245cd2e564e541a080458edd666fddf7",
+        "ff66d1a21d9b4d54b40c7930733708ac",
+        "b3c4b6b453b94c93bd28085db2c53cc6"
+      ],
+      "gearT2": [
+        "082334e491e34c65b464c90e317d4e7f",
+        "880be9ee37f6436cab915965b28ebf3d",
+        "7b77b09f4d144086901fdf81236aea9a",
+        "19c9755559574a7ea34adb408f8c5c06",
+        "37f4848470d943acaf08b7a933d4cf9f",
+        "f123c305357a44f58b1d6449ded7cda7",
+        "e98d0049c14443f6be83932b5207d7a5",
+        "60548ad4ada54c8f9e56fd4fd8cb0803"
+      ],
+      "gearT3": [
+        "dbf6e298905b4619a9408c8fa89dea62",
+        "93bc89a2332847b0b75394b31dd9274d",
+        "d5dfd4f7fec149dcb7a19089cfee5b02",
+        "85b84712fc30435ea73f3d45049f25f2",
+        "1718f0c0583c4c4983c05391b0b333eb",
+        "1b447777d38f43baa643fc2e915d6ef3",
+        "282432979339434183f587d931ab0df0",
+        "60548ad4ada54c8f9e56fd4fd8cb0803",
+        "f9e771d6f94f4601b7e6c955c40d2307|33a49bd301814a2c803bb82650cea118",
+        "3ee99c8bed704c04affaf706eaee785e|3c1c3f3fb1444f3e96541b356ca64ab2",
+        "dc5d0e7b109e42a6959f509756fdbdc2|756e0384483540e8a160b1b5584440c9",
+        "37f4848470d943acaf08b7a933d4cf9f"
+      ],
+      "guardNames": [
+        "指挥者",
+        "指挥官",
+        "战略家"
+      ],
+      "guardNames_en": [
+        "Leader",
+        "Commander",
+        "Strategist"
+      ]
+    }
+  ],
+  "_熟练度": "grantFeatures 在发装备之前授予。动力甲/重甲/轻甲三个熟练度全分型都给（ArmorSlot 会把缺熟练度伪装成\"槽位拒绝\"）；狙击额外给灵族+异形武器（赫卡顿之眼）；连射额外给重武器+爆矢枪（改良重型爆矢枪）。全是原版 BlueprintFeature，不新增 AssetId。",
+  "_预设说明": "精英单位选择规则(用户定): 天赋树抄自队友的 -> 用该队友**最低阶**官方预设; 抄自主控的 -> 用**1级创角模板**(StartGame_Pregen_*)。目的是让 ApplyChain 按我们的加点方案主导尽可能多的等级。注意每个精英必须用不同蓝图 —— 蓝图是这是哪个精英的持久判据。",
+  "_精英身份": "精英身份存在 PartUnitDescription.CustomPetName（[JsonProperty] 裸 string,卫兵无宠物所以该字段惰性）。因此多个精英可共用同一单位蓝图,不再需要一人一个独占蓝图。旧存档里没标记的卫兵会退回蓝图匹配。",
+  "_卫兵名": "guardNames = 五条路线各自的三档**军衔**（T1/T2/T3，不含人名）。guardNamePool = 根级共用的人名池。招募时挑一个当前没人用的人名，显示成「军衔·人名」；晋升只换军衔、人名跟一辈子；死了或遣散了那个人名重新可用。精英不走这里，用各自 elites[].name。面板关掉「自定义卫兵名」则整个不生效。",
+  "guardNamePool": [
+    "凯尔顿",
+    "瓦兰",
+    "德拉肯",
+    "科尔维斯",
+    "塞维林",
+    "洛克哈特",
+    "费迪南",
+    "格里默",
+    "哈尔文",
+    "伊斯特万",
+    "尤利安",
+    "卡斯佩",
+    "兰德里",
+    "马库斯",
+    "尼可拉",
+    "奥托里",
+    "帕斯卡",
+    "昆廷",
+    "雷纳德",
+    "索恩",
+    "泰奥多",
+    "乌尔班",
+    "维克托",
+    "沃尔夫",
+    "泽菲林",
+    "阿德里安",
+    "巴尔萨",
+    "凯瑞恩",
+    "达米安",
+    "埃德蒙",
+    "法比安",
+    "戈德里",
+    "赫伯特",
+    "英格拉姆",
+    "约里克",
+    "克莱门",
+    "卢西恩",
+    "梅纳德",
+    "诺伯特",
+    "奥兰多",
+    "佩特罗",
+    "昆图斯",
+    "罗德里",
+    "西格蒙",
+    "托比亚",
+    "乌尔里希",
+    "瓦西里",
+    "温菲尔",
+    "扎迦利",
+    "艾德丽",
+    "贝翠丝",
+    "卡珊德",
+    "多萝西",
+    "埃洛伊",
+    "菲奥娜",
+    "格蕾塔",
+    "海伦娜",
+    "伊莎贝",
+    "茱莉安",
+    "卡特琳",
+    "露西尔",
+    "沈砚舟",
+    "陆决明",
+    "顾长风",
+    "裴照",
+    "萧鹤野",
+    "江浔",
+    "谢无咎",
+    "程知远",
+    "韩烬",
+    "苏问渠",
+    "白洛川",
+    "宋停云",
+    "秦让",
+    "梁孤舟",
+    "崔怀瑾",
+    "叶惊蛰",
+    "唐九思",
+    "钟屿",
+    "冯听澜",
+    "邵岐",
+    "温砚",
+    "许南枝",
+    "简峋",
+    "楼见山",
+    "袁清野",
+    "袁执",
+    "颜昭",
+    "颜临舟",
+    "王砚青",
+    "王决",
+    "李昀",
+    "李霁川",
+    "张野",
+    "张沉舟",
+    "王朔",
+    "李归荑",
+    "张栖迟",
+    "颜北望",
+    "袁停舟"
+  ],
+  "guardNamePool_en": [
+    "Kelton",
+    "Valen",
+    "Draken",
+    "Corvis",
+    "Severin",
+    "Lockhart",
+    "Ferdinand",
+    "Grimmer",
+    "Halwin",
+    "Istvan",
+    "Julian",
+    "Kasper",
+    "Landry",
+    "Marcus",
+    "Nikola",
+    "Ottori",
+    "Pascal",
+    "Quentin",
+    "Renard",
+    "Thorne",
+    "Theodor",
+    "Urban",
+    "Viktor",
+    "Wolf",
+    "Zephyrin",
+    "Adrian",
+    "Balthasar",
+    "Cyrian",
+    "Damian",
+    "Edmund",
+    "Fabian",
+    "Godric",
+    "Herbert",
+    "Ingram",
+    "Yorick",
+    "Clement",
+    "Lucien",
+    "Maynard",
+    "Norbert",
+    "Orlando",
+    "Petro",
+    "Quintus",
+    "Rodric",
+    "Sigmund",
+    "Tobias",
+    "Ulrich",
+    "Vasily",
+    "Winfield",
+    "Zachary",
+    "Adele",
+    "Beatrice",
+    "Cassandra",
+    "Dorothea",
+    "Eloise",
+    "Fiona",
+    "Greta",
+    "Helena",
+    "Isabel",
+    "Juliana",
+    "Katrin",
+    "Lucille",
+    "Shen Yanzhou",
+    "Lu Jueming",
+    "Gu Changfeng",
+    "Pei Zhao",
+    "Xiao Heye",
+    "Jiang Xun",
+    "Xie Wujiu",
+    "Cheng Zhiyuan",
+    "Han Jin",
+    "Su Wenqu",
+    "Bai Luochuan",
+    "Song Tingyun",
+    "Qin Rang",
+    "Liang Guzhou",
+    "Cui Huaijin",
+    "Ye Jingzhe",
+    "Tang Jiusi",
+    "Zhong Yu",
+    "Feng Tinglan",
+    "Shao Qi",
+    "Wen Yan",
+    "Xu Nanzhi",
+    "Jian Xun",
+    "Lou Jianshan",
+    "Yuan Qingye",
+    "Yuan Zhi",
+    "Yan Zhao",
+    "Yan Linzhou",
+    "Wang Yanqing",
+    "Wang Jue",
+    "Li Yun",
+    "Li Jichuan",
+    "Zhang Ye",
+    "Zhang Chenzhou",
+    "Wang Shuo",
+    "Li Guiyi",
+    "Zhang Qichi",
+    "Yan Beiwang",
+    "Yuan Tingzhou"
+  ]
+}

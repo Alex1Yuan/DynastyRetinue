@@ -1,0 +1,15 @@
+# 构建产物
+bin/
+obj/
+*.dll.*.cache
+*.dll.*.cache.pdb
+
+# 发布包
+dist/
+
+# 改配表前的本地回滚点
+src/DynastyRetinue/archetypes.json.pre-*
+src/DynastyRetinue/archetypes.json.bak-*
+
+# 一次性排查脚本
+src/DynastyRetinue/_*.py
