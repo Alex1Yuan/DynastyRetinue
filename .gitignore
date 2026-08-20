@@ -35,3 +35,8 @@ dist/
 src/KgdRetinue/archetypes.json.pre-*
 # src 下划线开头的是一次性排查脚本，不入库
 src/KgdRetinue/_*.py
+
+# 发布物料（截图/录屏，体积大且是二进制）与本机 mod 目录备份
+_press/*
+!_press/*.md
+_backup/

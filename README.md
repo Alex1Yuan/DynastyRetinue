@@ -1,4 +1,4 @@
-# KgdRetinue · 家族卫队
+# DynastyRetinue · 家族卫队
 
 给《Warhammer 40,000: Rogue Trader》加一支**由 AI 操控的私人护卫队**，以及一套**座舰改装**系统。
 
@@ -12,7 +12,7 @@
 
 在**禁用 mod / 卸载 mod / 在 Steam 里关闭 DLC / 更换 Steam 账号**之前：
 
-1. 打开 UMM 面板 → **招募** 区 → 点【**遣散全部**】，确认日志出现「复查在册 0，清理完成」
+1. 打开 UMM 面板 → **面板顶部**（「卫队 在册 N」那一行下面）→ 点【**遣散全部**】，确认日志出现「复查在册 0，清理完成」
 2. 如果换过船模：**舰船** 区 → 点【**还原原版船模**】
 3. **存盘**
 4. 然后才能关 mod
@@ -47,11 +47,27 @@
 
 ## 安装
 
+> **从 0.8x 版升级的话，先做这一步**：旧版的文件夹名是 `KgdRetinue`。
+> 新版叫 `DynastyRetinue`，**解压新版只会多出一个文件夹，不会覆盖旧的** ——
+> UMM 是按「子目录里有没有 `Info.json`」装载的，不认目录名。
+> 两份同时跑 = 两套 Harmony 补丁、两个面板、两份名册认领同一批卫兵。
+> 所以请把旧的 `KgdRetinue` 文件夹**整个删掉或移出 UnityModManager 目录**，
+> 只改名是没用的。（存档里的卫兵不受影响，身份标记跨版本保持不变。）
+
 1. 装 [Unity Mod Manager](https://www.nexusmods.com/site/mods/21) **0.23.0 或更高**，用它安装本 mod
-2. 启动游戏，`Ctrl + F10` 打开 UMM 面板，找到 **Kgd Retinue**
+2. 启动游戏，`Ctrl + F10` 打开 UMM 面板，找到 **Dynasty Retinue & Refit**
 3. 读一个存档（不在存档里时大部分功能不可用，这是正常的）
 
-`archetypes.json` 和 `plans.json` **必须和 DLL 放在一起** —— 它们定义了分型、装备表、加点方案。缺失时 mod 会退回内置默认值并在日志里报错，功能会大幅退化。
+`archetypes.json`、`plans.json`、`l10n_en.json` **三个都必须和 DLL 放在一起**。
+前两个缺失时 mod 会退回内置默认值并在日志里报错，功能大幅退化；
+`l10n_en.json` 缺失是**静默**回落中文 —— 英文玩家的表现是「这 mod 没做英文」，最难自查。
+
+### 关于 DLC
+
+本 mod **不强制要求任何 DLC**，但五个分型里有四个的单位模板来自 **DLC3（Dark Legacy）**。
+没有 DLC3 时会自动退到本体单位蓝图：**职业链、装备、AI、成长全部照常**，
+只是那几个分型的卫兵外观和自带能力会和对应精英相同。面板上会显示一行提示。
+个别精英（圣焰·净罪修女）和一条 T2 职业链（火杖行刑者，DLC1）在缺对应 DLC 时不可用。
 
 ---
 
@@ -113,7 +129,7 @@
 
 ## 出问题时
 
-日志在 `%USERPROFILE%\AppData\LocalLow\Owlcat Games\Warhammer 40000 Rogue Trader\UnityModManager\KgdRetinue\kgd_log.txt`。
+日志在 `%USERPROFILE%\AppData\LocalLow\Owlcat Games\Warhammer 40000 Rogue Trader\UnityModManager\DynastyRetinue\dynasty_log.txt`。
 
 反馈时请带上这个文件 —— 里面记录了每一步的判据和数值，绝大多数问题能直接从日志定位，不需要来回猜。
 

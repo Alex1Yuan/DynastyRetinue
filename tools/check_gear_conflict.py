@@ -23,7 +23,7 @@ import io, json, os, re, subprocess, sys
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 ROOT = r"D:\RT_RetinueMod"
-ARCH = os.path.join(ROOT, r"src\KgdRetinue\archetypes.json")
+ARCH = os.path.join(ROOT, r"src\DynastyRetinue\archetypes.json")
 PY = os.path.join(ROOT, r"ref\bbp\py")
 
 _cache = {}

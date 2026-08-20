@@ -15,7 +15,7 @@
 """
 import hashlib, io, os, sys
 
-SRC = r"D:\RT_RetinueMod\src\KgdRetinue"
+SRC = r"D:\RT_RetinueMod\src\DynastyRetinue"
 OUT = os.path.join(SRC, "BuildManifest.cs")
 FILES = ["archetypes.json", "plans.json", "l10n_en.json"]
 
@@ -45,7 +45,7 @@ def main():
     io.open(OUT, "w", encoding="utf-8", newline="\r\n").write(u'''// ★自动生成，不要手改★ 由 tools/gen_manifest.py 在每次 bump 时重写。
 using System.Collections.Generic;
 
-namespace KgdRetinue
+namespace DynastyRetinue
 {
     /// <summary>
     /// 随包发布的数据文件指纹。<b>只用于诊断，不做任何拦截</b> ——
