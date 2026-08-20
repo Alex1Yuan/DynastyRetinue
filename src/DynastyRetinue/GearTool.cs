@@ -492,7 +492,8 @@ namespace DynastyRetinue
         /// </summary>
         public static bool EliteUnlocked(int archIndex)
         {
-            if (Main.Settings != null && Main.Settings.EliteIgnoreUnlock) return true;
+            // 走方法而不是直接读字段 —— 面板上那个「全部解除」总开关要能管到这里
+            if (Main.Settings != null && Main.Settings.NoEliteUnlockGate()) return true;
             var arch = Archetypes.Get(archIndex);
             if (arch == null || arch.Chain == null || arch.Chain.Length < 3) return false;
             string t3 = arch.Chain[2];
@@ -525,7 +526,7 @@ namespace DynastyRetinue
             if (Main.Settings == null) return null;
             if (!EliteUnlocked(archIndex)) return null;
 
-            if (!Main.Settings.UnlockEliteLimit)
+            if (!Main.Settings.NoEliteCountCap())
             {
                 int cap = Main.Settings.EliteLimitPerArchetype;
                 if (cap < 0) cap = 1;
