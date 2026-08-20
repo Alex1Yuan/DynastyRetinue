@@ -6,6 +6,7 @@ using Kingmaker;
 using Kingmaker.Blueprints;
 using Kingmaker.Blueprints.Root;
 using Kingmaker.EntitySystem.Entities;
+using Kingmaker.UnitLogic.Parts;   // PartHealthExtension.GetHealthOptional
 using Kingmaker.UnitLogic.Levelup;
 using Kingmaker.UnitLogic.Levelup.Components;
 using Kingmaker.UnitLogic.Progression.Paths;
@@ -66,7 +67,88 @@ namespace DynastyRetinue
             // 阿贝拉德先锋（不同等级，看 brain 是否为近战）
             ("Abelard_Vanguard_lv38",   "abdab891e05f4f5b8010cf8c3d11d8c5"),
             ("Abelard_Vanguard_lv45",   "edb5f57636ab4776b4e2215c34772c10"),
+            // ---- 「特殊」分型可行性调研（上限 1）----
+            // 关注点跟前面那些不一样：这里要看的是**体型**和**装备槽**，
+            // 而不只是 brain 配不配。恶魔引擎是大型单位，跟随和走廊过不过得去
+            // 只能实机看；阿斯塔特能不能穿普通护甲取决于种族限制。
+            // ★UlfarCompanion 是对照组，不是候选★ 它是真正的队友蓝图（带剧情标记，
+            // 玩家队里已有 Ulfar 时会撞车）。放进来是为了看"游戏原生支持的阿斯塔特"
+            // 装备槽长什么样，好跟下面那几个敌方 statblock 对比。
+            ("[对照]UlfarCompanion",    "daaf3d6bae644af8a9128ea09044bb99"),
+            ("SM_bolter",               "5270cd1e8a5642bdbb1cc648ace0ba32"),
+            ("SM_axe",                  "4b81380dc07245849efcf0bc6572025e"),
+            ("SM_melta",                "49c31d218b03419a83bd6b6efd733e04"),
+            ("SM_flamer",               "d3c68053ec2447ee8347d60f0ad4c86c"),
+            ("GhostSM_Bolter",          "8ec72d9c0b3b44afb1b7dccef5d9736c"),
+            ("GhostSM_ChainSword",      "ddadb9c79f184708ae8709433872ce72"),
+            ("Helbrute",                "56c0155a432f4e8593bd542ca92c860c"),
+            ("HellBrute2",              "0c20b1b0fc8d4e62bc7603ad5c686141"),
+            ("Defiler_Electro",         "da50661ad29a47318662acc75c3bb7d0"),
+            ("ForgeFiend",              "09ce003f693e4b2d8bc1a3815ad56c46"),
+            // ---- 换精英蓝图用的候选（只看血量档位）----
+            // 现有精英区间 96–282，两个要换：
+            //   亚空间审判者 1040（高出 3.7 倍）→ 想要 200–280
+            //   赏金 · 猎首   96（偏低）        → 想要 ~160
+            // ★血量只能实测★ 蓝图名字和实际数值没有关系，
+            //   Ch05Inquisitor_Psyker_unit 听着跟 DLC3_DL_Inquisitor_Unit 一档，
+            //   实测一个 1040 一个 700。
+            // 灵能 / 亚空间系
+            ("c_Starport_Psyker",       "9a351e6271ef43a197bb9f7ad99f894e"),
+            ("c_BlackshipPsyker_Ghost", "c696080db8ca4cb49d9c1fd577f6a1d2"),
+            ("c_CultistPsyker_Deck",    "5f5b2de325eb4aabb155b8446cd4a1e3"),
+            ("c_AdelinePsyker",         "3c8e861d179949b993fbaff63951eb9a"),
+            ("c_NavigatorOverseer15",   "ba23d404798644518954c4472dbf514a"),
+            ("c_CagedPsyker",           "c79b080d079741528ef77432675441ce"),
+            ("c_BlackshipCrewInquisitor","7dd7034305284d92a31d7059e1d6a376"),
+            // 狙击 / 猎手 / 精英档人形
+            ("c_SicarianRuststalker",   "56818fd6032643a39666f8fdffa2e581"),
+            ("c_DLC3_SicarianRust",     "aa02b505be774674ae924f19dc17e6f6"),
+            ("c_AnverBodyguardHard",    "99c69f2a7807409da5437a7af0ce855c"),
+            ("c_AnverKnivesOutLeader",  "1ff4d703a37546cea819186b524b3254"),
+            ("c_AnverCommanderLeader",  "459af5762ce247d79ea90808809a6d13"),
+            ("c_RadicalBodyguard",      "8f4a5a87fdd74e21b9d9300708fc31e6"),
+            ("c_FootfallBanditBodyguard","3d73c7f40518412ba83a2aeb4b200e00"),
+            ("c_ArenaElite",            "a0f919721f254121a070f948a382942f"),
+            ("c_JungleWorldRebelElite", "91a1777cfad54e95b311be7afb1d08c1"),
+            ("c_Lair3RebelEliteAssault","4f0a3bbd22694f9fb16748257114d6af"),
         };
+
+        /// <summary>
+        /// 从 archetypes.json 现读的候选：五个分型的普通兵 + 十个精英。
+        ///
+        /// ★为什么不写死在上面那张表里★
+        ///   写死就得每次改配置都记得同步，漏了不会有任何提示 ——
+        ///   而这张表存在的意义正是"配之前先看清楚数据"。
+        ///   现读的话，改完 archetypes.json 直接跑探针就是最新的。
+        ///
+        /// ★为什么现在特别需要它★
+        ///   灵能普通兵那个 428 血的坑（Boss 档 statblock 塞进普通兵位置）
+        ///   就是因为选蓝图时没有一张"各分型血量横向对比"的表。
+        ///   现在跑一次就能看到全部十五个的血量并排。
+        /// </summary>
+        private static IEnumerable<(string Name, string Id)> ArchetypeCandidates()
+        {
+            // ★必须遍历 Archetypes.All，不能用 Get(i) 配合 null 判空★
+            //   Get(index) 是**钳制**的：index >= Length 时返回最后一个，永远不为 null。
+            //   写成 for(i=0;;i++){ if(Get(i)==null) break; } 就是个死循环 ——
+            //   实机表现是点了「探测候选单位」游戏直接卡住。
+            ChainProbe.Archetype[] all;
+            try { all = Archetypes.All; } catch { yield break; }
+            if (all == null) yield break;
+
+            foreach (var a in all)
+            {
+                if (a == null) continue;
+
+                if (!string.IsNullOrEmpty(a.UnitId))
+                    yield return ($"◆普通:{a.Name}", a.UnitId);
+
+                if (a.Elites != null)
+                    foreach (var e in a.Elites)
+                        if (e != null && !string.IsNullOrEmpty(e.UnitId))
+                            yield return ($"★精英:{e.Name}", e.UnitId);
+            }
+        }
 
         /// <summary>只探属性，不试 career path。快。</summary>
         public static void ProbeUnits()
@@ -92,12 +174,20 @@ namespace DynastyRetinue
 
                 int rtXp = leader.Progression.Experience;
                 Main.Log("========== 批量探测开始 ==========");
-                Main.Log($"主角经验 = {rtXp}，候选 {Candidates.Length} 个，试 path = {tryPaths}");
+                Main.Log($"主角经验 = {rtXp}，硬编码候选 {Candidates.Length} 个 + archetypes.json 在用蓝图，试 path = {tryPaths}");
 
                 var paths = tryPaths ? CollectCareerPaths() : new List<BlueprintCareerPath>();
                 if (tryPaths) Main.Log($"找到 {paths.Count} 条 career path");
 
-                foreach (var c in Candidates)
+                // 硬编码候选 + 从 archetypes.json 现读的在用蓝图。
+                // 后者去重：连射精英「圣焰」用的就是 Sororitas_Melta，上表里已经有了。
+                var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                var all = new List<(string Name, string Id)>();
+                foreach (var c in Candidates.Concat(ArchetypeCandidates()))
+                    if (seen.Add(c.Id)) all.Add(c);
+                Main.Log($"去重后实际探测 {all.Count} 个");
+
+                foreach (var c in all)
                 {
                     BaseUnitEntity u = null;
                     try
@@ -117,7 +207,10 @@ namespace DynastyRetinue
                             $"    {DescribeBrain(u)}\n" +
                             $"    基础等级={u.Progression?.CharacterLevel} 基础经验={u.Progression?.Experience}\n" +
                             $"    CharacterLevelLimit={(lim == null ? "无" : lim.LevelLimit.ToString())}\n" +
-                            $"    武器={DescribeWeapons(u)}");
+                            $"    武器={DescribeWeapons(u)}\n" +
+                            $"    体型={bp.Size}\n" +
+                            $"    血量={DescribeHp(u)}\n" +
+                            $"    装备槽={DescribeSlots(u)}");
 
                         // path 探测另起全新单位，这里先销毁当前这个再测
                     }
@@ -269,6 +362,64 @@ namespace DynastyRetinue
             }
             catch (Exception e) { return "(brain 读取失败: " + e.GetType().Name + ")"; }
         }
+        /// <summary>
+        /// 这个单位有哪些装备槽、槽里现在是什么。
+        ///
+        /// ★调研「特殊」分型时这一列比 brain 更关键★
+        ///   阿斯塔特能不能穿普通护甲，取决于物品的种族限制（日志里见过
+        ///   「CanBeEquippedBy 拒绝：种族排除」）；恶魔引擎多半根本没有装备槽 ——
+        ///   武器是内建的。两种情况下 GearTool 该做的事完全不同：
+        ///   前者要挑能穿的，后者要整个跳过发装备这一步。
+        ///   槽位为 null 和槽位为空是两回事，所以这里把 null 单独标出来。
+        /// </summary>
+        private static string DescribeSlots(BaseUnitEntity u)
+        {
+            try
+            {
+                var b = u.Body;
+                if (b == null) return "无 Body";
+                var sb = new System.Text.StringBuilder();
+                void One(string label, Kingmaker.Items.Slots.ItemSlot slot)
+                {
+                    if (sb.Length > 0) sb.Append("  ");
+                    if (slot == null) { sb.Append(label).Append("=<无此槽>"); return; }
+                    string it = "空";
+                    try { if (slot.HasItem && slot.Item != null) it = slot.Item.Blueprint != null ? slot.Item.Blueprint.name : "?"; }
+                    catch { it = "?"; }
+                    sb.Append(label).Append('=').Append(it);
+                }
+                One("护甲", b.Armor);
+                One("头", b.Head);
+                One("项链", b.Neck);
+                One("手套", b.Gloves);
+                One("靴", b.Feet);
+                One("肩", b.Shoulders);
+                return sb.ToString();
+            }
+            catch (Exception e) { return "读取失败: " + e.Message; }
+        }
+
+        /// <summary>
+        /// 单位的基础血量。
+        ///
+        /// ★为什么要探这个★
+        ///   实机发现灵能普通兵 lv4 有 428 血，而同级近战 64、军官 48 ——
+        ///   原因是它用的蓝图是 DLC3_DL_Inquisitor_Unit（审判官，Boss 档 statblock），
+        ///   那 400 多血是单位自带的，跟职业链无关。
+        ///   分型选蓝图时必须看这一列，否则"挑了个看着合适的模型"就会顺手
+        ///   把一个 Boss 的血条带进队伍。
+        /// </summary>
+        private static string DescribeHp(BaseUnitEntity u)
+        {
+            try
+            {
+                var h = u.GetHealthOptional();
+                if (h == null) return "无 Health";
+                return h.HitPointsLeft + "/" + h.MaxHitPoints;
+            }
+            catch (Exception e) { return "读取失败: " + e.Message; }
+        }
+
         private static string DescribeWeapons(BaseUnitEntity u)
         {
             try

@@ -62,6 +62,21 @@ namespace DynastyRetinue
 
             /// <summary>精英专用单位蓝图 —— 兼作"是不是这个精英"的持久判据。</summary>
             public string UnitId;
+            /// <summary>
+            /// UnitId 解析不到时依次尝试的备选蓝图（DLC 缺失兜底）。
+            ///
+            /// ★精英原来没有这个，是个真空洞★
+            ///   分型级的 UnitFallback 只在 `_elite == null` 时才生效（RetinueTest.cs 的生成分支），
+            ///   所以精英的 DLC3 蓝图解析不到时会直接掉到面板的全局兜底 ——
+            ///   玩家招到的「赏金 · 猎首」其实是个普通甲板卫兵。功能正常，但看着完全不对。
+            ///   给精英单独配兜底之后，退化的是外观档次而不是身份。
+            ///
+            /// ★身份不受影响★ EliteDefOf 优先读 `kgd.e:` 标记（写在 CustomPetName 里），
+            ///   蓝图匹配只是旧存档的退路。所以兜底出来的精英仍然是那个精英：
+            ///   名字、军衔、职业链、装备、加点方案、brain 覆盖全部照常，
+            ///   蓝图只提供模型、基础属性和自带武器 —— 退化的只有外观档次。
+            /// </summary>
+            public string[] UnitFallback;
             /// <summary>专属名字。旧格式，只在没有 Rank 时用。</summary>
             public string Name;
             /// <summary>英文位阶（archetypes.json 的 "rank_en"）。缺失回落中文。</summary>
