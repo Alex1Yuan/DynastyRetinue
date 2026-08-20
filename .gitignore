@@ -39,9 +39,24 @@ src/KgdRetinue/_*.py
 # 发布物料（截图/录屏，体积大且是二进制）与本机 mod 目录备份
 _press/*
 !_press/*.md
+
+# 宣传片：★源码进版本控制，素材不进★
+#   public/footage 是 122 MB 的切片、out/ 是渲染产物、vo/ 是 TTS 输出，
+#   三者都能从 Film.tsx + 原录屏 + 配音稿重新生成，没有进 git 的理由。
+#   但时间轴本身（哪一秒切哪个镜头、为什么这么切）是真正的工作量。
+!_press/video/
+_press/video/*
+!_press/video/src/
+!_press/video/package.json
+!_press/video/package-lock.json
+!_press/video/tsconfig.json
+!_press/video/remotion.config.ts
 _backup/
 
 # Remotion 的 agent skills（做宣传视频用的第三方工具，跟 mod 本身无关）
 .agents/
 .claude/skills/
 skills-lock.json
+
+# 本机构建路径（每台机器不同，不入库）
+src/DynastyRetinue/local.props

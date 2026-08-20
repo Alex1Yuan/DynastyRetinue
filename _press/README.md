@@ -2,8 +2,8 @@
 
 Dynasty Retinue & Refit（家族卫队 · 座舰改装）1.0 发布相关的全部材料。
 
-代码仓库：https://github.com/Alex1Yuan/DynastyRetinue　（tag `v1.0.0`）
-发布包：`D:\RT_RetinueMod\dist\DynastyRetinue-1.0.0.zip`
+代码仓库：https://github.com/Alex1Yuan/DynastyRetinue　（tag `v1.0.5`）
+发布包：`D:\RT_RetinueMod\dist\DynastyRetinue-1.0.5.zip`
 
 ---
 
@@ -13,69 +13,76 @@ Dynasty Retinue & Refit（家族卫队 · 座舰改装）1.0 发布相关的全�
 |---|---|---|
 | `nexus_zh.md` | Nexus 页面 · 中文 | ✅ 可直接贴 |
 | `nexus_en.md` | Nexus 页面 · 英文 | ✅ 可直接贴 |
-| `bilibili.md` | B站标题 / 简介 / 分镜脚本 | ✅ |
-| `配音稿_TTS.md` | 剪映「文本朗读」用的分段稿 | ✅ |
-| `测试与拍摄清单.md` | 测试流程 + 拍摄清单（已全部跑完）| 存档参考 |
-| `video/` | Remotion 工程，出三个插入片段 | ✅ 可渲染 |
+| `bilibili.md` | B站标题 / 简介 | ✅ |
+| `配音稿_TTS.md` | 配音文稿（已用 edge-tts 生成）| ✅ |
+| `vo/` | 六段中文女声 mp3 + srt | ✅ |
+| `screenshots/` | 11 张，含封面 | ✅ |
+| `video/out/家族卫队_宣传片.mp4` | **成片，3 分 32 秒，可直接投稿** | ✅ |
+| `测试与拍摄清单.md` | 测试流程（已全部跑完）| 存档参考 |
 
 ---
 
-## 素材
-
-三段实机录屏在 `C:\Users\kyua805\Videos\Desktop\`：
-
-| 文件 | 时长 | 内容 |
-|---|---|---|
-| `...09.02.41.01.mp4` | ~2.5 min | 招募界面 / 换船 / 巡洋+大巡 / 改装页面 / 设置 |
-| `...09.38.22.03.mp4` | ~6 min | 地面战斗 / 镜头自由观察 / 卫兵永久阵亡 |
-| `...09.48.38.05.mp4` | ~5 min | 海战 / 五项加成实战 / 撞角 |
-
-还有两张 08:57 的 png 截图（HDR 已关，格式正确）。
-
-**还缺的**：UMM 面板全景（中文），版本号要是 `1.0.0`。
-之前建议排到 1.0 之后拍，现在 1.0 已经出来了，可以补。
-
----
-
-## Remotion 片段
+## 成片
 
 ```bash
 cd D:\RT_RetinueMod\_press\video
-npx remotion studio                    # 实时预览，可在界面里直接改数值
-
-npx remotion render TitleCard   out/TitleCard.mp4
-npx remotion render ShipStats   out/ShipStats.mp4
-
-# ★FeatureBars 背景是透明的，必须带 alpha 渲染★
-npx remotion render FeatureBars out/FeatureBars.mov --codec=prores --prores-profile=4444
+npx remotion render Film out/家族卫队_宣传片.mp4 --codec=h264 --crf=18
 ```
 
-| 片段 | 时长 | 怎么用 |
+结构（1920×1080 / 60fps / 212 秒）：
+
+| 起 | 段 | 画面 |
 |---|---|---|
-| `TitleCard` | 3 秒 | 接在冷开场之后，整屏 |
-| `FeatureBars` | 8 秒 | 四条下三分之一横条，**叠在实机画面上** |
-| `ShipStats` | 8 秒 | 座舰加成对照，整屏或半透明叠在改装画面上 |
+| 0:00 | 冷开场 | 战斗，压屏「这五个人不是我在操作」，无配音 |
+| 0:13 | 标题 | `TitleCard` |
+| 0:17 | 这是什么 | 招募面板 → 战斗 |
+| 0:41 | 镜头不跟随 | 战斗 |
+| 1:07 | 招募与成长 | 招募面板 → 战斗 → 战斗 + `FeatureBars` |
+| 1:43 | 精英与代价 | 灵能精英 → 战斗 |
+| 2:20 | 座舰改装 | 船坞对话框 → 装备界面 → 虚空战 + `ShipStats` |
+| 2:50 | 卸载安全 | `UninstallCard` 三条路径 |
+| 3:26 | 尾板 | `EndCard` |
 
-`ShipStats` 里的数字取自代码默认值（`Main.cs` 的 Settings 字段），
-不是从某次日志抄的。用百分比而非绝对值——护盾上限的基数随船而变。
+### 改内容怎么改
 
----
+- **改词** → 改 `配音稿_TTS.md`，重跑 edge-tts（命令在那个文件末尾），
+  再跑 `py tools/srt2ts.py _press/vo _press/video/src/captions.ts`，最后重渲
+- **换镜头** → 改 `src/Film.tsx` 里的 `<Clip src=... from=... />`
+- **换素材片段** → 用下面「切片」一节的 ffmpeg 命令重切进 `public/footage/`
 
-## 剪辑顺序建议
+### 切片
 
-1. 剪映里排主干：三段录屏 → 按 `bilibili.md` 的分镜切
-2. 贴配音：`配音稿_TTS.md` 分段生成，对轴
-3. 叠 Remotion 片段：`TitleCard` 在 00:15，`FeatureBars` 压在成长那段，
-   `ShipStats` 压在座舰那段
-4. 配字幕：卸载那一段**必须**有字幕，信息量太大
-5. 导出 1080p60
+原录屏在 `C:\Users\kyua805\Videos\Desktop\`，三段共 6.1 GB，**不进 git、不进 public/**。
+`public/footage/` 里是切好的 1080p 小片段。
+
+★UI 段（招募面板、船坞对话框、装备界面）用裁切而不是整帧缩放★
+
+```bash
+# UI：裁到面板本身，0.75× —— 4K 整帧缩到 1080p 是 0.5×，
+#     面板里的说明文字只剩十几像素，B站二压之后必糊
+-vf "crop=2560:1440:640:320,scale=1920:1080"
+
+# 战斗：没有小字，整帧缩放看不出差别
+-vf "scale=1920:1080"
+```
+
+那个裁切框（2560×1440 @ 640,320）招募面板和船坞对话框都罩得住，
+顺带把右上角的 FPS 叠层切掉了。
+
+### 原录屏里可用的区间（已核对）
+
+| 录像 | 区间 | 内容 |
+|---|---|---|
+| A `09.02.41` | 8–24s | 船坞 · 座舰改装对话框 |
+| A | **25–35s** | 招募面板（只有这十秒，之后就关了）|
+| A | 46–100s | 舰船装备界面；**87–96s 的 tooltip 上有「Mod 已计算」** |
+| A | ~165s | UMM 设置面板 |
+| B `09.38.22` | 全程 | 地面战斗。同一个房间同一机位 —— 镜头不跟随本来就是卖点，<br>所以隔两分钟切出来的两块看着一样，成片里靠缓慢推进拉开差别 |
+| C `09.48.38` | 175–215s | 虚空战，大巡洋舰 + 射界。其余是读盘和星图赶路 |
 
 ---
 
 ## 待办
 
-- [ ] 补拍 UMM 面板（中文，版本号 1.0.0）
-- [ ] 从第一段录屏里截「座舰改装前后同机位」两帧，做对比图
-- [ ] 洋红那张截图（不按流程卸载的样子）—— 已有，在对话记录里，需要从游戏重现或找回
-- [ ] Nexus 页面配图：封面 + 6–8 张
-- [ ] 发布：Nexus 建页 + B站投稿
+- [ ] Nexus 建页（贴 `nexus_zh.md` + `nexus_en.md`，配 `screenshots/`）
+- [ ] B站投稿（贴 `bilibili.md`，传成片）
