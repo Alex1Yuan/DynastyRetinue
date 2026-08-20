@@ -227,6 +227,23 @@ namespace DynastyRetinue
         public static bool DevMode { get; private set; }
 
         /// <summary>
+        /// 玩家区里那些「只有开发者才看得到」的额外内容，此刻该不该显示。
+        ///
+        /// = 开发模式开着 **且** 没在预览玩家视角。
+        ///
+        /// ★为什么需要这个而不是直接用 DevMode★ 拍发布用的面板截图时要的是玩家视角，
+        /// 而唯一的办法本来是删掉 dynasty_dev.flag 再重启游戏 —— 一来一回四五分钟，
+        /// 而且拍完还得建回来。有了这个开关，勾一下就能看到玩家看到的样子。
+        ///
+        /// ★开发区本身不用它★ 那一区必须始终可达，否则勾上预览之后就再也关不掉了。
+        /// 预览模式下开发区只保留这一行开关，其余内容折叠。
+        /// </summary>
+        public static bool DevUI
+        {
+            get { return DevMode && (Settings == null || !Settings.PreviewAsPlayer); }
+        }
+
+        /// <summary>
         /// 非空 = 检测到旧版 KgdRetinue 也在运行，值是它的目录。
         /// 面板顶部会常驻显示一条红字，直到玩家把旧目录清掉。
         /// </summary>
@@ -405,7 +422,7 @@ namespace DynastyRetinue
             GUILayout.Label(L.F("<b>分型</b>   当前 = <color=#80ff80>{0}</color>{1}",
                                 _archs[_cur].Name,
                                 // 配表字段说明只对改配表的人有意义，玩家看了只会更困惑
-                                DevMode ? L.T("    <i>（模板 archetypes.json：unit=模型/装备, brain=AI行为, plan=天赋方案, chain=职业链）</i>") : ""));
+                                DevUI ? L.T("    <i>（模板 archetypes.json：unit=模型/装备, brain=AI行为, plan=天赋方案, chain=职业链）</i>") : ""));
             GUILayout.BeginHorizontal();
             for (int i = 0; i < _archs.Length; i++)
             {
@@ -416,7 +433,7 @@ namespace DynastyRetinue
             GUILayout.EndHorizontal();
 
             // 这两个都是「把内容 dump 进日志」的作者工具：玩家不改配表，也看不懂加点方案的内部名。
-            if (DevMode)
+            if (DevUI)
             {
             GUILayout.BeginHorizontal();
             if (GUILayout.Button(L.T("重载模板"), GUILayout.Width(110))) Archetypes.Reload();
@@ -435,13 +452,13 @@ namespace DynastyRetinue
             if (GUILayout.Button(L.T("挂到当前区域"), GUILayout.Width(110)))
             { RecruitEntry.AttachInArea(true); RecruitDialog.InjectInArea(true); }
             // 「列出可挂载 NPC」只往日志里 dump 一串蓝图名，玩家拿到也不知道该干嘛
-            if (DevMode && GUILayout.Button(L.T("列出可挂载 NPC"), GUILayout.Width(130))) RecruitEntry.ListCandidates();
+            if (DevUI && GUILayout.Button(L.T("列出可挂载 NPC"), GUILayout.Width(130))) RecruitEntry.ListCandidates();
             if (GUILayout.Button(L.T("直接开窗"), GUILayout.Width(90))) OpenRecruitUI(null);
             GUILayout.EndHorizontal();
             // 这里原来还有一个【预览新窗口】按钮，调 UI.RetinueUI.Open()。
             // 而【直接开窗】走的 OpenRecruitUI 第一句就是 try { UI.RetinueUI.Open(); return; } ——
             // 也就是说它是【直接开窗】的**真子集**（少了异常兜底）。两个按钮并排只会让人猜区别。
-            if (DevMode)
+            if (DevUI)
                 GUILayout.Label(L.T("<color=#aaaaaa>名单打在 dynasty_log.txt 里。本船的高阶顾问蓝图名是 HighFactotum，音阵大师是 VoxMaster。</color>"));
 
             // ---------- 招募上限：利润因子 ----------
@@ -535,7 +552,9 @@ namespace DynastyRetinue
             Settings.ShipGrandShieldPct = (int)GUILayout.HorizontalSlider(Settings.ShipGrandShieldPct, 0f, 300f, GUILayout.Width(140));
             GUILayout.Label(Settings.ShipGrandShieldPct + "%", GUILayout.Width(46));
             GUILayout.EndHorizontal();
-            GUILayout.Label(L.T("<color=#aaaaaa>只对玩家座舰生效（GetMax 是全舰船共用的，不加判据会把敌舰护盾也翻倍）。</color>"));
+            // 「GetMax 是全舰船共用的，不加判据会把敌舰护盾也翻倍」——那是实现依据，
+            // 玩家只需要知道"敌舰不会跟着变强"这个结论。
+            GUILayout.Label(L.T("<color=#aaaaaa>只对你的座舰生效，敌舰不受影响。</color>"));
             GUILayout.BeginHorizontal();
             GUILayout.Label(L.T("装甲减伤 +%  巡洋"), GUILayout.Width(130));
             Settings.ShipCruiserArmourPct = (int)GUILayout.HorizontalSlider(Settings.ShipCruiserArmourPct, 0f, 200f, GUILayout.Width(140));
@@ -587,11 +606,12 @@ namespace DynastyRetinue
                 L.T("解除船体限制（连未校准的船体也允许更换）　<color=#aaaaaa>挂点位置和缩放只在 Gothic / Dictator 上验过</color>"));
 
             // 这两条解释的是"内部怎么算的"，不是"你该怎么用"，收进开发区
-            if (DevMode)
+            if (DevUI)
             GUILayout.Label(L.T("<color=#aaaaaa>撞角没有可乘的「基础距离」常量（行程来自寻路），"
                               + "所以按「速度 × 百分比」折算成额外格数。机动性不动。</color>"));
-            GUILayout.Label(L.T("<color=#ffaa66>注意：舰船分档是 [JsonProperty]，会写进存档。"
-                              + "它是 vanilla 枚举、不碰存档红线，卸载 mod 后存档照样能开，"
+            // 原文里的「[JsonProperty]」「vanilla 枚举」「存档红线」是写给我自己看的依据。
+            // 玩家要的结论只有两句：存档不会坏，但船会停在你切过去那一档、要还原得手动切回来。
+            GUILayout.Label(L.T("<color=#ffaa66>注意：舰船分档会写进存档。卸载 mod 后存档照样能开，"
                               + "但船会保持在你切过去的那一档 —— 要还原就切回护卫舰再存一次。</color>"));
 
             // ---------- 换船模（真外观）----------
@@ -635,7 +655,7 @@ namespace DynastyRetinue
             //     不是"你该怎么用"。留在玩家区只会让面板显得像调试器。
             // 保留在上面的 ShipMountFallback 开关则相反：它修的是玩家真能看见的 bug
             // （武器在虚空里开火），是个玩法开关。
-            if (DevMode)
+            if (DevUI)
             {
             GUILayout.BeginHorizontal();
             if (GUILayout.Button(L.T("挂点诊断"), GUILayout.Width(110))) ShipSlotProbe.Dump();
@@ -722,9 +742,9 @@ namespace DynastyRetinue
                 if (GUILayout.Toggle(Settings.Language == i, _langs[i], "Button", GUILayout.Width(i == 0 ? 90 : 70))
                     && Settings.Language != i)
                     L.Apply(i);   // 立刻生效：重读译文 + 重命名卫兵 + 刷新已开的窗口
-            GUILayout.Label(L.T("<color=#aaaaaa>默认跟随游戏语言（LocalizationManager.CurrentLocale）。"
-                              + "译文在 l10n_en.json 里，热加载 —— 查不到的条目原样显示中文，不会空白。"
-                              + "卫兵军衔/精英位阶/人名池另有英文版，在 archetypes.json 的 *_en 字段。</color>"));
+            // 原文提到 LocalizationManager.CurrentLocale / l10n_en.json / archetypes.json 的 *_en 字段
+            // —— 全是实现细节，玩家看了只会更困惑。想改译文的人自己会去翻文件。
+            GUILayout.Label(L.T("<color=#aaaaaa>默认跟随游戏语言，也可以在这里手动切，不用重启。</color>"));
             GUILayout.EndHorizontal();
             GUILayout.Space(6);
 
@@ -748,9 +768,17 @@ namespace DynastyRetinue
                               + "★不追溯★ 只影响之后新生成或补发的，已经穿在身上的不会被扒掉。</color>"));
             GUILayout.EndHorizontal();
             Settings.EliteCanBeDowned = GUILayout.Toggle(Settings.EliteCanBeDowned,
-                L.T("精英倒地可救（0 血进昏迷而非死亡）　<color=#aaaaaa>普通卫兵始终永久死亡 —— "
-                  + "那是原版对 ExCompanion 的默认行为（UnitLifeController.CalculateLifeState），不需要我们做任何事</color>"));
+                L.T("精英倒地可救（0 血进昏迷而非死亡）　<color=#aaaaaa>普通卫兵始终永久死亡</color>"));
             GUILayout.Label(L.T("<b>解除限制</b>　<color=#aaaaaa>互不相干的几件事，分开控制</color>"));
+            // ★「全部解除」放在单独一行、且排在最前★
+            // 原来它和另外三个并排，看着像第四个并列项，实际是总开关 ——
+            // 玩家勾了它以后发现精英还是招不了，因为下面那两个精英开关当时没被它管到。
+            // 现在 NoEliteCountCap() / NoEliteUnlockGate() 也认它了，位置和文案一并改清楚。
+            GUILayout.BeginHorizontal();
+            Settings.UnlockTierLimits = GUILayout.Toggle(Settings.UnlockTierLimits,
+                L.T("<b>全部解除</b>"), GUILayout.Width(110));
+            GUILayout.Label(L.T("<color=#aaaaaa>一个顶下面五个。勾上之后下面几项无论是否勾选都已生效。</color>"));
+            GUILayout.EndHorizontal();
             GUILayout.BeginHorizontal();
             Settings.UnlockPfGate   = GUILayout.Toggle(Settings.UnlockPfGate,
                 L.T("解除利润因子限制"), GUILayout.Width(160));
@@ -758,8 +786,6 @@ namespace DynastyRetinue
                 L.T("解除数量上限"), GUILayout.Width(140));
             Settings.UnlockLevelCap = GUILayout.Toggle(Settings.UnlockLevelCap,
                 L.T("解除等级上限"), GUILayout.Width(140));
-            Settings.UnlockTierLimits = GUILayout.Toggle(Settings.UnlockTierLimits,
-                L.T("<b>全部解除</b>"), GUILayout.Width(110));
             GUILayout.EndHorizontal();
             // ★这两个原来在开发区★ 它们只改玩法数值、没有副作用，属于作弊而非测试工具，
             // 玩家该能碰。更实际的理由：招募窗口的灰字提示按名字引用它们
@@ -830,10 +856,39 @@ namespace DynastyRetinue
             GUILayout.EndHorizontal();
             if (!string.IsNullOrEmpty(DiagnosticReport.LastPath))
                 GUILayout.Label(L.F("<color=#7ec8ff>最近导出：{0}</color>", DiagnosticReport.LastPath));
+            // ★详细日志：默认关★ 它控制的全是纯观测（士气变化、帷幕跳过、换脑拦截），
+            // 一条指令一行，一场会话能把日志灌到好几 MB。原来默认开着、而且**没有开关**，
+            // 玩家既关不掉也不知道它存在。现在默认关，报 bug 时再打开重现一次即可。
+            GUILayout.BeginHorizontal();
+            Settings.WatchMomentum = GUILayout.Toggle(Settings.WatchMomentum,
+                L.T("详细日志"), GUILayout.Width(100));
+            GUILayout.Label(L.T("<color=#aaaaaa>记录每次士气变化、帷幕跳过、AI 换脑拦截。"
+                              + "平时不用开（日志会涨很快）；作者让你复现问题时再打开。</color>"));
+            GUILayout.EndHorizontal();
 
             if (DevMode)
             if (Fold(ref Settings.PanelShowDev, "开发 · 测试", "探针 / 诊断 / 热键　★注意：好几个按钮会清空全部卫兵★"))
             {
+            // ★预览玩家视角★ 勾上之后，玩家区里所有「只有开发者看得到」的额外内容
+            // （配表字段说明、dump 按钮、挂点诊断与微调、内部实现的解释……）全部隐藏，
+            // 面板就是玩家装上后看到的样子。拍发布截图用。
+            //
+            // 这个开关**故意不受自己影响** —— 它用的是 DevMode 而不是 DevUI。
+            // 否则勾上之后连它自己都藏起来了，只能去删 flag 重启才能恢复。
+            // 同理，预览期间开发区其余内容整块折叠，只留这一行。
+            GUILayout.BeginHorizontal();
+            Settings.PreviewAsPlayer = GUILayout.Toggle(Settings.PreviewAsPlayer,
+                L.T("预览玩家视角"), GUILayout.Width(130));
+            GUILayout.Label(Settings.PreviewAsPlayer
+                ? "<color=#d0a050>正在以玩家视角显示 —— 开发区其余内容已折叠。拍完截图取消勾选即可恢复。</color>"
+                : "<color=#aaaaaa>勾上后隐藏玩家区里所有开发者专属内容，面板变成玩家看到的样子。不用删 flag 重启。</color>");
+            GUILayout.EndHorizontal();
+            // Fold 自己开合 BeginHorizontal/EndHorizontal，走到这里没有未闭合的 layout group，
+            // 所以直接 return 是安全的（EndVertical 反而会导致 unbalanced）。
+            // 开发区是 OnGUI 的最后一块，提前返回也不会跳过别的内容。
+            if (Settings.PreviewAsPlayer) return;
+            GUILayout.Space(6);
+
             // ---------- 工具 ----------
             GUILayout.Space(8);
             // 从玩家区挪进来的：会整份覆盖 archetypes.json，产物丢掉
@@ -1069,7 +1124,28 @@ namespace DynastyRetinue
         public bool NoPfGate()   { return UnlockTierLimits || UnlockCountCap || UnlockPfGate; }
         /// <summary>等级是否不受阶位限制。</summary>
         public bool NoLevelCap() { return UnlockTierLimits || UnlockLevelCap; }
-        public bool WatchMomentum = true;
+
+        /// <summary>
+        /// 精英数量是否不限。
+        ///
+        /// ★为什么也要走方法★ 这两个精英开关原来是被**直接读**的
+        /// （GearTool.cs 的 495 / 528 行），于是勾了标着「全部解除」的那个总开关之后，
+        /// 精英该解锁的还是没解锁 —— 玩家得再单独去勾「无视 T3 解锁条件」。
+        /// 标签写着"全部"却管不到全部，这是个纯粹的措辞与实现不一致。
+        /// </summary>
+        public bool NoEliteCountCap() { return UnlockTierLimits || UnlockEliteLimit; }
+        /// <summary>是否跳过「该线先练出一名 T3 卫兵」这个精英解锁前提。</summary>
+        public bool NoEliteUnlockGate() { return UnlockTierLimits || EliteIgnoreUnlock; }
+        /// <summary>
+        /// 详细日志开关。控制的全是**纯观测**：士气变化、帷幕跳过、AI 换脑拦截、
+        /// MomentumWatch 每帧轮询。没有任何功能依赖它。
+        ///
+        /// ★默认必须是 false★ 开着的话卫兵每条指令都打一行，实测一场会话能把
+        /// dynasty_log.txt 灌到 5.8 MB；而且 MomentumPatch 每次士气变化都会调
+        /// GuardStates() 遍历全部卫兵拼字符串。发布前它一直是 true 且**没有面板开关**，
+        /// 玩家既关不掉也不知道有这回事。
+        /// </summary>
+        public bool WatchMomentum = false;
         // 创伤三档：0=无创伤  1=跟队恢复（队友被治时卫兵一起治）  2=原版
         public int TraumaMode = 0;
         // 卫兵按 XpRatio 缩放拿到的经验（队友那份一分不动，原版每人各拿一份完整值，不存在稀释）
@@ -1263,6 +1339,13 @@ namespace DynastyRetinue
         /// <summary>精英倒地可救（0 血进昏迷而非死亡）。普通卫兵始终永久死亡 ——
         /// 那是原版对 ExCompanion 的默认行为，不需要我们做任何事。</summary>
         public bool EliteCanBeDowned = true;
+        /// <summary>
+        /// 只在开发模式下有意义：把玩家区里开发者专属的额外内容临时藏起来，
+        /// 面板变成玩家装上后看到的样子。用来拍发布截图，省得删 flag 重启。
+        /// 不进发布包的行为（开发区整体由 dynasty_dev.flag 控制），所以这个值对玩家无影响。
+        /// </summary>
+        public bool PreviewAsPlayer = false;
+
         public KeyCode SpawnKey = KeyCode.F7;
         // 遣散 = 永久销毁，默认不给热键，只能从面板点
         public KeyCode DespawnKey = KeyCode.None;

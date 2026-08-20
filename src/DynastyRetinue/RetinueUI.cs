@@ -160,6 +160,31 @@ namespace DynastyRetinue.UI
         private static TextMeshProUGUI _pfLabel;
         private static int _selected = -1;
 
+        /// <summary>
+        /// 左栏分型按钮的底图，用来切换选中高亮。
+        ///
+        /// ★为什么要存着★ 高亮原来只在 RebuildArchetypes() 里画，而点分型的回调只调
+        /// RebuildUnits()（重建右栏）—— 于是左栏的高亮要等到下一次完整 Refresh()
+        /// 才更新，表现就是"点了左边没反应，得先点一次右边的招募才亮"。
+        /// 直接在回调里重建左栏也能修，但那会销毁重建一整列按钮：闪一下，
+        /// 而且滚动位置会被顶回顶部。存着底图只改颜色，两者都没有。
+        /// </summary>
+        private static readonly List<Image> _archBg = new List<Image>();
+        private static Color _archBgNormal;
+
+        /// <summary>按 _selected 重涂左栏高亮。不重建任何 GameObject。</summary>
+        private static void PaintArchSelection()
+        {
+            for (int i = 0; i < _archBg.Count; i++)
+            {
+                Image bg = _archBg[i];
+                if (bg == null) continue;   // 窗口关过又开，旧对象已销毁
+                bg.color = (i == _selected)
+                    ? new Color(VanillaSkin.Gold.r, VanillaSkin.Gold.g, VanillaSkin.Gold.b, 0.28f)
+                    : _archBgNormal;
+            }
+        }
+
         public static bool IsOpen { get { return _root != null; } }
 
         // ------------------------------------------------------------- 生命周期
@@ -400,20 +425,20 @@ namespace DynastyRetinue.UI
                 return;
             }
 
+            _archBg.Clear();
             for (int i = 0; i < all.Length; i++)
             {
                 int idx = i;   // 闭包捕获
                 ChainProbe.Archetype a = all[i];
-                Button b = MakeButton(_archContent, a.Name, 0f, 42f, () => { _selected = idx; RebuildUnits(); });
+                Button b = MakeButton(_archContent, a.Name, 0f, 42f,
+                                      () => { _selected = idx; PaintArchSelection(); RebuildUnits(); });
                 LayoutElement le = b.gameObject.AddComponent<LayoutElement>();
                 le.minHeight = 42f; le.preferredHeight = 42f;
-                if (idx == _selected)
-                {
-                    Image bg = b.GetComponent<Image>();
-                    if (bg != null) bg.color = new Color(VanillaSkin.Gold.r, VanillaSkin.Gold.g,
-                                                         VanillaSkin.Gold.b, 0.28f);
-                }
+                Image bg = b.GetComponent<Image>();
+                if (i == 0 && bg != null) _archBgNormal = bg.color;   // 未选中时的原色，用第一个当样本
+                _archBg.Add(bg);
             }
+            PaintArchSelection();
             ReapplyLayer();   // 新建的子物体停在 layer 0，UICamera 只收 layer 5
         }
 
