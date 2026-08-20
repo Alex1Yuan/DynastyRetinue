@@ -355,12 +355,18 @@ namespace DynastyRetinue
                     GUILayout.Label(_w.ToString());
                 }
             }
-            GUILayout.Label(L.F("<b>卫队</b>   在册 {0}   {1}", RetinueRegistry.Count, RetinueRegistry.Describe()));
+            // ★一帧只扫一次★ 这一段原来连着调 4 次 RetinueRegistry.Count/All()，
+            // 而每次都是「遍历所有 State 里的全部实体 + 逐个 IsGuard」。
+            // IMGUI 一帧至少触发两轮事件（Layout / Repaint），于是面板开着的时候
+            // 每帧要全量扫八九遍。不是卡顿的主因（5 个卫兵的量级远不够），但纯属白费。
+            var _guards = RetinueRegistry.All();
+            int _cnt = _guards.Count;
+            GUILayout.Label(L.F("<b>卫队</b>   在册 {0}   {1}", _cnt, RetinueRegistry.Describe(_guards)));
             GUILayout.BeginHorizontal();
             if (GUILayout.Button(L.T("生成一个"), GUILayout.Width(110))) RetinueTest.SpawnOne();
             if (GUILayout.Button(L.T("Dump 状态"), GUILayout.Width(110))) RetinueTest.DumpState();
             DangerButton(ref _armDismiss, L.T("遣散全部"), 110f,
-                         RetinueRegistry.Count, () => RetinueRegistry.DismissAll());
+                         _cnt, () => RetinueRegistry.DismissAll());
             GUILayout.EndHorizontal();
             // ★ DLC 缺失提示 ★ 五个分型里四个的单位蓝图来自 DLC3。没启用 DLC3 时会退到
             // 本体兜底单位（见 ChainProbe.UnitFallback），卫兵功能完全正常，但外观和自带

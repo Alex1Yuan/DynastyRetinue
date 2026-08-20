@@ -40,13 +40,20 @@ namespace DynastyRetinue
         public const string GuardTag = "kgd.guard";
 
         /// <summary>
-        /// 墓碑前缀 —— 必须是 <see cref="GuardTag"/> 的子前缀，理由见 All(bool)。
-        /// 曾经是 "kgd_dead_"（下划线），和 GuardTag（点号）不同族，
-        /// 于是销毁失败的实体会从名册里彻底消失，且 DismissAll 的复查还会照常
-        /// 打印「复查在册 0，清理完成」—— 一句假的验收日志，而 README 恰恰要玩家
-        /// 拿它当「可以安全关 mod 了」的依据。
+        /// 墓碑前缀。★必须不是 GuardTag 的子前缀★
+        ///
+        /// v0.83.0 我把它改成过 GuardTag + ".dead."，想让销毁失败的孤儿仍然能被
+        /// All()/DismissAll 收走。副作用是致命的：IsGuard 靠 StartsWith(GuardTag) 判断，
+        /// 于是阵亡卫兵在「摘牌」到「两帧后销毁」这段窗口里**仍然是卫兵**，
+        /// 而全 mod 有 15 处 IsGuard 门控（CameraFollowPatch / VeilPatch / MomentumPatch /
+        /// XpPatch / DeathRules / GuardKillCreditPatch …）会继续每帧去碰一个正在销毁的实体。
+        /// 实机表现：一名卫兵阵亡后整个游戏进入慢动作，回合再也推不下去，且不产生任何日志。
+        ///
+        /// 所以前缀退回「与 GuardTag 不同族」—— 摘牌即刻生效，原语义不变。
+        /// 孤儿仍然清得掉：All(true) 显式把这一族也扫进来（见下），
+        /// 不再依赖「墓碑也算卫兵」这个危险的等价关系。
         /// </summary>
-        public const string DeadTag = GuardTag + ".dead.";
+        public const string DeadTag = "kgd.dead.";
 
         // 招募过程中 CombatGroup.Id 还没设上（或被 SetState 覆写），IsGuard 认不出来，
         // 而 RestoreSharedInventory 恰恰在那个窗口里触发。用临时白名单兜住这段。
@@ -231,13 +238,12 @@ namespace DynastyRetinue
         /// <paramref name="includeDead"/> = 是否把「已摘牌但还没销毁成功」的墓碑实体也算进来。
         ///
         /// ★为什么要有这个开关★ RemoveOne 是「先摘身份标记、再延迟两帧销毁」。
-        /// 摘牌是为了让名额当场释放（不用等销毁完成），所以日常查询必须排除它们。
+        /// 摘牌是为了让名额当场释放，也为了让 15 处 IsGuard 门控立刻停止处理这个实体
+        /// （不摘的话它们会每帧去碰一个正在销毁的对象 —— v0.83.0 实测会让整个游戏进入慢动作）。
         /// 但销毁那一步是可能失败的（EntityDestroyer.Destroy 抛异常、或 Deferred 的 Runner
         /// 在那两帧里被关掉），失败时只打一行日志、不回滚标记。
-        /// 如果墓碑串跟 GuardTag 不同族，这个实体就此从 All() 里彻底消失，
-        /// 而它仍然实实在在躺在 party.json 里 —— 遣散清不掉、玩家也看不见，
-        /// 万一它引用的是 DLC 蓝图，日后关掉 DLC 就是存档永久打不开。
-        /// 所以墓碑用 GuardTag 的子前缀，让它**仍然是**卫兵，只是默认不出现在名册里。
+        /// 那样的孤儿仍然躺在 party.json 里，却不再是「卫兵」——
+        /// 所以这里**显式**把墓碑一族也扫进来，而不是靠让墓碑继续算卫兵。
         /// </summary>
         public static List<BaseUnitEntity> All(bool includeDead)
         {
@@ -253,8 +259,8 @@ namespace DynastyRetinue
                 foreach (var e in snapshot)
                 {
                     var b = e as BaseUnitEntity;
-                    if (b == null || !IsGuard(b)) continue;
-                    if (!includeDead && IsTombstoned(b)) continue;
+                    if (b == null) continue;
+                    if (!IsGuard(b) && !(includeDead && IsTombstoned(b))) continue;
                     string uid;
                     try { uid = b.UniqueId; } catch { continue; }
                     if (uid != null && seen.Add(uid)) result.Add(b);
@@ -314,8 +320,9 @@ namespace DynastyRetinue
             if (g == null) return;
             try
             {
-                // 先摘掉身份标记 —— 这一步立刻生效，名额当场释放，
-                // 不用等销毁完成（销毁是延迟的）。
+                // 先摘掉身份标记 —— 这一步必须**立刻**做：名额当场释放，
+                // 而且全 mod 那 15 处 IsGuard 门控（镜头/帷幕/士气/经验/击杀归属…）
+                // 从这一刻起不再处理它。摘晚了会每帧去碰一个正在死的实体。
                 try { var cg = g.CombatGroup; if (cg != null) cg.Id = DeadTag + Guid.NewGuid().ToString("N").Substring(0, 8); }
                 catch { }
                 try { g.Remove<UnitPartFollowUnit>(); } catch { }
@@ -323,6 +330,27 @@ namespace DynastyRetinue
             }
             catch (Exception e) { Main.LogError("[名册] 拆解失败: " + e.Message); }
 
+            // ★战斗中不销毁，只排队★
+            // 两帧后就把实体销毁的话，尸体会当着玩家的面凭空消失 —— 原版所有单位
+            // 阵亡后都会把尸体留在地上，唯独卫兵"啪"地不见了，看起来就是个 bug。
+            // 摘牌已经把它踢出名册和所有门控了，尸体留到战斗结束毫无代价。
+            bool inCombat = false;
+            try { inCombat = Game.Instance != null && Game.Instance.Player != null && Game.Instance.Player.IsInCombat; }
+            catch { }
+
+            if (inCombat)
+            {
+                lock (_pending) _pending.Add(g);
+                return;
+            }
+            DestroyNow(g);
+        }
+
+        /// <summary>战斗中阵亡、等着战斗结束再销毁的尸体。</summary>
+        private static readonly List<BaseUnitEntity> _pending = new List<BaseUnitEntity>();
+
+        private static void DestroyNow(BaseUnitEntity g)
+        {
             Deferred.NextFrames(2, () =>
             {
                 try
@@ -335,8 +363,29 @@ namespace DynastyRetinue
             });
         }
 
+        /// <summary>
+        /// 战斗结束时把排队的尸体收掉。由 CombatWatch 在检测到「战斗结束」那一帧调用。
+        /// 玩家中途退出游戏的话这些尸体会留在存档里 —— 它们带 DeadTag，
+        /// All(true) 扫得到，【遣散全部】清得掉，不会变成永久孤儿。
+        /// </summary>
+        public static void FlushPendingDestroy()
+        {
+            List<BaseUnitEntity> copy;
+            lock (_pending)
+            {
+                if (_pending.Count == 0) return;
+                copy = new List<BaseUnitEntity>(_pending);
+                _pending.Clear();
+            }
+            Main.Log("[名册] 战斗结束，清理 " + copy.Count + " 具阵亡卫兵的遗体。");
+            foreach (var g in copy) { try { DestroyNow(g); } catch { } }
+        }
+
         public static int DismissAll()
         {
+            // 先把排队的遗体收掉，免得它们既不在名册里、又还没被销毁 ——
+            // 玩家点遣散的场景通常就是"准备关 mod 了"，这时候不能留尾巴。
+            try { FlushPendingDestroy(); } catch { }
             // ★包含墓碑实体★ 之前销毁失败、只摘了牌的那些也要一起收 ——
             // 它们不在名册里、玩家看不见，但确确实实在 party.json 里。
             // 这里是玩家清理存档的唯一出口，漏掉它们就等于永远清不掉。
@@ -380,9 +429,15 @@ namespace DynastyRetinue
             return attempted - left;
         }
         /// <summary>面板/日志用的一行摘要。</summary>
-        public static string Describe()
+        public static string Describe() { return Describe(All()); }
+
+        /// <summary>
+        /// 传入已有快照的版本 —— 面板一帧里要连着用四次名册，
+        /// 每次都全量扫一遍所有 State 的实体纯属白费（IMGUI 一帧还触发两轮事件）。
+        /// </summary>
+        public static string Describe(List<BaseUnitEntity> list)
         {
-            var list = All();
+            if (list == null) list = All();
             // ★这几个串会进玩家面板第一屏★ Main.cs 那行是 L.F("...{1}", ..., Describe())，
             // 模板过了本地化、塞进去的内容没过 —— 于是英文玩家一开面板就看到
             // "lv12 hp40/40 未标记"。这一行在所有折叠块之外，常驻可见。

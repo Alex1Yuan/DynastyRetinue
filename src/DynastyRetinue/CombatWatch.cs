@@ -104,7 +104,13 @@ namespace DynastyRetinue
             catch { return; }
 
             if (now && !_wasInCombat) { _rows.Clear(); _lastTurnKey = null; }      // 开打：清空上一场
-            else if (!now && _wasInCombat) { Dump("战斗结束"); }
+            else if (!now && _wasInCombat)
+            {
+                Dump("战斗结束");
+                // 战斗中阵亡的卫兵只摘了牌、尸体留在地上（见 RetinueRegistry.RemoveOne），
+                // 到这里才真正销毁 —— 战斗结束是唯一不会让玩家看到"尸体凭空消失"的时机。
+                try { RetinueRegistry.FlushPendingDestroy(); } catch { }
+            }
             _wasInCombat = now;
 
             if (now) TrackTurn();

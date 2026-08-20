@@ -56,6 +56,14 @@ namespace DynastyRetinue
             if (floorR > 4f) floorR = 4f;
 
             if (!Main.Settings.XpCatchUp) return floorR;
+            // ★招募时的初始对齐不吃追赶倍率★
+            // 追赶制是给战斗中的**增量**经验用的：落后越多补得越快。
+            // 但新卫兵经验是 0、落后到顶，而初始对齐会把主角的**全部**经验
+            // 一次性灌进来 —— 走的还是同一条 GainExperience。
+            // 结果是 85799 × 2.5 = 214497，卫兵一出生就比主角高十几级
+            // （实测主角 lv42 / 卫兵 lv55），跟注释里"永远不会反超主角"正好相反。
+            // 加追赶制那版漏了这条路径。初始对齐用地板倍率，净结果回到 0.8 × 主角经验。
+            if (RetinueTest.AligningExperience) return floorR;
 
             try
             {

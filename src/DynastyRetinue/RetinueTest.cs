@@ -33,6 +33,12 @@ namespace DynastyRetinue
         /// </summary>
         public static bool DlcFallbackUsed;
 
+        /// <summary>
+        /// 正在做「招募时的初始经验对齐」。XpPatch 据此改用地板倍率，
+        /// 不让追赶倍率把主角的全部经验乘上去（见 XpPatch.RatioFor）。
+        /// </summary>
+        public static bool AligningExperience;
+
         public static int SpawnedCount { get { return RetinueRegistry.Count; } }
 
         public static void SpawnOne() { SpawnOne(-1, null, false); }
@@ -692,7 +698,10 @@ namespace DynastyRetinue
                 int rtXp = leader.Progression.Experience;
                 int before = guard.Progression.Experience;
 
-                guard.Progression.AdvanceExperienceTo(rtXp, false);
+                // 见 XpPatch.RatioFor：这一段推进要按地板倍率算，不能吃追赶倍率
+                AligningExperience = true;
+                try { guard.Progression.AdvanceExperienceTo(rtXp, false); }
+                finally { AligningExperience = false; }
 
                 float ratio;
                 if (!float.TryParse(Main.Settings.XpRatio, out ratio)) ratio = 0.8f;
