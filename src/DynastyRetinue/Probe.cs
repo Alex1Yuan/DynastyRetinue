@@ -192,7 +192,20 @@ namespace DynastyRetinue
             Run(true);
         }
 
-        private static void Run(bool tryPaths)
+        /// <summary>
+        /// 只对名字匹配 <paramref name="filter"/> 的候选跑职业链探测。
+        ///
+        /// ★为什么需要窄版★
+        ///   职业链探测是**真的把单位一级级推上去**。在 55 级存档上，
+        ///   73 个候选 × 9 条路径，每条都要推几十级 —— 游戏会卡好几分钟。
+        ///   而我们要的答案只关乎那几个阿斯塔特蓝图。
+        /// </summary>
+        public static void ProbePathsFiltered(string filter)
+        {
+            Run(true, filter);
+        }
+
+        private static void Run(bool tryPaths, string filter = null)
         {
             try
             {
@@ -216,6 +229,13 @@ namespace DynastyRetinue
                 foreach (var c in Candidates.Concat(ArchetypeCandidates()))
                     if (seen.Add(c.Id)) all.Add(c);
                 Main.Log($"去重后实际探测 {all.Count} 个");
+
+                if (!string.IsNullOrEmpty(filter))
+                {
+                    var before = all.Count;
+                    all = all.Where(x => x.Name.IndexOf(filter, StringComparison.OrdinalIgnoreCase) >= 0).ToList();
+                    Main.Log($"按「{filter}」过滤：{before} -> {all.Count} 个");
+                }
 
                 foreach (var c in all)
                 {

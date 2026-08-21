@@ -1093,6 +1093,10 @@ namespace DynastyRetinue
             if (GUILayout.Button("探测候选单位", GUILayout.Width(120))) Probe.ProbeUnits();
             // 开发区的按钮不进本地化表 —— 这里的文案只给作者看
             if (GUILayout.Button("字体覆盖检查", GUILayout.Width(120))) FontCheck.Run();
+            // 职业链探测是真把单位一级级推上去 —— 55 级存档上全量跑会卡几分钟。
+            // 用上面那个关键词框过滤，只测关心的那几个。
+            if (GUILayout.Button("职业链(按关键词)", GUILayout.Width(130)))
+                Probe.ProbePathsFiltered(Settings.InspectFilter);
             GUILayout.EndHorizontal();
             // 区域单位一览：走到目标面前点一下，游戏自己告诉你它的蓝图名。
             // 比按中文译名反查靠谱 —— 译名和蓝图名经常毫无关系。

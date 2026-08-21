@@ -41,6 +41,17 @@ namespace DynastyRetinue
         /// <summary>两次传送之间的最小间隔，防止在某个死角反复瞬移。</summary>
         private const float CooldownSeconds = 8f;
 
+        /// <summary>
+        /// ★多久真正检查一次★ 绝不能每帧跑。
+        ///
+        /// RetinueRegistry.All() 内部对每个场景状态做 AllEntityData.ToList() ——
+        /// 那是把**区域里所有实体**复制一份。实测一个普通区域有 60 个单位，
+        /// 每帧跑就是每秒六十次全量拷贝加分配，纯粹给 GC 添堵。
+        /// 而"卡住"这件事本身以秒计（阈值 6 秒），1 秒一次的精度绰绰有余。
+        /// </summary>
+        private const float ScanInterval = 1.0f;
+        private static float _sinceScan;
+
         private sealed class Row
         {
             public Vector3 Last;
@@ -51,12 +62,22 @@ namespace DynastyRetinue
         private static readonly Dictionary<string, Row> _rows =
             new Dictionary<string, Row>(StringComparer.Ordinal);
 
-        /// <summary>由 Main.OnUpdate 每帧调用。没有卫兵时几乎零开销。</summary>
+        /// <summary>
+        /// 由 Main.OnUpdate 每帧调用，但**每秒才真正扫一次**（见 ScanInterval）。
+        /// 帧上的开销只有一次浮点累加和一次比较。
+        /// </summary>
         public static void Tick(float dt)
         {
             try
             {
                 if (!Main.Enabled || Main.Settings == null || !Main.Settings.StuckRescue) return;
+
+                // 节流放在最前面：不到间隔就什么都不做，连 Game.Instance 都不碰
+                _sinceScan += dt;
+                if (_sinceScan < ScanInterval) return;
+                dt = _sinceScan;          // 用真实经过的时间计时，不是单帧的 dt
+                _sinceScan = 0f;
+
                 var game = Game.Instance;
                 if (game == null || game.Player == null) return;
 
