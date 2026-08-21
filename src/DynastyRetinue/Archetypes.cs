@@ -229,6 +229,7 @@ namespace DynastyRetinue
                             {
                                 UnitId   = (string)e["unit"],
                                 UnitFallback = ReadGuidList(e["unitFallback"]),
+                                DualMelee    = e["dualMelee"] != null && (bool)e["dualMelee"],
                                 BrainId  = (string)e["brain"],   // 可选：不填沿用分型的
                                 Name     = (string)e["name"],
                                 Rank     = (string)e["rank"],

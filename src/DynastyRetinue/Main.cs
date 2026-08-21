@@ -292,6 +292,7 @@ namespace DynastyRetinue
                 RetinueLifecycle.TickPending();
                 CombatWatch.Tick();          // 一帧一个 bool 比较，战斗结束那一帧才干活
                 if (Settings.WatchMomentum) MomentumWatch.Tick();
+                StuckWatch.Tick(dt);         // 卡住检测：战斗中直接跳过，无卫兵时几乎零开销
 
                 // 日志攒在内存里，靠这里定期落盘。没有这一下，安静时段最后那几行
                 // 会一直卡在缓冲区里，玩家去翻日志看不到最新的内容。
@@ -1367,6 +1368,13 @@ namespace DynastyRetinue
         /// 玩家既关不掉也不知道有这回事。
         /// </summary>
         public bool WatchMomentum = false;
+
+        /// <summary>
+        /// 卫兵卡住时自动挪回队长身边。
+        /// 主要是给传奇档的恶魔引擎兜底 —— Gargantuan/Huge 体型过不了窄走廊，
+        /// 没这个的话卫兵会永远留在上一个房间。战斗中一律不触发。
+        /// </summary>
+        public bool StuckRescue = true;
 
         /// <summary>开发区「区域单位一览」的关键词。纯 UI 状态，存起来免得每次重打。</summary>
         public string InspectFilter = "";
