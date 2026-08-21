@@ -292,6 +292,7 @@ namespace DynastyRetinue
                 RetinueLifecycle.TickPending();
                 CombatWatch.Tick();          // 一帧一个 bool 比较，战斗结束那一帧才干活
                 if (Settings.WatchMomentum) MomentumWatch.Tick();
+                StuckWatch.Tick(dt);         // 卡住检测：战斗中直接跳过，无卫兵时几乎零开销
 
                 // 日志攒在内存里，靠这里定期落盘。没有这一下，安静时段最后那几行
                 // 会一直卡在缓冲区里，玩家去翻日志看不到最新的内容。
@@ -1092,6 +1093,36 @@ namespace DynastyRetinue
             if (GUILayout.Button("探测候选单位", GUILayout.Width(120))) Probe.ProbeUnits();
             // 开发区的按钮不进本地化表 —— 这里的文案只给作者看
             if (GUILayout.Button("字体覆盖检查", GUILayout.Width(120))) FontCheck.Run();
+            // 职业链探测是真把单位一级级推上去 —— 55 级存档上全量跑会卡几分钟。
+            // 用上面那个关键词框过滤，只测关心的那几个。
+            if (GUILayout.Button("职业链(按关键词)", GUILayout.Width(130)))
+                Probe.ProbePathsFiltered(Settings.InspectFilter);
+            GUILayout.EndHorizontal();
+            // 区域单位一览：走到目标面前点一下，游戏自己告诉你它的蓝图名。
+            // 比按中文译名反查靠谱 —— 译名和蓝图名经常毫无关系。
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("区域单位一览　关键词", GUILayout.Width(150));
+            Settings.InspectFilter = GUILayout.TextField(Settings.InspectFilter ?? "", GUILayout.Width(160));
+            if (GUILayout.Button("列出", GUILayout.Width(80))) UnitInspect.Run(Settings.InspectFilter);
+            // 全库按显示名搜：不受"必须在那个区域"限制，代价是要加载 3069 个蓝图
+            if (GUILayout.Button("全库搜显示名", GUILayout.Width(110)))
+                UnitInspect.SearchByDisplayName(Settings.InspectFilter);
+            GUILayout.EndHorizontal();
+
+            // ★一键全测★ 每次改探针都要你重启一次游戏才能生效，
+            // 而一次会话里逐个找按钮点又容易漏。串成一次点击，跑完一起看日志。
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("一键全测（单位+装备+职业链+字体）", GUILayout.Width(280)))
+            {
+                Log("########## 一键全测开始 ##########");
+                try { Probe.ProbeUnitsAndPaths(); } catch (Exception e) { LogError("单位/职业链: " + e.Message); }
+                try { ItemProbe.Run(); }            catch (Exception e) { LogError("装备: " + e.Message); }
+                try { FontCheck.Run(); }            catch (Exception e) { LogError("字体: " + e.Message); }
+                Log("########## 一键全测结束 ##########");
+                FlushLog(true);
+            }
+            GUILayout.Label("<color=#aaaaaa>会跑几十秒，期间游戏卡住是正常的。结果全在 dynasty_log.txt</color>");
+            GUILayout.Label("<color=#aaaaaa>留空=列全部；中英文都能匹配（蓝图名 + 游戏内显示名）</color>");
             if (GUILayout.Button("批量试算方案", GUILayout.Width(120))) PlanProbe.Run();
             if (GUILayout.Button("导出天赋名录", GUILayout.Width(120))) ItemTool.ExportFeatures();
             GUILayout.EndHorizontal();
@@ -1341,6 +1372,16 @@ namespace DynastyRetinue
         /// 玩家既关不掉也不知道有这回事。
         /// </summary>
         public bool WatchMomentum = false;
+
+        /// <summary>
+        /// 卫兵卡住时自动挪回队长身边。
+        /// 主要是给传奇档的恶魔引擎兜底 —— Gargantuan/Huge 体型过不了窄走廊，
+        /// 没这个的话卫兵会永远留在上一个房间。战斗中一律不触发。
+        /// </summary>
+        public bool StuckRescue = true;
+
+        /// <summary>开发区「区域单位一览」的关键词。纯 UI 状态，存起来免得每次重打。</summary>
+        public string InspectFilter = "";
         // 创伤三档：0=无创伤  1=跟队恢复（队友被治时卫兵一起治）  2=原版
         public int TraumaMode = 0;
         // 卫兵按 XpRatio 缩放拿到的经验（队友那份一分不动，原版每人各拿一份完整值，不存在稀释）

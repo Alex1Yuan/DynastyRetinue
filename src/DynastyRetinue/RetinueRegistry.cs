@@ -217,6 +217,9 @@ namespace DynastyRetinue
         /// 同时扫 CrossSceneState 和当前区域的 MainState。
         /// 前者是新方案的落点，后者兜底旧存档里遗留的卫兵（v0.0.x 时代生成的）。
         /// </summary>
+        /// <summary>开放给 UnitInspect 用：它要扫的是**全部**单位，不只是卫兵。</summary>
+        internal static IEnumerable<SceneEntitiesState> AllStates() { return States(); }
+
         private static IEnumerable<SceneEntitiesState> States()
         {
             var g = Game.Instance;

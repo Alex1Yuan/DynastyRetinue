@@ -225,9 +225,21 @@ namespace DynastyRetinue
 
         // ------------------------------------------------------------ 工具
 
+        /// <summary>
+        /// ★必须是 O(1)★ 这个方法挂在 HandleUnitCommandDidStart 上 ——
+        /// 战斗中**每个单位的每条指令**都会调它，包括所有敌人的。
+        ///
+        /// 原来的写法是 `foreach (var g in RetinueRegistry.All())` 做引用比对，
+        /// 而 All() 内部对每个场景状态做 AllEntityData.ToList()，
+        /// 那是把区域里所有实体（实测一个普通区域 60 个）拷一份。
+        /// 于是一场战斗里每条指令都触发一次全量拷贝，纯给 GC 添堵。
+        ///
+        /// IsGuard 只读一次 CombatGroup.Id 做前缀比较，语义完全等价 ——
+        /// All() 本来就是靠 IsGuard 筛出来的。
+        /// </summary>
         private static bool IsOurs(BaseUnitEntity u)
         {
-            try { foreach (var g in RetinueRegistry.All()) if (ReferenceEquals(g, u)) return true; }
+            try { return RetinueRegistry.IsGuard(u); }
             catch { }
             return false;
         }

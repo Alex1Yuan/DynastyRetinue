@@ -53,6 +53,21 @@ namespace DynastyRetinue.UI
         public static Sprite ButtonSprite { get { EnsureSprites(); return _button; } }
         public static Sprite RowSprite { get { EnsureSprites(); return _row; } }
 
+        /// <summary>
+        /// 挑字体时用来打分的探针串 —— 全是 mod 界面上真会出现的字。
+        ///
+        /// ★为什么需要打分，不能拿到第一个就用★
+        ///   这游戏同时加载着四十来个 TMP 字体，其中**只有五到八个有中文**，
+        ///   其余是拉丁文/数字/图标字体。原来的写法是 FirstOrDefault ——
+        ///   摘到哪个纯看遍历顺序，而那个顺序因机器、因存档、因当前场景而异。
+        ///   摘中没有中文的那一个，招募窗口和船坞窗口就是满屏白方块，
+        ///   而作者本机一直摘得到对的那个，所以永远复现不出来。
+        ///   有玩家反馈"看不到字"、附带的截图正是这种：按钮上的字正常
+        ///   （那几个字恰好在字体里），标题和条目全是方块。
+        /// </summary>
+        private const string FontProbe =
+            "船坞座舰改装招募卫队分型近战狙击连射灵能军官废料利润因子解锁名额精英已是原样关闭还原默认设置巡洋舰护卫舰帝国级";
+
         private static void EnsureFont()
         {
             if (_fontTried) return;
@@ -61,19 +76,92 @@ namespace DynastyRetinue.UI
             {
                 // 只认场景里活着的 TMP 文本 —— FindObjectsOfTypeAll 会返回未实例化的 prefab，
                 // 它们的材质可能没加载，用了就是粉方块。
-                TextMeshProUGUI live = Resources.FindObjectsOfTypeAll<TextMeshProUGUI>()
-                    .FirstOrDefault(t => t != null && t.font != null
-                                      && t.fontSharedMaterial != null
-                                      && t.gameObject.scene.IsValid());
-                if (live != null) { _font = live.font; _fontMat = live.fontSharedMaterial; return; }
+                var live = Resources.FindObjectsOfTypeAll<TextMeshProUGUI>()
+                    .Where(t => t != null && t.font != null
+                             && t.fontSharedMaterial != null
+                             && t.gameObject.scene.IsValid());
 
+                TMP_FontAsset bestFont = null; Material bestMat = null; int bestScore = -1;
+                var scored = new Dictionary<int, int>();   // fontAsset InstanceID -> 覆盖数
+
+                foreach (var t in live)
+                {
+                    int id = t.font.GetInstanceID();
+                    int score;
+                    if (!scored.TryGetValue(id, out score))
+                    {
+                        score = CoverageOf(t.font);
+                        scored[id] = score;
+                    }
+                    // ★字体和材质必须成对★ 拿 A 的字体配 B 的材质会渲染成方块/粉块，
+                    // 所以这里始终取同一个 TMP 文本身上的那一对。
+                    if (score > bestScore) { bestScore = score; bestFont = t.font; bestMat = t.fontSharedMaterial; }
+                    if (bestScore >= FontProbe.Length) break;   // 全覆盖，不用再找
+                }
+
+                if (bestFont != null && bestScore > 0)
+                {
+                    _font = bestFont; _fontMat = bestMat;
+                    Main.Log($"[UI] 摘到字体 {bestFont.name}，探针覆盖 {bestScore}/{FontProbe.Length}"
+                           + (bestScore < FontProbe.Length ? "　★覆盖不全，界面可能出现方块★" : ""));
+                    return;
+                }
+
+                // 场景里一个带中文的都没摘到，退回全量字体资产按覆盖率挑。
+                // 这一步没有配套材质，只能用字体自己的 material。
                 TMP_FontAsset any = Resources.FindObjectsOfTypeAll<TMP_FontAsset>()
-                    .FirstOrDefault(f => f != null);
-                if (any != null) { _font = any; _fontMat = any.material; return; }
+                    .Where(f => f != null)
+                    .OrderByDescending(CoverageOf)
+                    .FirstOrDefault();
+                if (any != null)
+                {
+                    _font = any; _fontMat = any.material;
+                    Main.Log($"[UI] 场景里没摘到合适字体，退回资产 {any.name}，探针覆盖 {CoverageOf(any)}/{FontProbe.Length}");
+                    return;
+                }
 
                 Main.Log("[UI] 未摘到原版 TMP 字体，退回 TMP 默认字体（能用，观感退化）");
             }
             catch (Exception e) { Main.LogError("[UI] 摘字体失败: " + e.Message); }
+        }
+
+        /// <summary>探针串里有多少个字这个字体（含 fallback 链）能显示。</summary>
+        private static int CoverageOf(TMP_FontAsset f)
+        {
+            if (f == null) return 0;
+            try
+            {
+                var set = new HashSet<uint>();
+                CollectChars(f, set, new HashSet<int>(), 0);
+                int n = 0;
+                foreach (char c in FontProbe) if (set.Contains(c)) n++;
+                return n;
+            }
+            catch { return 0; }
+        }
+
+        /// <summary>
+        /// 收集字体及其 fallback 链的全部字符。
+        /// visited 防环 —— TMP 允许 A→B→A 这种配置，不防会无限递归；depth 是第二道保险。
+        /// </summary>
+        private static void CollectChars(TMP_FontAsset f, HashSet<uint> set, HashSet<int> visited, int depth)
+        {
+            if (f == null || depth > 6) return;
+            if (!visited.Add(f.GetInstanceID())) return;
+            try
+            {
+                var table = f.characterTable;
+                if (table != null)
+                    for (int i = 0; i < table.Count; i++)
+                        if (table[i] != null) set.Add(table[i].unicode);
+            }
+            catch { }
+            try
+            {
+                var fb = f.fallbackFontAssetTable;
+                if (fb != null) foreach (var g in fb) CollectChars(g, set, visited, depth + 1);
+            }
+            catch { }
         }
 
         private static void EnsureSprites()

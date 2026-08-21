@@ -77,6 +77,25 @@ namespace DynastyRetinue
             ///   蓝图只提供模型、基础属性和自带武器 —— 退化的只有外观档次。
             /// </summary>
             public string[] UnitFallback;
+
+            /// <summary>
+            /// 这个精英走"双手都拿近战"的配装模式。
+            ///
+            /// ★为什么是 per-精英 而不是全局开关★
+            ///   原版对带阿斯塔特标记的单位硬锁「主手远程 + 副手近战」
+            ///   （HandSlot.IsItemSupported）。解除它是**放宽规则**，
+            ///   作用域越窄越好 —— 只有明确声明要双近战的条目才放开，
+            ///   同一个蓝图的"近战+远程"模式仍然走原版行为。
+            ///   这样补丁碰不到主角、Ulfar、敌方阿斯塔特，也碰不到
+            ///   我们自己其它四条线的卫兵。
+            ///
+            /// ★配装模式就是靠这个字段区分的★
+            ///   同一个 unit 配两份 EliteDef（一份 dualMelee=true 走近战套的
+            ///   chain/plan/gear，一份 false 走混合套），玩家在招募面板上看到的
+            ///   就是"同一个人的两种流派"。身份判定走 kgd.e: 标记，
+            ///   天然支持同蓝图多条目。
+            /// </summary>
+            public bool DualMelee;
             /// <summary>专属名字。旧格式，只在没有 Rank 时用。</summary>
             public string Name;
             /// <summary>英文位阶（archetypes.json 的 "rank_en"）。缺失回落中文。</summary>

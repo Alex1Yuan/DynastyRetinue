@@ -111,6 +111,36 @@ namespace DynastyRetinue
             ("c_ArenaElite",            "a0f919721f254121a070f948a382942f"),
             ("c_JungleWorldRebelElite", "91a1777cfad54e95b311be7afb1d08c1"),
             ("c_Lair3RebelEliteAssault","4f0a3bbd22694f9fb16748257114d6af"),
+            // ---- 阿斯塔特：明确标 Friendly 的太空野狼 ----
+            // 比 Spacemarine_* 那批（敌方 statblock）更合适：这些本来就是按
+            // "站在玩家这边"设计的。全库搜过战团名，★没有圣血天使★ ——
+            // 特拉金收藏库里那两个是 Exhibition_ChaosSpacemarine_Melee/Ranged，
+            // 是**混沌**星际战士（红甲容易看成圣血天使）。
+            ("w_FriendlySW",            "da643980de8846aa8bd354b5b6dc8884"),
+            ("w_FriendlySW_Bolter",     "a8944783b2454bf0aac240ba3e4ef78d"),
+            ("w_FriendlySW_Melta",      "eba48b02e6b342d9abd3d9e16f36ae7f"),
+            ("w_FriendlySW_Pistol",     "b0d2345e5b9d47dc8f4ae72143f59365"),
+            ("w_Halbrandt",             "3fd86919340247f7a2d510b5d91f0258"),
+            ("w_Regind_Melee",          "e1b33ed2d2ca4962a9cac40f682b95ad"),
+            ("w_Regind_Ranged",         "6aa650295bca4fa6b839bb6ba4a78270"),
+            ("w_Spacewolf_Ghost_Bolter","497eba49f78f4f8396b02daa6dcaf61a"),
+            // 对照：特拉金展品里的"阿斯塔特"，确认它们是混沌的
+            ("x_Exhibition_CSM_Melee",  "5a5f360c41b44f979899806180009416"),
+            ("x_Exhibition_CSM_Ranged", "8a2ea334e86342d49c6947f986abda00"),
+            // ★Spacemarine_Companion —— 从蓝图包里直接挖出来的，units.tsv 里没有★
+            //   units.tsv 是离线提取的，实测**不完整**（搜 deathwatch 一无所获，
+            //   但包里确实有死亡守望队长的对话和任务旗标）。所以它的"没搜到"不能当证据。
+            //   这个是**队友规格**的星际战士蓝图，很可能就是硬光实验室那位
+            //   死亡守望队长（Museion_HardlightLab，可救可杀，见
+            //   SaveDeathWatchCapitain_1_Argenta / KillDeathWatchCapitain_1_Ulfar）。
+            // ★佐拉尔 —— 找了整整两轮才挖到★
+            //   蓝图名 Blood_Raven（血鸦战团），名字里既没有 astartes/marine，
+            //   也没有 deathwatch/zoral —— 所有关键词搜索全部落空。
+            //   最后是靠「全库按游戏内显示名搜」找到的：把 3069 个单位挨个加载、
+            //   问各自的 CharacterName。教训是：用英文蓝图名去找一个只有中文译名
+            //   的东西，方向从一开始就是错的。
+            //   自带 BloodRaven_Brain，另有 BlackRage / DeathGuardTraining 两个特性。
+            ("z_Blood_Raven",          "88651654158644c699669d2ecb1ebc94"),
         };
 
         /// <summary>
@@ -162,7 +192,20 @@ namespace DynastyRetinue
             Run(true);
         }
 
-        private static void Run(bool tryPaths)
+        /// <summary>
+        /// 只对名字匹配 <paramref name="filter"/> 的候选跑职业链探测。
+        ///
+        /// ★为什么需要窄版★
+        ///   职业链探测是**真的把单位一级级推上去**。在 55 级存档上，
+        ///   73 个候选 × 9 条路径，每条都要推几十级 —— 游戏会卡好几分钟。
+        ///   而我们要的答案只关乎那几个阿斯塔特蓝图。
+        /// </summary>
+        public static void ProbePathsFiltered(string filter)
+        {
+            Run(true, filter);
+        }
+
+        private static void Run(bool tryPaths, string filter = null)
         {
             try
             {
@@ -187,13 +230,34 @@ namespace DynastyRetinue
                     if (seen.Add(c.Id)) all.Add(c);
                 Main.Log($"去重后实际探测 {all.Count} 个");
 
+                if (!string.IsNullOrEmpty(filter))
+                {
+                    var before = all.Count;
+                    all = all.Where(x => x.Name.IndexOf(filter, StringComparison.OrdinalIgnoreCase) >= 0).ToList();
+                    Main.Log($"按「{filter}」过滤：{before} -> {all.Count} 个");
+                }
+
                 foreach (var c in all)
                 {
                     BaseUnitEntity u = null;
                     try
                     {
-                        var bp = ResourcesLibrary.TryGetBlueprint<BlueprintUnit>(c.Id);
-                        if (bp == null) { Main.Log($"[{c.Name}] 蓝图找不到: {c.Id}"); continue; }
+                        // ★不能直接 TryGetBlueprint<BlueprintUnit>★
+                        //   泛型版在"GUID 存在但不是 BlueprintUnit"时抛
+                        //   InvalidCastException，日志里只剩一句「Specified cast is not valid」——
+                        //   看不出到底是找不到、还是找到了但类型不对。
+                        //   这两种情况的处理完全不同：前者要换 GUID，后者说明这个名字
+                        //   根本不是单位（实际踩到：Spacemarine_Companion 从蓝图包里挖出来，
+                        //   名字像单位，其实不是）。所以先按基类取，再自己判类型。
+                        object raw = null;
+                        try { raw = ResourcesLibrary.TryGetBlueprint(c.Id); } catch { }
+                        if (raw == null) { Main.Log($"[{c.Name}] 蓝图找不到: {c.Id}"); continue; }
+                        var bp = raw as BlueprintUnit;
+                        if (bp == null)
+                        {
+                            Main.Log($"[{c.Name}] {c.Id} 存在，但**不是 BlueprintUnit** —— 实际类型 {raw.GetType().Name}，跳过。");
+                            continue;
+                        }
 
                         u = game.EntitySpawner.SpawnUnit(bp, leader.Position, Quaternion.identity, state);
                         if (u == null) { Main.Log($"[{c.Name}] spawn 返回 null"); continue; }
