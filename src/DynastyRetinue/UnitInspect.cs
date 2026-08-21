@@ -30,6 +30,70 @@ namespace DynastyRetinue
     /// </summary>
     public static class UnitInspect
     {
+        /// <summary>
+        /// 按**游戏内显示名**在全部单位蓝图里搜。
+        ///
+        /// ★为什么需要它★
+        ///   区域一览只能看当前区域。而要找的东西常常在别处 ——
+        ///   比如收藏库那位死亡守望连长「佐拉尔」：全游戏 3069 个单位里
+        ///   没有任何一个蓝图名带 deathwatch 或 zoral，他一定叫别的名字。
+        ///   离线也走不通：本地化 key 能查到（0baca466-…），
+        ///   但蓝图正文在 .bbp 里是压缩的，反查不到是谁引用了它。
+        ///   那就换个方向 —— 把全部单位挨个加载，问它们各自的显示名。
+        ///
+        /// ★为什么要外部索引文件★
+        ///   运行时枚举全部蓝图没有现成的公开 API。
+        ///   units_all.tsv 由 tools/dump_unit_index.py 从游戏自带的
+        ///   cheatdata.json 导出（那是权威索引，每条都带类型）。
+        ///   文件不在发布包里，只有开发机上有 —— 这是纯调研工具。
+        ///
+        /// ★代价★ 会真的加载 3069 个蓝图，几秒到十几秒，期间游戏会卡住。
+        ///   只在开发区、只在需要时点。
+        /// </summary>
+        public static void SearchByDisplayName(string keyword)
+        {
+            try
+            {
+                keyword = (keyword ?? "").Trim();
+                if (keyword.Length == 0) { Main.LogError("请先填关键词。"); Main.FlushLog(true); return; }
+
+                string path = System.IO.Path.Combine(Main.ModEntry?.Path ?? ".", "units_all.tsv");
+                if (!System.IO.File.Exists(path))
+                {
+                    Main.LogError("找不到 units_all.tsv —— 跑 tools/dump_unit_index.py 生成它。");
+                    Main.FlushLog(true); return;
+                }
+
+                var lines = System.IO.File.ReadAllLines(path);
+                Main.Log("========== 按显示名搜索单位 ==========");
+                Main.Log($"索引 {lines.Length} 个单位，关键词「{keyword}」　（要逐个加载蓝图，会卡几秒）");
+
+                int hit = 0, bad = 0;
+                foreach (var line in lines)
+                {
+                    var t = line.Split('	');
+                    if (t.Length < 2) continue;
+                    object raw = null;
+                    try { raw = Kingmaker.Blueprints.ResourcesLibrary.TryGetBlueprint(t[1]); } catch { bad++; continue; }
+                    var bp = raw as Kingmaker.Blueprints.BlueprintUnit;
+                    if (bp == null) { bad++; continue; }
+                    string cn = null;
+                    try { cn = bp.CharacterName; } catch { }
+                    if (string.IsNullOrEmpty(cn)) continue;
+                    if (cn.IndexOf(keyword, StringComparison.OrdinalIgnoreCase) < 0) continue;
+                    hit++;
+                    string size = "?";
+                    try { size = bp.Size.ToString(); } catch { }
+                    Main.Log($"  ★ {cn,-20} {t[0],-46} {t[1]}  {size}");
+                    if (hit >= 40) { Main.Log("  （命中过多，已截断）"); break; }
+                }
+                Main.Log($"命中 {hit} 个；解析失败/非单位 {bad} 个");
+                Main.Log("========== 搜索结束 ==========");
+                Main.FlushLog(true);
+            }
+            catch (Exception e) { Main.LogError(e); Main.FlushLog(true); }
+        }
+
         /// <summary>一次最多打多少行 —— 有些区域上百个单位，全打出来日志没法看。</summary>
         private const int MaxRows = 120;
 

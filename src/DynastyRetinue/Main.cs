@@ -1099,6 +1099,24 @@ namespace DynastyRetinue
             GUILayout.Label("区域单位一览　关键词", GUILayout.Width(150));
             Settings.InspectFilter = GUILayout.TextField(Settings.InspectFilter ?? "", GUILayout.Width(160));
             if (GUILayout.Button("列出", GUILayout.Width(80))) UnitInspect.Run(Settings.InspectFilter);
+            // 全库按显示名搜：不受"必须在那个区域"限制，代价是要加载 3069 个蓝图
+            if (GUILayout.Button("全库搜显示名", GUILayout.Width(110)))
+                UnitInspect.SearchByDisplayName(Settings.InspectFilter);
+            GUILayout.EndHorizontal();
+
+            // ★一键全测★ 每次改探针都要你重启一次游戏才能生效，
+            // 而一次会话里逐个找按钮点又容易漏。串成一次点击，跑完一起看日志。
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("一键全测（单位+装备+职业链+字体）", GUILayout.Width(280)))
+            {
+                Log("########## 一键全测开始 ##########");
+                try { Probe.ProbeUnitsAndPaths(); } catch (Exception e) { LogError("单位/职业链: " + e.Message); }
+                try { ItemProbe.Run(); }            catch (Exception e) { LogError("装备: " + e.Message); }
+                try { FontCheck.Run(); }            catch (Exception e) { LogError("字体: " + e.Message); }
+                Log("########## 一键全测结束 ##########");
+                FlushLog(true);
+            }
+            GUILayout.Label("<color=#aaaaaa>会跑几十秒，期间游戏卡住是正常的。结果全在 dynasty_log.txt</color>");
             GUILayout.Label("<color=#aaaaaa>留空=列全部；中英文都能匹配（蓝图名 + 游戏内显示名）</color>");
             if (GUILayout.Button("批量试算方案", GUILayout.Width(120))) PlanProbe.Run();
             if (GUILayout.Button("导出天赋名录", GUILayout.Width(120))) ItemTool.ExportFeatures();

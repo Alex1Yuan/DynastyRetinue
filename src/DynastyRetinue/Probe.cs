@@ -133,7 +133,14 @@ namespace DynastyRetinue
             //   这个是**队友规格**的星际战士蓝图，很可能就是硬光实验室那位
             //   死亡守望队长（Museion_HardlightLab，可救可杀，见
             //   SaveDeathWatchCapitain_1_Argenta / KillDeathWatchCapitain_1_Ulfar）。
-            ("z_Spacemarine_Companion", "91c3944f414f48189f0464bd82f36e0c"),
+            // ★佐拉尔 —— 找了整整两轮才挖到★
+            //   蓝图名 Blood_Raven（血鸦战团），名字里既没有 astartes/marine，
+            //   也没有 deathwatch/zoral —— 所有关键词搜索全部落空。
+            //   最后是靠「全库按游戏内显示名搜」找到的：把 3069 个单位挨个加载、
+            //   问各自的 CharacterName。教训是：用英文蓝图名去找一个只有中文译名
+            //   的东西，方向从一开始就是错的。
+            //   自带 BloodRaven_Brain，另有 BlackRage / DeathGuardTraining 两个特性。
+            ("z_Blood_Raven",          "88651654158644c699669d2ecb1ebc94"),
         };
 
         /// <summary>
