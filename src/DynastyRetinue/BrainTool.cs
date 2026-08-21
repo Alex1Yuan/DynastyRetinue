@@ -48,6 +48,15 @@ namespace DynastyRetinue
             ("RangedSniper",          "4a10f56d2a4e41e0a94a26b0a48aaf5d"),
             ("RangedPositionalSniper","6bfff31e4223456db500de4efe560b6a"),
             ("ProloguePirateSniper",  "b5f8fd374e1948d1b68e301cd3acf13e"),
+            // ---- 实际在用、但从未探测过的（补进来才能一键验证）----
+            //   这几个是 archetypes.json 里真正被赋给分型/精英的 brain。
+            //   候选表原来只收通用基础 brain，于是"我们实际换上去的那个到底
+            //   限不限制技能"反而没人验过 —— 战斗修女不行动就出在这里。
+            ("ArgentaAlternative",     "c3b4b0e56cec4a99b448bc7102971bd3"),
+            ("Ch04_Psyker",            "e257fc0ffe054d569cde2b18723f7a4a"),
+            ("Sororitas_HBolter",      "32111e7b22a54ea9842006987571569b"),
+            ("Sororitas_Melta",        "8dc8edca88f94951a4c3246c62441d63"),
+            ("Sororitas_HFlamer",      "c1a807dc03004eefbe3ddac6b00bd8df"),
             // ---- 支援 / 军官 / 灵能 ----
             ("Officer",               "92118d6f493741e489aabe6e2f8d5fa4"),
             ("RangeNNStation",        "0148827b31a7458c8513d2cedc222af8"),

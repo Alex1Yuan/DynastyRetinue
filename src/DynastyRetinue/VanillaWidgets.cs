@@ -136,7 +136,7 @@ namespace DynastyRetinue.UI
                 }
                 // 3) 绝不盲抓场景里任意 OwlcatButton —— 那正是"摘到光晕图"的老路。
                 if (_btnTemplate == null) Main.Log("[VW] 未找到原版按钮模板，全部回退程序生成");
-                else Main.Log("[VW] 按钮模板 = " + FullPath(_btnTemplate.transform));
+                else Main.LogVerbose("[VW] 按钮模板 = " + FullPath(_btnTemplate.transform));
             }
             catch (Exception e) { Main.LogError("[VW] 取按钮模板失败: " + e.Message); }
             return _btnTemplate;
@@ -169,6 +169,63 @@ namespace DynastyRetinue.UI
             //   嵌套 Canvas 上的 Graphic 只被它自己那个 Canvas 的 GraphicRaycaster 检测
             //   （GraphicRegistry.GetGraphicsForCanvas）。保留 Canvas 却删掉 Raycaster
             //   = 按钮看得见点不动。窗框不需要独立排序，直接连 Canvas 一起删最省事。
+        }
+
+        /// <summary>
+        /// 克隆一个**原版的** TMP 文本对象出来用。
+        ///
+        /// ★为什么要这么绕，不直接 AddComponent&lt;TextMeshProUGUI&gt;★
+        ///   方块 bug 追了六个版本，每一轮的日志都显示我们的标签和好用的标签
+        ///   **逐字段相同**：同一个字体、同一个主材质、同样的 _GradientScale /
+        ///   图集尺寸、fallback 都正确解析到思源宋体、子网格也都在 layer 5。
+        ///   可玩家那台就是整片实心块，作者机怎么测都正常。
+        ///
+        ///   但有一个事实从头到尾没变过：**克隆原版按钮的那个标签，两台机器都正常。**
+        ///   同一个窗口、同一帧、紧挨着的两个控件，一个好一个坏，区别只有
+        ///   "抄来的" 和 "新建的"。
+        ///
+        ///   既然差异查不出来，就别再构造了 —— 直接抄那个已经被实机证明能用的对象。
+        ///   TMP 组件上有几十个序列化字段（材质预设引用、fontFeatures、
+        ///   m_TextProcessingArray、richText 解析器状态、autoSize 参数…），
+        ///   Instantiate 会**逐字节**带过来；AddComponent 拿到的是一套默认值，
+        ///   哪一个默认值在他那台机器上是错的，我没有能力从日志里穷举出来。
+        ///
+        /// ★失败就回退★
+        ///   摘不到模板（比如还没进游戏、ESC 菜单没实例化）时返回 null，
+        ///   调用方回落到原来的 AddComponent 路径 —— 至少不比现在差。
+        /// </summary>
+        public static TextMeshProUGUI CloneLabel(Transform parent)
+        {
+            try
+            {
+                GameObject src = GetButtonTemplate();
+                if (src == null) return null;
+
+                // 先进 inactive holder 再裁剪，理由同 MakeButton：
+                // 直接进活动树会触发原版 View 的 OnEnable，在没有 VM 时可能 NRE。
+                GameObject clone = UnityEngine.Object.Instantiate(src, Holder);
+                try
+                {
+                    Strip(clone, false);   // 标签不需要 OwlcatButton 那套交互组件
+                    TextMeshProUGUI label = clone.GetComponentInChildren<TextMeshProUGUI>(true);
+                    if (label == null) { UnityEngine.Object.Destroy(clone); return null; }
+
+                    // 把标签本体拎出来，按钮外壳丢掉
+                    label.transform.SetParent(parent, false);
+                    label.gameObject.SetActive(true);
+                    UnityEngine.Object.Destroy(clone);
+
+                    // ★autoSize 必须关★ 原版按钮多半开着自动缩放，
+                    //   开着的话我们设的 fontSize 会被当成"下限"而不是实际字号，
+                    //   排版全乱。按钮那条路留着它是因为按钮尺寸固定、正好靠它规避裁字；
+                    //   我们的标签尺寸各异，必须自己说了算。
+                    label.enableAutoSizing = false;
+                    label.overflowMode = TextOverflowModes.Overflow;
+                    return label;
+                }
+                catch { try { UnityEngine.Object.Destroy(clone); } catch { } return null; }
+            }
+            catch { return null; }
         }
 
         private static void Strip(GameObject root, bool keepOwlcat)
@@ -248,6 +305,14 @@ namespace DynastyRetinue.UI
                     //   TMP 在 Ellipsis/Truncate 下，纵向放不下时会把**整串**字符清零（不是截断）。
                     //   按钮标签就一两个词，Overflow 没有任何副作用，直接在源头关掉这个雷。
                     label.overflowMode = TextOverflowModes.Overflow;
+
+                    // ★把原版按钮的字体回灌给标签用★
+                    //   这是全场最可靠的字体来源：它就是游戏自己拿来渲染这个窗口
+                    //   中文文字的那一个，不需要任何猜测。
+                    //   之前 VanillaSkin.EnsureFont 是去 FindObjectsOfTypeAll 里挑，
+                    //   实机翻车过 —— 按钮（克隆原版、自带字体）中文正常，
+                    //   标签（我们 new 的、用挑出来的字体）全是方框。
+                    VanillaSkin.AdoptFont(label.font, label.fontSharedMaterial);
                 }
                 else
                 {

@@ -61,6 +61,9 @@ fi
 # 译文表现在是交付物的一部分。缺了不影响功能（会回落中文），但英文玩家会看到满屏中文，
 # 而这个失败是静默的 —— 所以在这里显式挡一道，别让它悄悄漏发。
 [ -f "$R/l10n_en.json" ]     || { echo "x $R/l10n_en.json 不存在（英文玩家会看到中文界面）"; exit 1; }
+# looks.json 缺了不影响功能（外观只剩「跟随装备」= 原版行为），但玩家会发现
+# 风格选项凭空消失且毫无提示 —— 和 l10n 一样是静默失败，所以也挡一道。
+[ -f "$R/looks.json" ]       || { echo "x $R/looks.json 不存在（外观风格会全部消失）"; exit 1; }
 
 py -c "
 import io,re
@@ -82,6 +85,7 @@ if [ -f "$BIN/DynastyRetinue.pdb" ]; then cp "$BIN/DynastyRetinue.pdb" "$D/"; fi
 # 所以现象是"改了没生效"，而且不报错。l10n_en.json 更隐蔽：缺了会静默回落中文，
 # 看起来就只是"英文没做好"。
 cp "$R/archetypes.json"  "$D/"
+cp "$R/looks.json"       "$D/"
 cp "$R/plans.json"       "$D/"
 if [ -f "$R/l10n_en.json" ]; then cp "$R/l10n_en.json" "$D/"; fi
 echo "已部署 v$VER 到本机"
@@ -89,7 +93,7 @@ echo "已部署 v$VER 到本机"
 if [ "$2" = "pack" ]; then
   OUT=dist/DynastyRetinue
   rm -rf dist && mkdir -p "$OUT"
-  cp "$R/Info.json" "$R/archetypes.json" "$R/plans.json" "$OUT/"
+  cp "$R/Info.json" "$R/archetypes.json" "$R/plans.json" "$R/looks.json" "$OUT/"
   # 译文表：缺了只是界面不显示英文，不影响功能；但既然有就该发
   if [ -f "$R/l10n_en.json" ]; then cp "$R/l10n_en.json" "$OUT/"; fi
   cp "$BIN/DynastyRetinue.dll" "$OUT/"

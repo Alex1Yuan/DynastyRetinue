@@ -64,7 +64,17 @@ namespace DynastyRetinue
                 TextKey  = TextKey,
                 Text     = delegate { return L.T(TextValue); },
                 Enabled  = delegate { return Main.Settings != null && Main.Settings.DialogRecruitEntry; },
-                OnPicked = delegate { Main.OpenRecruitUI(null); },
+                // ★招募不留在对话里★（1.0.66 撤回 1.0.54 的改动）
+                //   1.0.54 给它加过 KeepDialog=true，目的是让"对话结束自动关窗"
+                //   在合作里成立（房主点一下两台都开窗，而关窗不复制）。
+                //   但留在对话里之后，刚点过的那一条**不会变暗** ——
+                //   原版点过的选项都会变暗，同一个列表里两套显示逻辑，很突兀。
+                //   根因是同一个对话会话里答案列表不重建；试过在选中时刷新（1.0.63）
+                //   和在关窗时刷新（1.0.64），都没能让它变暗。
+                //
+                //   权衡下来：自动关窗省的是客机一次点击，而显示不一致是**每次都看得见**的。
+                //   撤回，退回选中即关对话 —— 下次进对话是全新会话，显示自然正确。
+                OnPicked = delegate { Main.OpenRecruitUI(null, true); },
             });
             ShipDialog.RegisterAll();
         }
@@ -252,7 +262,7 @@ namespace DynastyRetinue
                 ResourcesLibrary.BlueprintsCache.AddCachedBlueprint(entry.Guid, a);
                 _answer = a;
                 _answers[entry.Guid] = a;
-                Main.Log("[对话注入] answer 已注册 " + entry.Guid + "  「" + Label(entry) + "」");
+                Main.LogVerbose("[对话注入] answer 已注册 " + entry.Guid + "  「" + Label(entry) + "」");
             }
             catch (Exception e) { Main.LogError("[招募对话] 构造 answer 失败: " + e); }
             return _answer;
@@ -279,7 +289,7 @@ namespace DynastyRetinue
                 var ls = new LocalizedString();
                 ls.Key = textKey;
                 f.SetValue(a, ls);
-                Main.Log("[对话注入] Text.Key 已设为 " + textKey);
+                Main.LogVerbose("[对话注入] Text.Key 已设为 " + textKey);
             }
             catch (Exception e) { Main.LogError("[招募对话] 设置文案失败: " + e); }
         }
@@ -334,7 +344,7 @@ namespace DynastyRetinue
                             foreach (var it in part.Interactions)
                             {
                                 if (it == null) continue;
-                                if (verbose) Main.Log("[招募对话]   交互: " + it.GetType().Name);
+                                if (verbose) Main.LogVerbose("[招募对话]   交互: " + it.GetType().Name);
                                 dlg = FindDialog(it);
                                 if (dlg != null) break;
                             }
@@ -350,12 +360,12 @@ namespace DynastyRetinue
                         }
                         catch { }
                     }
-                    if (dlg == null) { if (verbose) Main.Log("[招募对话] " + bp + " 身上找不到对话（交互数 " + InteractionCount(u) + "）"); continue; }
-                    if (verbose) Main.Log("[招募对话] " + bp + " 的对话 = " + dlg.name);
+                    if (dlg == null) { if (verbose) Main.LogVerbose("[招募对话] " + bp + " 身上找不到对话（交互数 " + InteractionCount(u) + "）"); continue; }
+                    if (verbose) Main.LogVerbose("[招募对话] " + bp + " 的对话 = " + dlg.name);
 
                     foreach (var e in active) n += InjectInto(dlg, e, verbose);
                 }
-                if (verbose && n == 0) Main.Log("[招募对话] 没插入任何选项（关键字: " + Main.Settings.RecruitNpcKeys + "）");
+                if (verbose && n == 0) Main.LogVerbose("[招募对话] 没插入任何选项（关键字: " + Main.Settings.RecruitNpcKeys + "）");
             }
             catch (Exception e) { Main.LogError("[招募对话] InjectInArea 异常: " + e); }
             return n;
@@ -371,7 +381,7 @@ namespace DynastyRetinue
                 // 带 Continue 的叙述 cue 会把答案列表整个换掉，插进去等于没插。
                 // 所以遍历整张对话图，只挑**本来就列选项**的枢纽 cue。
                 var cues = CollectCues(dlg);
-                if (verbose) Main.Log("[招募对话] " + dlg.name + " 共 " + cues.Count + " 个 cue");
+                if (verbose) Main.LogVerbose("[招募对话] " + dlg.name + " 共 " + cues.Count + " 个 cue");
 
                 // ★ 真正的选项枢纽是 BlueprintAnswersList，不是 cue ★
                 // 实测 HighFactotumDialogue 里几乎每个 cue 都只挂 1 个"答案"，
@@ -389,7 +399,7 @@ namespace DynastyRetinue
                         BlueprintAnswersList lst = null;
                         try { lst = ar != null ? ar.Get() as BlueprintAnswersList : null; } catch { }
                         if (lst == null || lst.Answers == null) continue;
-                        if (verbose) Main.Log("[招募对话]   列表 " + lst.name + " 在 " + cue.name
+                        if (verbose) Main.LogVerbose("[招募对话]   列表 " + lst.name + " 在 " + cue.name
                                               + "  含 " + lst.Answers.Count + " 条");
                         // 取条目最多的那个 —— 主选项菜单
                         if (best == null || lst.Answers.Count > best.Answers.Count)
@@ -399,7 +409,7 @@ namespace DynastyRetinue
 
                 if (best == null)
                 {
-                    if (verbose) Main.Log("[招募对话] " + dlg.name + " 里没有 AnswersList，退回按 cue 找枢纽");
+                    if (verbose) Main.LogVerbose("[招募对话] " + dlg.name + " 里没有 AnswersList，退回按 cue 找枢纽");
                     return InjectIntoCueHub(dlg, cues, entry, verbose);
                 }
 
@@ -431,7 +441,7 @@ namespace DynastyRetinue
                         // 现在直接跳过 SelectAnswer，NextCue 压根不会被消费。
                         // 指回 vanilla cue 反而有重放台词 / 撞 ShowOnce / 重复 ApplyShiftDialog 的风险。
                         n++;
-                        Main.Log("[对话注入] 「" + Label(entry) + "」已插入到选项列表 " + best.name + "（" + bestWhere + "）"
+                        Main.LogVerbose("[对话注入] 「" + Label(entry) + "」已插入到选项列表 " + best.name + "（" + bestWhere + "）"
                                  + "  位置 " + at + "/" + best.Answers.Count
                                  + (at < best.Answers.Count - 1 ? "（退出项之前）" : "（末尾）"));
                     }
@@ -454,7 +464,7 @@ namespace DynastyRetinue
                     bool hasContinue = cue.Continue != null && cue.Continue.Cues != null && cue.Continue.Cues.Count > 0;
                     if (cue.Answers != null && cue.Answers.Count > 1 && !hasContinue && hub == null) hub = cue;
                 }
-                if (hub == null) { if (verbose) Main.Log("[招募对话] " + dlg.name + " 也没有 cue 枢纽"); return 0; }
+                if (hub == null) { if (verbose) Main.LogVerbose("[招募对话] " + dlg.name + " 也没有 cue 枢纽"); return 0; }
                 string key = dlg.name + "/" + hub.name;
                 if (_injected.Contains(key)) return 0;
                 var r = new BlueprintAnswerBaseReference();
@@ -465,7 +475,7 @@ namespace DynastyRetinue
                 hub.Answers.Insert(at, r);
                 _injected.Add(key);
                 n++;
-                Main.Log("[招募对话] 已插入到 cue 枢纽 " + hub.name + " 位置 " + at);
+                Main.LogVerbose("[招募对话] 已插入到 cue 枢纽 " + hub.name + " 位置 " + at);
             }
             catch (Exception e) { Main.LogError("[招募对话] 退路插入失败: " + e.Message); }
             return n;
@@ -718,7 +728,7 @@ namespace DynastyRetinue
                     if (!_orderLogged)
                     {
                         _orderLogged = true;
-                        Main.Log("[对话注入] 可见列表重排：" + ours.Count + " 条我们的选项整体挪到第 "
+                        Main.LogVerbose("[对话注入] 可见列表重排：" + ours.Count + " 条我们的选项整体挪到第 "
                                  + target + " 位（退出项之前），共 " + list.Count + " 条可见。");
                     }
                 }

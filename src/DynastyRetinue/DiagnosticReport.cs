@@ -127,6 +127,21 @@ namespace DynastyRetinue
             Try(sb, "操作系统   : ", delegate { return SystemInfo.operatingSystem; });
             Try(sb, "语言(游戏) : ", delegate { return L.Current == L.ZhCN ? "中文" : "English"; });
             Try(sb, "mod 已启用 : ", delegate { return Main.Enabled ? "是" : "否"; });
+
+            // ★设置指纹要进报告头★
+            //   联机时两台机器必须跑**同一套规则**：士气隔离、经验缩放、
+            //   舰船加成…… 这些是 Harmony 补丁在战斗中持续读设置算出来的，
+            //   开关不一样就等于两边在用不同规则跑同一场战斗，而结果都进哈希。
+            //   游戏自带的握手只比对 mod 的 Id 和版本号，**配置根本不参与**，
+            //   所以这一层只能我们自己报。
+            //   下面「设置（只列改过的）」虽然也有全部信息，但要人肉 diff 83 个字段；
+            //   两份报告对一眼这 8 位十六进制就够了。
+            Try(sb, "设置指纹   : ", delegate { return CoopState.SettingsFingerprint(); });
+            Try(sb, "合作状态   : ", delegate
+            {
+                string c = CoopState.Describe();
+                return string.IsNullOrEmpty(c) ? "（当前不在合作会话中）" : c;
+            });
             sb.AppendLine();
         }
 

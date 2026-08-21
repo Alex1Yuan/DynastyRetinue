@@ -1,4 +1,5 @@
 {
+  "_README_en": "Field reference in English: docs/archetypes.en.md in the repository. The keys starting with '_' below are Chinese-only design notes; they are comments, not data, and are ignored by the loader. Every GUID here must be a VANILLA blueprint - this mod never creates new AssetIds, because a mod AssetId written into a persisted typed field makes the save unopenable without the mod.",
   "_说明": "unit=普通卫兵蓝图  eliteUnit=精英专用蓝图(兼作精英身份判据)  brain=AI行为  plan=RTAutoBuilder天赋方案  chain=职业链(T1->T2->T3)  gear=毕业套装(仅精英,凭空生成)  playerGear=玩家面板自配(普通卫兵,也是生成副本)",
   "_精英": "每条路线限 1 个,且需该路线先有卫兵练到 T3 职业才解锁。两个限制都能在面板取消。",
   "_装备": "gear 里的 GUID 由加点方案描述里的中文名匹配而来(items_zh.tsv + 存档实际拥有物品交叉验证)。解析不到的条目(未启用DLC)会静默跳过,不影响其余。",
@@ -48,7 +49,7 @@
             ],
             "e0e76a258d844385a16c9dc602caa316",
             [
-              "8b13aef5103a4719980774c0d4a12506",
+              "3803098850504a7ebf80d6fbb70c37c6|8b13aef5103a4719980774c0d4a12506",
               "1fede9d9621f437c92832e239426bbcf"
             ],
             "8992baa7047e4736b43fa1b94b0407b6",
@@ -100,7 +101,7 @@
             [
               "c1c07d80309c47de99b055ba9eb43a07",
               "e84349dae8bb4a818fa4473ce32dcd9a",
-              "8b13aef5103a4719980774c0d4a12506",
+              "3803098850504a7ebf80d6fbb70c37c6|8b13aef5103a4719980774c0d4a12506",
               "1fede9d9621f437c92832e239426bbcf"
             ],
             "f6f3b301deb5474c92de0560e8ac2f22",
@@ -247,7 +248,8 @@
           "_race注": "EldarStandardRace — 伊瑞莉特方案里的灵族天赋有种族门控，起源补不了。SetRace 是实体级(PartUnitProgression.cs:196)，不动蓝图，不污染其它单位。"
         },
         {
-          "unit": "aa02b505be774674ae924f19dc17e6f6",
+          "unit": "8104e86cc05c42bfbb2c11c70332ef06",
+          "_unit改注": "v1.0.85 起改用 DLC3_DL_Arbites_Sniper_Unit（裁判庭狙击手，实测 305 血）。此前用 c_DLC3_SicarianRust（308 血）纯粹是为了血量 —— 更早的 FootfallAnverSniper 只有 96，比同线另一个精英「寂静之眼」的 256 低 2.7 倍。代价是一个双持超音速刃的近战机械刺客顶着「赏金猎手」的名字站在狙击线里，脑子也是近战脑。实测裁判庭狙击手 305 vs 锈行者 308，差 3 点血就把模型/AI/原生武器全部换对了，所以不再需要 appearanceUnit 覆盖外观",
           "name": "赏金 · 猎首",
           "rank": "赏金猎手",
           "rank_en": "Bounty Hunter",
@@ -345,7 +347,7 @@
       "gearT3": [
         "9fff749bf072433fac15cc2907f4e266",
         "3535abdbb30543bbaa395ef07059dbc1",
-        "44555bd3e9b149408470cefb5da1c9ba|5bee6a60c37341b6a4cb39995498546e|2d262a9870604d3e88260a11c984d725",
+        "ddd6d0a5bdfc4fefaed5f247cf46e852|44555bd3e9b149408470cefb5da1c9ba|5bee6a60c37341b6a4cb39995498546e|2d262a9870604d3e88260a11c984d725",
         "78787ef16bb84f28b68f71b98c726260",
         "31d4ecc2b4ff4fa48c0414687d2d6844",
         "ff66d1a21d9b4d54b40c7930733708ac",
@@ -376,7 +378,6 @@
       ],
       "_unitFallback注": "主单位是 DLC3 蓝图；没启用 DLC3 时依次退到 TaintedStreets_Arbites_SolomonSquad_V1（本体，连射精英在用）→ OfficersDeckGuard（本体）。功能不受影响，只是外观和自带能力会跟精英同款。",
       "brain": "c3b4b0e56cec4a99b448bc7102971bd3",
-      "_brain注": "ArgentaAlternative_Brain —— 阿洁塔（连射爆弹枪同伴）被 AI 接管时用的脑子，和我们「玩家方单位交给 AI 打」是同一场景。判据(全部来自 ref/rt_probe/q/_scan_all.json)：uol=false（不锁技能白名单，career 链练出来的技能 AI 才会考虑）、prio 为空（不绑定某件具体武器）、序=EnemyThreat>Hide>Closiness。★两个踩过的坑，别再回去★ (1) 8dc8edca=Melta 脑：uol 虽 false 但序里 EffectiveDistance 优先、Hide/StayingAway 全忽略，实测只打单发+反复装弹+移动 0。(2) 32111e7b=HBolter 脑：uol=TRUE 且三个白名单能力(HuntDownThePrey/ControlledShot/RapidFire)全部绑死在 DLC3_DL_Sororitas_HeavyBolter_Item 上，我们五套装备一件都没有；且 hit_unintended_penalty=0.0（完全不在乎误伤友军），给我方单位用会对着队友开火。",
       "plan": "rt_soldier_suppress",
       "chain": [
         "06f4f78a9c1a472b85cd79a9a142153d",
@@ -680,6 +681,7 @@
           ],
           "gear": [
             "24a156a6132d46a982f2f3a7c794ecbd",
+            "ea60e97cfbe14231b8fdb8e1702b5f70|35844167264c40449ef10a89d7eb63d5|8b13aef5103a4719980774c0d4a12506",
             "5f4091e7ebae4cfea6831d72db37ba33",
             "f44d8c44d5044cbda7539cac89410670",
             "bc66c47af73e48b4b28c090808213182",
@@ -745,7 +747,7 @@
       "gearT3": [
         "dbf6e298905b4619a9408c8fa89dea62",
         "93bc89a2332847b0b75394b31dd9274d",
-        "d5dfd4f7fec149dcb7a19089cfee5b02",
+        "35844167264c40449ef10a89d7eb63d5|7936346540a84327b661203fbf858482|d5dfd4f7fec149dcb7a19089cfee5b02",
         "85b84712fc30435ea73f3d45049f25f2",
         "1718f0c0583c4c4983c05391b0b333eb",
         "1b447777d38f43baa643fc2e915d6ef3",

@@ -24,6 +24,17 @@ namespace DynastyRetinue
             ModEntry = modEntry;
             Settings = UnityModManager.ModSettings.Load<Settings>(modEntry);
 
+            // ★迁移：清掉已废弃的手动字体覆盖★
+            //   1.0.33–1.0.35 提供过「换一个字体」，有玩家会停在 HintFont
+            //   （含 fallback 覆盖只有 14/55，真会缺字）。开关已移除，
+            //   但旧值还躺在 Settings.xml 里 —— 不清的话字段永远是脏的。
+            if (Settings != null && !string.IsNullOrEmpty(Settings.FontOverride))
+            {
+                Log("[UI] 清理已废弃的手动字体设置（原值 " + Settings.FontOverride + "）。");
+                Settings.FontOverride = "";
+                try { Settings.Save(modEntry); } catch { }
+            }
+
             modEntry.OnToggle  = OnToggle;
             modEntry.OnGUI     = OnGUI;
             modEntry.OnSaveGUI = OnSaveGUI;
@@ -68,6 +79,11 @@ namespace DynastyRetinue
                        + "\n    请退出游戏，把旧的 KgdRetinue 文件夹整个删除或移出 UnityModManager 目录"
                        + "（只改名无效）。"
                        + "\n    （若你已在 UMM 里手动禁用了它，可以忽略这条。）");
+
+            // ★合作动作表要在补丁之前就绪★
+            //   补丁一旦装上，对方发来的 kgd.* 指令随时可能到达；
+            //   处理函数还没注册的话只会打一行"不认识的动作"，白丢一次执行。
+            CoopCommand.RegisterAll();
 
             HarmonyInstance = new Harmony(modEntry.Info.Id);
             PatchAllSafe(HarmonyInstance, System.Reflection.Assembly.GetExecutingAssembly());
@@ -178,12 +194,12 @@ namespace DynastyRetinue
         /// 万一 uGUI 那套在某台机器/某个版本上出问题，翻个开关就能继续用，
         /// 不至于让"招募"这个核心功能整个不可用。
         /// </summary>
-        public static void OpenRecruitUI(Kingmaker.EntitySystem.Entities.BaseUnitEntity npc)
+        public static void OpenRecruitUI(Kingmaker.EntitySystem.Entities.BaseUnitEntity npc, bool fromDialog = false)
         {
             // uGUI 窗口是唯一正式入口。旧的 IMGUI 窗口只在它抛异常时兜底 ——
             // 曾经有个 UseNewUI 开关，但载入时无条件被置 true、判据恒真，
             // 等于死代码，v0.49.0 删了。
-            try { UI.RetinueUI.Open(); return; }
+            try { if (fromDialog) UI.RetinueUI.OpenFromDialog(); else UI.RetinueUI.Open(); return; }
             catch (Exception e) { LogError("[UI] 新窗口开启失败，回退到旧窗口: " + e); }
             RecruitWindow.Open(npc);
         }
@@ -351,29 +367,20 @@ namespace DynastyRetinue
                 GUILayout.BeginHorizontal();
                 GUILayout.Label("　" + cur, GUILayout.Width(220));
                 _renameBuf[id] = GUILayout.TextField(buf ?? "", 40, GUILayout.Width(220));
-                if (GUILayout.Button(L.T("改名"), GUILayout.Width(60)))
+                if (Btn(L.T("改名"), 60f))
                 {
                     string want = (_renameBuf[id] ?? "").Trim();
                     if (want.Length > 0 && want != cur)
                     {
-                        try
-                        {
-                            g.GetOrCreate<PartUnitDescription>().SetName(want);
-                            Log("手动改名: " + cur + " -> " + want);
-                        }
-                        catch (Exception e) { LogError("手动改名失败: " + e.Message); }
+                        // 名字进 CustomName，属于被哈希的实体状态 —— 必须两台一起改
+                        CoopCommand.Send("rename", id, want);
                     }
                 }
-                if (GUILayout.Button(L.T("还原"), GUILayout.Width(60)))
+                if (Btn(L.T("还原"), 60f))
                 {
                     // 清掉自定义名再让 mod 按规则重推 —— 相当于对单个人做【重新命名全部】
-                    try
-                    {
-                        g.GetOrCreate<PartUnitDescription>().SetName(null);
-                        RetinueTest.ApplyName(g);
-                        _renameBuf.Remove(id);
-                    }
-                    catch (Exception e) { LogError("还原名字失败: " + e.Message); }
+                    CoopCommand.Send("rename", id, "");   // 空串 = 交回 mod 自动推导
+                    _renameBuf.Remove(id);
                 }
                 GUILayout.EndHorizontal();
             }
@@ -399,7 +406,7 @@ namespace DynastyRetinue
         /// 用两段式而不是弹窗：IMGUI 里做模态对话框要接管输入、还要处理面板关闭时的残留状态，
         /// 而两段式只需要一个 float，且不打断操作流。
         /// </summary>
-        private static float _armDismiss, _armShipRevert, _armReset;
+        private static float _armDismiss, _armShipRevert, _armReset, _armResetCoop, _armRefit;
         private const float ArmWindow = 3f;
         private static void DangerButton(ref float armedAt, string label, float width,
                                          int affected, System.Action action)
@@ -412,7 +419,7 @@ namespace DynastyRetinue
             {
                 var prev = GUI.color;
                 GUI.color = new Color(1f, 0.55f, 0.4f);
-                if (GUILayout.Button(L.F("再点一次（{0}）", affected), GUILayout.Width(width + 40f)))
+                if (Btn(L.F("再点一次（{0}）", affected), width + 40f))
                 {
                     armedAt = 0f;
                     GUI.color = prev;
@@ -421,7 +428,7 @@ namespace DynastyRetinue
                 }
                 GUI.color = prev;
             }
-            else if (GUILayout.Button(label, GUILayout.Width(width)))
+            else if (Btn(label, width))
             {
                 armedAt = now;
             }
@@ -464,6 +471,122 @@ namespace DynastyRetinue
             catch (Exception e) { LogError("[设置] 恢复默认失败: " + e.Message); }
         }
 
+        /// <summary>
+        /// 按钮：给一个**最小**宽度，但文字放不下时自动加宽。
+        ///
+        /// ★为什么不直接写 GUILayout.Width(120)★
+        ///   IMGUI 的固定宽度会**直接把文字截掉**，不换行也不缩小。
+        ///   中文文案刚好放得下的宽度，换成英文（"Rename all" 比"重新命名全部"宽）
+        ///   或者以后改一版文案，就会变成"重新命名全…"。而且每个按钮的宽度是各写各的，
+        ///   于是同一行里高矮不一、参差不齐。
+        ///   给最小宽度保证短标签之间仍然对齐，量内容保证长标签不被切。
+        /// </summary>
+        private static bool Btn(string label, float minWidth)
+        {
+            var c = new GUIContent(label);
+            float w = minWidth;
+            try
+            {
+                var st = GUI.skin != null ? GUI.skin.button : null;
+                if (st != null) w = Mathf.Max(minWidth, st.CalcSize(c).x + 10f);
+            }
+            catch { }
+            return GUILayout.Button(c, GUILayout.Width(w));
+        }
+
+        /// <summary>当前"画笔"：点格子会把它刷进去。空串 = 跟随装备。</summary>
+        private static string _lookBrush = LookCatalog.FollowGear;
+
+        /// <summary>
+        /// 外观分配矩阵。行 = 分型，列 = T1/T2/T3/精英。
+        ///
+        /// ★为什么是画笔而不是每格循环切换★
+        ///   5×4 = 20 格。循环切换的话，"把 T3 那一列全设成克里格"要点很多次，
+        ///   而且风格越多越难点到想要的那个。画笔模式的点击次数和风格数量无关：
+        ///   选一次画笔，之后点哪格刷哪格，点行头刷整行、点列头刷整列。
+        ///
+        /// ★列不是并存的三种卫兵★
+        ///   阶位来自玩家等级（Archetypes.PlayerTier），是全局进度。
+        ///   所以三列读作"随战役推进，这个分型依次变成什么样"。
+        /// </summary>
+        private static void DrawLookSection()
+        {
+            var looks = LookCatalog.All;
+
+            GUILayout.Label(L.T("<color=#aaaaaa>影响<b>所有</b>卫兵，包括之后招募的。"
+                              + "外观是本地设置，<b>联机时不同步</b> —— 各人可以设自己喜欢的，不影响同步。</color>"));
+            GUILayout.Space(4);
+
+            // ---- 画笔 ----
+            GUILayout.BeginHorizontal();
+            GUILayout.Label(L.T("风格"), GUILayout.Width(50));
+            if (GUILayout.Toggle(_lookBrush == LookCatalog.FollowGear, L.T("跟随装备"), "Button", GUILayout.Width(96)))
+                _lookBrush = LookCatalog.FollowGear;
+            for (int i = 0; i < looks.Length; i++)
+            {
+                var c = new GUIContent(looks[i].Display());
+                float w = 96f;
+                try { if (GUI.skin != null) w = Mathf.Max(96f, GUI.skin.button.CalcSize(c).x + 10f); } catch { }
+                if (GUILayout.Toggle(_lookBrush == looks[i].Id, c, "Button", GUILayout.Width(w)))
+                    _lookBrush = looks[i].Id;
+            }
+            GUILayout.Space(10);
+            if (Btn(L.T("全部设为"), 90f)) { LookAssign.SetAll(_lookBrush); RefreshLooks(); }
+            GUILayout.Space(10);
+            // ★改了 looks.json 之后必须重读★ 清单是带缓存的（只在第一次访问时读文件），
+            //   没有这个按钮就只能重启游戏 —— 而调配方是个"改一件看一眼"的循环，
+            //   每次重启的代价高到让这个配置形同虚设。
+            if (Btn(L.T("重载风格"), 100f)) { LookCatalog.Invalidate(); RefreshLooks(); }
+            GUILayout.EndHorizontal();
+            GUILayout.Label(L.T("<color=#aaaaaa>【重载风格】= 重读 looks.json 并立刻重建视图。改配方不用重启游戏。</color>"));
+
+            if (looks.Length == 0)
+                GUILayout.Label(L.T("<color=#d0a050>looks.json 里没有可用的风格，只能「跟随装备」。</color>"));
+
+            GUILayout.Space(6);
+
+            // ---- 矩阵 ----
+            var all = Archetypes.All;
+            string[] cols = { "T1", "T2", "T3", L.T("精英") };
+
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("", GUILayout.Width(96));
+            for (int c = 0; c < LookAssign.Cols; c++)
+                if (Btn(cols[c] + " ↓", 96f)) { LookAssign.SetCol(c, _lookBrush); RefreshLooks(); }
+            GUILayout.Label(L.T("<color=#aaaaaa>　点列头刷整列</color>"));
+            GUILayout.EndHorizontal();
+
+            for (int i = 0; all != null && i < all.Length; i++)
+            {
+                GUILayout.BeginHorizontal();
+                if (Btn((all[i].Name ?? "?") + " →", 96f)) { LookAssign.SetRow(i, _lookBrush); RefreshLooks(); }
+                for (int c = 0; c < LookAssign.Cols; c++)
+                {
+                    string cur = LookAssign.Get(i, c);
+                    var look = LookCatalog.Get(cur);
+                    string txt = look != null ? look.Display() : L.T("跟随装备");
+                    // 和画笔一致的那些格子高亮，一眼看出这次要刷哪些
+                    bool same = string.Equals(cur ?? "", _lookBrush ?? "", StringComparison.OrdinalIgnoreCase);
+                    if (GUILayout.Toggle(same, txt, "Button", GUILayout.Width(96)) && !same)
+                    { LookAssign.Set(i, c, _lookBrush); RefreshLooks(); }
+                }
+                GUILayout.EndHorizontal();
+            }
+
+            GUILayout.Space(6);
+            Settings.HideGearLook = !GUILayout.Toggle(!Settings.HideGearLook,
+                L.T("显示所穿装备的外观"), GUILayout.Width(180));
+            GUILayout.Label(L.T("<color=#aaaaaa>开：模型会随身上的装备变化（各人穿什么就是什么，统一外观会被盖掉一半）。"
+                              + "关：只显示上面选的风格，<b>手持武器不受影响</b>。"
+                              + "对「借模型」类的风格（如克里格）无效 —— 那种本来就不显示装备。</color>"));
+        }
+
+        /// <summary>改完分配表就地重建视图，不用过图。</summary>
+        private static void RefreshLooks()
+        {
+            try { DollLookPatch.RebuildAllGuardViews(); } catch (Exception e) { LogError("[外观] 刷新失败: " + e.Message); }
+        }
+
         private static bool Fold(ref bool open, string title, string hint)
         {
             GUILayout.Space(8);
@@ -503,6 +626,68 @@ namespace DynastyRetinue
                     GUILayout.Label(_w.ToString());
                 }
             }
+            // ★合作模式现状★ 不在联机时 Describe() 返回空串，单机玩家看不到任何联机字样。
+            //
+            //   为什么现在只是提示而不是拦截：用户明确要的是**支持**而不是禁用。
+            //   但在指令通道接好之前，如实说明比假装没事强 —— 实测在合作里
+            //   从面板招募会立刻触发不同步，而且 Uuid 用的是 StatefulRandom，
+            //   单边生成还会把本机的随机流永久推快一格，之后每次原版生成的 id 都错位。
+            {
+                string _co = CoopState.Describe();
+                if (!string.IsNullOrEmpty(_co))
+                {
+                    GUILayout.Label("<color=#7ec8ff>" + _co + "</color>");
+                    if (!CoopState.ModsMatch)
+                        GUILayout.Label(L.T("<color=#ff8080>双方的 mod 列表或版本不一致（这是游戏自带的握手结果）。"
+                                          + "请确保两边装的是同一个版本的本 mod。</color>"));
+                    // ★链路自检必须放在**玩家看得见**的地方★
+                    //   发布包不带 dynasty_dev.flag，开发区在玩家那边永远是隐藏的 ——
+                    //   放开发区等于只有我自己能点，而这个测试恰恰**必须两台机器一起做**。
+                    //   它不碰任何游戏状态，只让两边各打一行日志，所以放出来是安全的；
+                    //   而且只在真的处于合作会话时才出现，单机玩家看不到。
+                    GUILayout.BeginHorizontal();
+                    if (Btn(L.T("测试联机通道"), 140f))
+                        CoopCommand.Send("ping", CoopState.IsHost ? "H" : "G");
+                    // 指纹只说"不一样"，说不出"哪不一样"。83 个开关人肉对不现实，
+                    // 用已经验证可用的指令通道把设置对发一次，直接列差异。
+                    if (Btn(L.T("核对双方设置"), 140f))
+                    {
+                        var _c = new List<string> { CoopState.LocalUserId };
+                        _c.AddRange(CoopSettings.CaptureAll());
+                        CoopCommand.Send("cfg", _c.ToArray());
+                    }
+                    // ★对齐设置的两件事放在一起★
+                    //   核对告诉你"哪几项不一样"，还原是"最快让它们一样"的手段
+                    //   （默认值是同一份代码里的常量，双方各点一次必然一致）。
+                    //   面板下方那个通用按钮保留给单机用；这一块只在联机时出现，
+                    //   所以单机玩家的布局完全没变。
+                    DangerButton(ref _armResetCoop, L.T("恢复默认设置"), 140f, 0,
+                                 ResetSettingsToDefault);
+                    GUILayout.Label(L.T("<color=#aaaaaa>不改变任何游戏状态，只在两台机器的日志里各打一行。"
+                                      + "两边都出现「收到 ping」才说明通道是通的。</color>"));
+                    GUILayout.EndHorizontal();
+
+                    // 核对结果（还没核对过时 DiffText 返回空串，不占地方）
+                    {
+                        string _d = CoopSettings.DiffText();
+                        if (!string.IsNullOrEmpty(_d))
+                            GUILayout.Label((_d.Contains("★") ? "<color=#ff8080>" : "<color=#7ec87e>")
+                                          + _d + "</color>");
+                    }
+
+                    if (CoopState.IsMultiplayer)
+                    {
+                        GUILayout.Label(L.T("<color=#7ec87e>招募 / 换船 / 改名 / 遣散 已走官方指令通道，两台机器会一起执行。"
+                                          + "这些操作使用<b>发起方</b>的设置（谁点的算谁的），"
+                                          + "但<b>不会改动你自己的设置</b> —— 只在执行那一条指令期间借用，跑完立刻还原；"
+                                          + "单机时当然还是用你自己的。</color>"));
+                        GUILayout.Label(L.T("<color=#d0a050>但战斗中的<b>被动规则</b>不走指令：士气隔离、卫兵经验缩放、"
+                                          + "舰船多打一发 / 护盾护甲加成等，是补丁在战斗中持续读各自设置算的。"
+                                          + "两边不一致就等于用不同规则跑同一场战斗 —— 请先对一下上面那个<b>设置指纹</b>。</color>"));
+                    }
+                }
+            }
+
             // ★一帧只扫一次★ 这一段原来连着调 4 次 RetinueRegistry.Count/All()，
             // 而每次都是「遍历所有 State 里的全部实体 + 逐个 IsGuard」。
             // IMGUI 一帧至少触发两轮事件（Layout / Repaint），于是面板开着的时候
@@ -511,10 +696,28 @@ namespace DynastyRetinue
             int _cnt = _guards.Count;
             GUILayout.Label(L.F("<b>卫队</b>   在册 {0}   {1}", _cnt, RetinueRegistry.Describe(_guards)));
             GUILayout.BeginHorizontal();
-            if (GUILayout.Button(L.T("生成一个"), GUILayout.Width(110))) RetinueTest.SpawnOne();
-            if (GUILayout.Button(L.T("Dump 状态"), GUILayout.Width(110))) RetinueTest.DumpState();
+            // 走指令通道，理由同招募面板：直接生成只有本机改了状态。
+            // 分型 -1 = 用设置里的默认分型；精英 -1 = 普通卫兵。
+            if (Btn(L.T("生成一个"), 110f))
+            {
+                // ★不能发 -1★
+                //   SpawnOne 里 `archOverride < 0` 会退回读 Main.Settings.ArchetypeIndex ——
+                //   那是**本机设置**。发 -1 等于让两台机器各按自己面板上选的分型生成，
+                //   一台出近战、一台出灵能，实体属性当场分叉。
+                //   这里由发起方先解析成具体序号再发。
+                int _arch = (Settings != null) ? Settings.ArchetypeIndex : 0;
+                var _a = new List<string>
+                {
+                    _arch.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                    "-1",
+                    (Settings != null && Settings.NoCountCap()) ? "1" : "0",
+                };
+                _a.AddRange(CoopSettings.Capture());
+                CoopCommand.Send("recruit", _a.ToArray());
+            }
+            if (Btn(L.T("Dump 状态"), 110f)) RetinueTest.DumpState();
             DangerButton(ref _armDismiss, L.T("遣散全部"), 110f,
-                         _cnt, () => RetinueRegistry.DismissAll());
+                         _cnt, () => CoopCommand.Send("dismissall"));
             GUILayout.EndHorizontal();
             // ★ DLC 缺失提示 ★ 五个分型里四个的单位蓝图来自 DLC3。没启用 DLC3 时会退到
             // 本体兜底单位（见 ChainProbe.UnitFallback），卫兵功能完全正常，但外观和自带
@@ -558,7 +761,7 @@ namespace DynastyRetinue
             for (int i = 0; i < _archs.Length; i++)
             {
                 string label = (i == _cur ? "● " : "○ ") + _archs[i].Name;
-                if (GUILayout.Button(label, GUILayout.Width(150))) Settings.ArchetypeIndex = i;
+                if (Btn(label, 150f)) Settings.ArchetypeIndex = i;
                 if (i % 4 == 3 && i < _archs.Length - 1) { GUILayout.EndHorizontal(); GUILayout.BeginHorizontal(); }
             }
             GUILayout.EndHorizontal();
@@ -567,8 +770,8 @@ namespace DynastyRetinue
             if (DevUI)
             {
             GUILayout.BeginHorizontal();
-            if (GUILayout.Button(L.T("重载模板"), GUILayout.Width(110))) Archetypes.Reload();
-            if (GUILayout.Button(L.T("列出加点方案"), GUILayout.Width(130))) BuildPlans.Reload();
+            if (Btn(L.T("重载模板"), 110f)) Archetypes.Reload();
+            if (Btn(L.T("列出加点方案"), 130f)) BuildPlans.Reload();
             GUILayout.EndHorizontal();
             }
 
@@ -580,11 +783,11 @@ namespace DynastyRetinue
             GUILayout.BeginHorizontal();
             GUILayout.Label(L.T("目标 NPC 关键字"), GUILayout.Width(110));
             Settings.RecruitNpcKeys = GUILayout.TextField(Settings.RecruitNpcKeys ?? "", GUILayout.Width(220));
-            if (GUILayout.Button(L.T("挂到当前区域"), GUILayout.Width(110)))
+            if (Btn(L.T("挂到当前区域"), 110f))
             { RecruitEntry.AttachInArea(true); RecruitDialog.InjectInArea(true); }
             // 「列出可挂载 NPC」只往日志里 dump 一串蓝图名，玩家拿到也不知道该干嘛
-            if (DevUI && GUILayout.Button(L.T("列出可挂载 NPC"), GUILayout.Width(130))) RecruitEntry.ListCandidates();
-            if (GUILayout.Button(L.T("直接开窗"), GUILayout.Width(90))) OpenRecruitUI(null);
+            if (DevUI && Btn(L.T("列出可挂载 NPC"), 130f)) RecruitEntry.ListCandidates();
+            if (Btn(L.T("直接开窗"), 90f)) OpenRecruitUI(null);
             GUILayout.EndHorizontal();
             // 这里原来还有一个【预览新窗口】按钮，调 UI.RetinueUI.Open()。
             // 而【直接开窗】走的 OpenRecruitUI 第一句就是 try { UI.RetinueUI.Open(); return; } ——
@@ -670,9 +873,9 @@ namespace DynastyRetinue
 
             GUILayout.BeginHorizontal();
             GUILayout.Label(L.T("换船（默认：巡洋/大巡都用 Gothic）"), GUILayout.Width(210));
-            if (GUILayout.Button(L.T("护卫舰"), GUILayout.Width(80)))   StarshipViewTool.ApplyTierDefault(Kingmaker.Enums.Size.Frigate_1x2);
-            if (GUILayout.Button(L.T("巡洋舰"), GUILayout.Width(80)))   StarshipViewTool.ApplyTierDefault(Kingmaker.Enums.Size.Cruiser_2x4);
-            if (GUILayout.Button(L.T("大巡洋舰"), GUILayout.Width(90)))  StarshipViewTool.ApplyTierDefault(Kingmaker.Enums.Size.GrandCruiser_3x6);
+            if (Btn(L.T("护卫舰"), 80f))   StarshipViewTool.ApplyTierDefault(Kingmaker.Enums.Size.Frigate_1x2);
+            if (Btn(L.T("巡洋舰"), 80f))   StarshipViewTool.ApplyTierDefault(Kingmaker.Enums.Size.Cruiser_2x4);
+            if (Btn(L.T("大巡洋舰"), 90f))  StarshipViewTool.ApplyTierDefault(Kingmaker.Enums.Size.GrandCruiser_3x6);
             GUILayout.EndHorizontal();
             Settings.ShipSwitchInCombat = GUILayout.Toggle(Settings.ShipSwitchInCombat, L.T("允许战斗中换船（有风险：格子占位会变，寻路网格未必跟着重算）"));
             GUILayout.BeginHorizontal();
@@ -770,7 +973,7 @@ namespace DynastyRetinue
                 for (int _i = 0; _i < _list.Count; _i++)
                 {
                     var _m = _list[_i];
-                    if (GUILayout.Button(_m.HullName, GUILayout.Width(190))) StarshipViewTool.ApplyModelAtTier(_m, _tier);
+                    if (Btn(_m.HullName, 190f)) StarshipViewTool.ApplyModelAtTier(_m, _tier);
                 }
                 GUILayout.EndHorizontal();
             }
@@ -790,8 +993,8 @@ namespace DynastyRetinue
             if (DevUI)
             {
             GUILayout.BeginHorizontal();
-            if (GUILayout.Button(L.T("挂点诊断"), GUILayout.Width(110))) ShipSlotProbe.Dump();
-            if (GUILayout.Button(L.T("挂点几何诊断"), GUILayout.Width(150))) ShipSlotGeometryProbe.Dump();
+            if (Btn(L.T("挂点诊断"), 110f)) ShipSlotProbe.Dump();
+            if (Btn(L.T("挂点几何诊断"), 150f)) ShipSlotGeometryProbe.Dump();
             GUILayout.EndHorizontal();
             GUILayout.BeginHorizontal();
             GUILayout.Label(L.T("舰首挂点微调　前后"), GUILayout.Width(130));
@@ -801,7 +1004,7 @@ namespace DynastyRetinue
             Settings.ShipProwUpPct = (int)GUILayout.HorizontalSlider(Settings.ShipProwUpPct, -60f, 60f, GUILayout.Width(130));
             GUILayout.Label(Settings.ShipProwUpPct + "%", GUILayout.Width(42));
             // 拖歪了没法凭记忆拖回来 —— 这个按钮就是"默认值是多少"的答案
-            if (GUILayout.Button(L.T("归零"), GUILayout.Width(60)))
+            if (Btn(L.T("归零"), 60f))
             { Settings.ShipProwOffsetPct = 0; Settings.ShipProwUpPct = 0; Log("[挂点] 微调已归零，回到算出来的位置。"); }
             GUILayout.EndHorizontal();
             // 学到的舰首挂点 —— 这是整条链上唯一的地面真值，值得单独一行
@@ -817,7 +1020,7 @@ namespace DynastyRetinue
                                     Settings.ProwDropRatio.ToString("F3"),
                                     Settings.ProwZBackRatio.ToString("F3")), GUILayout.Width(520));
             Settings.ShipProwUseLearned = GUILayout.Toggle(Settings.ShipProwUseLearned, L.T("用学到的"), GUILayout.Width(90));
-            if (Settings.ProwLearned && GUILayout.Button(L.T("忘掉"), GUILayout.Width(60)))
+            if (Settings.ProwLearned && Btn(L.T("忘掉"), 60f))
             { Settings.ProwLearned = false; Settings.ProwLearnedFrom = ""; Log("[挂点] 已忘掉学到的舰首挂点，退回公式。"); }
             GUILayout.EndHorizontal();
             GUILayout.Label(L.T("<color=#aaaaaa>0% = 用算出来的船艏位置。合成挂点挂在 StarshipView 下、旋转归零，"
@@ -847,40 +1050,23 @@ namespace DynastyRetinue
 
             }
 
-            if (Fold(ref Settings.PanelShowRules, L.T("规则"), L.T("士气池 / 镜头 / 成长 / 装备 / 解除限制")))
+            // ★分区重排（1.0.74）★ 原来「规则」一个折叠区里塞了 14 件互不相干的事 ——
+            //   跟队、成长、经验、士气、镜头、缠斗、语言、发装备、创伤、解除限制、命名、
+            //   诊断、日志、恢复默认。找一个选项要从头扫到尾。现在按"想改什么"分区。
+            //   ★只搬不改★ 每一块都是整段搬过来的，没有重写任何一行控件逻辑。
+
+            if (Fold(ref Settings.PanelShowLook, L.T("外观"), L.T("按分型/阶层分配风格 / 是否显示所穿装备")))
             {
-            // ---------- 规则 ----------
+            GUILayout.Space(6);
+            DrawLookSection();
+            }
+
+            if (Fold(ref Settings.PanelShowGrowth, L.T("成长"), L.T("经验 / 升级 / 创伤 / 发装备")))
+            {
             GUILayout.Space(8);
-            GUILayout.Label(L.T("<b>规则</b>"));
-            Settings.AttachFollow     = GUILayout.Toggle(Settings.AttachFollow, L.T("跟随队长"));
             Settings.AlignExperience  = GUILayout.Toggle(Settings.AlignExperience, L.T("招募时按主角经验设起点"));
             Settings.AutoLevelUp      = GUILayout.Toggle(Settings.AutoLevelUp, L.T("自动成长（每次进区域按当前阶位补升级）"));
             Settings.ScaleGuardXp     = GUILayout.Toggle(Settings.ScaleGuardXp, L.T("卫兵经验按比例缩放（不影响队友那份）"));
-            Settings.IsolateMomentum  = GUILayout.Toggle(Settings.IsolateMomentum, L.T("士气隔离（卫兵受伤/倒地不扣队伍士气）"));
-            Settings.SeparateMomentumPool = GUILayout.Toggle(Settings.SeparateMomentumPool, L.T("卫队独立士气池（大招花自己的；代价是卫兵的 Resolve 也不再进你的池子）"));
-            Settings.GuardKillFeedsOwnPool = GUILayout.Toggle(Settings.GuardKillFeedsOwnPool, L.T("卫兵杀敌也给卫队池加分（不动你那份，否则卫队只出力不进账）"));
-            Settings.GuardPsykerNoVeil = GUILayout.Toggle(Settings.GuardPsykerNoVeil, L.T("卫兵灵能不推高亚空间威胁　<color=#d0a050>建议保持默认（开）</color>"
-                  + "<color=#aaaaaa>　帷幕是区域唯一值、做不了独立池，只能选计不计入。关掉后五个 AI 每回合乱放技能，帷幕会迅速失控。</color>"));
-            Settings.NoCameraFollowGuards = GUILayout.Toggle(Settings.NoCameraFollowGuards, L.T("卫兵行动时镜头不跟随（含技能演出特写；你自己队伍不受影响）"));
-            Settings.GuardsCanShootInMelee = GUILayout.Toggle(Settings.GuardsCanShootInMelee,
-                L.T("卫兵被近战缠住时也能开火　<color=#aaaaaa>原版规则里重武器射击在缠斗中不可用，"
-                  + "玩家能手动走位规避、AI 卫兵不能 —— 关掉的话远程卫兵要么整回合忙着退位、要么一枪不开。</color>"));
-            // 「发放装备」这四个字太省，作者本人都问过它是干嘛的 ——
-            // 作者看不懂的标签，玩家一定看不懂。改成把**两边的后果**都写出来。
-            // ---------- 界面语言 ----------
-            GUILayout.BeginHorizontal();
-            GUILayout.Label(L.T("界面语言"), GUILayout.Width(70));
-            string[] _langs = { L.T("跟随游戏"), "中文", "English" };
-            for (int i = 0; i < _langs.Length; i++)
-                if (GUILayout.Toggle(Settings.Language == i, _langs[i], "Button", GUILayout.Width(i == 0 ? 90 : 70))
-                    && Settings.Language != i)
-                    L.Apply(i);   // 立刻生效：重读译文 + 重命名卫兵 + 刷新已开的窗口
-            // 原文提到 LocalizationManager.CurrentLocale / l10n_en.json / archetypes.json 的 *_en 字段
-            // —— 全是实现细节，玩家看了只会更困惑。想改译文的人自己会去翻文件。
-            GUILayout.Label(L.T("<color=#aaaaaa>默认跟随游戏语言，也可以在这里手动切，不用重启。</color>"));
-            GUILayout.EndHorizontal();
-            GUILayout.Space(6);
-
             Settings.EquipGraduationGear = GUILayout.Toggle(Settings.EquipGraduationGear,
                 L.T("<b>给卫兵发装备</b>　<color=#aaaaaa>开：按 archetypes.json 的配表凭空生成一整套"
                   + "（普通卫兵按 T1/T2/T3 三档，精英用专属套），不动你的仓库。"
@@ -902,6 +1088,69 @@ namespace DynastyRetinue
             GUILayout.EndHorizontal();
             Settings.EliteCanBeDowned = GUILayout.Toggle(Settings.EliteCanBeDowned,
                 L.T("精英倒地可救（0 血进昏迷而非死亡）　<color=#aaaaaa>普通卫兵始终永久死亡</color>"));
+            GUILayout.BeginHorizontal();
+            GUILayout.Label(L.T("创伤:"), GUILayout.Width(60));
+            string[] _tm = { L.T("无创伤"), L.T("跟队恢复"), L.T("原版") };
+            for (int i = 0; i < _tm.Length; i++)
+            {
+                bool on = (Settings.TraumaMode == i);
+                if (GUILayout.Toggle(on, _tm[i], GUILayout.Width(100)) && !on) Settings.TraumaMode = i;
+            }
+            GUILayout.Label(L.T("    经验比例:"), GUILayout.Width(80));
+            Settings.XpRatio = GUILayout.TextField(Settings.XpRatio, GUILayout.Width(60));
+            GUILayout.EndHorizontal();
+            GUILayout.Label(L.T("<i>无创伤=不进创伤流水线；跟队恢复=队友被治时一起治；原版=每倒地一次永久掉最大生命，且重伤阈值写死 50% 不吃难度减免</i>"));
+
+            // ---------- 经验追赶 ----------
+            GUILayout.BeginHorizontal();
+            Settings.XpCatchUp = GUILayout.Toggle(Settings.XpCatchUp,
+                L.T("经验追赶（落后越多拿越多）"), GUILayout.Width(200));
+            GUILayout.Label(L.T("落后"), GUILayout.Width(34));
+            Settings.XpCatchUpSpan = (int)GUILayout.HorizontalSlider(Settings.XpCatchUpSpan, 1f, 40f, GUILayout.Width(110));
+            GUILayout.Label(L.F("{0} 级吃满", Settings.XpCatchUpSpan), GUILayout.Width(70));
+            GUILayout.Label(L.T("上限"), GUILayout.Width(34));
+            Settings.XpCatchUpMax = (int)GUILayout.HorizontalSlider(Settings.XpCatchUpMax, 80f, 500f, GUILayout.Width(110));
+            GUILayout.Label("×" + (Settings.XpCatchUpMax / 100f).ToString("F1"), GUILayout.Width(46));
+            GUILayout.EndHorizontal();
+            GUILayout.Label(L.T("<color=#aaaaaa>固定比例的问题是**差距只会单调拉大** —— 越往后招的卫兵越追不上。"
+                              + "追赶制：落后 0 级拿「经验比例」那个地板值，落后到设定级数拿满上限，中间线性插值；"
+                              + "追平后回落到地板，所以卫兵<b>永远不会反超主角</b>。</color>"));
+
+            }
+
+            if (Fold(ref Settings.PanelShowCombat, L.T("战斗与行为"), L.T("士气池 / 镜头 / 缠斗 / 跟随")))
+            {
+            GUILayout.Space(8);
+            Settings.AttachFollow     = GUILayout.Toggle(Settings.AttachFollow, L.T("跟随队长"));
+            Settings.IsolateMomentum  = GUILayout.Toggle(Settings.IsolateMomentum, L.T("士气隔离（卫兵受伤/倒地不扣队伍士气）"));
+            Settings.SeparateMomentumPool = GUILayout.Toggle(Settings.SeparateMomentumPool, L.T("卫队独立士气池（大招花自己的；代价是卫兵的 Resolve 也不再进你的池子）"));
+            Settings.GuardKillFeedsOwnPool = GUILayout.Toggle(Settings.GuardKillFeedsOwnPool, L.T("卫兵杀敌也给卫队池加分（不动你那份，否则卫队只出力不进账）"));
+            Settings.GuardPsykerNoVeil = GUILayout.Toggle(Settings.GuardPsykerNoVeil, L.T("卫兵灵能不推高亚空间威胁　<color=#d0a050>建议保持默认（开）</color>"
+                  + "<color=#aaaaaa>　帷幕是区域唯一值、做不了独立池，只能选计不计入。关掉后五个 AI 每回合乱放技能，帷幕会迅速失控。</color>"));
+            Settings.NoCameraFollowGuards = GUILayout.Toggle(Settings.NoCameraFollowGuards, L.T("卫兵行动时镜头不跟随（含技能演出特写；你自己队伍不受影响）"));
+            Settings.GuardsCanShootInMelee = GUILayout.Toggle(Settings.GuardsCanShootInMelee,
+                L.T("卫兵被近战缠住时也能开火　<color=#aaaaaa>原版规则里重武器射击在缠斗中不可用，"
+                  + "玩家能手动走位规避、AI 卫兵不能 —— 关掉的话远程卫兵要么整回合忙着退位、要么一枪不开。</color>"));
+            }
+
+            if (Fold(ref Settings.PanelShowNaming, L.T("命名"), L.T("军衔·人名 / 重新命名")))
+            {
+            GUILayout.Space(8);
+            GUILayout.BeginHorizontal();
+            GUILayout.Label(L.T("<b>命名</b>　<color=#aaaaaa>「军衔·人名」，军衔随本人等级三档自动晋升，人名跟他一辈子</color>"), GUILayout.Width(520));
+            if (Btn(L.T("重新命名全部"), 120f)) CoopCommand.Send("renameall");
+            GUILayout.EndHorizontal();
+            GUILayout.Label(L.T("<i>军衔取自 archetypes.json 的 guardNames（每条线三档），人名取自根级 guardNamePool；"
+                              + "精英用自己的专属军衔。你手改过的名字不会被覆盖 —— 想让 mod 重新接管就点【重新命名全部】。</i>"));
+            DrawRenameList();
+
+            }
+
+            if (Fold(ref Settings.PanelShowUnlock, L.T("解除限制"), L.T("利润因子 / 数量 / 等级 / 精英")))
+            {
+            GUILayout.Space(8);
+            // 「发放装备」这四个字太省，作者本人都问过它是干嘛的 ——
+            // 作者看不懂的标签，玩家一定看不懂。改成把**两边的后果**都写出来。
             GUILayout.Label(L.T("<b>解除限制</b>　<color=#aaaaaa>互不相干的几件事，分开控制</color>"));
             // ★「全部解除」放在单独一行、且排在最前★
             // 原来它和另外三个并排，看着像第四个并列项，实际是总开关 ——
@@ -939,48 +1188,29 @@ namespace DynastyRetinue
                 + "</color>"));
 
 
-            GUILayout.BeginHorizontal();
-            GUILayout.Label(L.T("<b>命名</b>　<color=#aaaaaa>「军衔·人名」，军衔随本人等级三档自动晋升，人名跟他一辈子</color>"), GUILayout.Width(520));
-            if (GUILayout.Button(L.T("重新命名全部"), GUILayout.Width(120))) RetinueTest.RenameAll();
-            GUILayout.EndHorizontal();
-            GUILayout.Label(L.T("<i>军衔取自 archetypes.json 的 guardNames（每条线三档），人名取自根级 guardNamePool；"
-                              + "精英用自己的专属军衔。你手改过的名字不会被覆盖 —— 想让 mod 重新接管就点【重新命名全部】。</i>"));
-            DrawRenameList();
-
-            GUILayout.BeginHorizontal();
-            GUILayout.Label(L.T("创伤:"), GUILayout.Width(60));
-            string[] _tm = { L.T("无创伤"), L.T("跟队恢复"), L.T("原版") };
-            for (int i = 0; i < _tm.Length; i++)
-            {
-                bool on = (Settings.TraumaMode == i);
-                if (GUILayout.Toggle(on, _tm[i], GUILayout.Width(100)) && !on) Settings.TraumaMode = i;
             }
-            GUILayout.Label(L.T("    经验比例:"), GUILayout.Width(80));
-            Settings.XpRatio = GUILayout.TextField(Settings.XpRatio, GUILayout.Width(60));
-            GUILayout.EndHorizontal();
-            GUILayout.Label(L.T("<i>无创伤=不进创伤流水线；跟队恢复=队友被治时一起治；原版=每倒地一次永久掉最大生命，且重伤阈值写死 50% 不吃难度减免</i>"));
 
-            // ---------- 经验追赶 ----------
+            // ---------- 常用（始终可见，不折叠）----------
+            // 语言、诊断包、恢复默认是"任何时候都可能要点"的东西，藏进折叠区反而更难找。
+            // ---------- 界面语言 ----------
             GUILayout.BeginHorizontal();
-            Settings.XpCatchUp = GUILayout.Toggle(Settings.XpCatchUp,
-                L.T("经验追赶（落后越多拿越多）"), GUILayout.Width(200));
-            GUILayout.Label(L.T("落后"), GUILayout.Width(34));
-            Settings.XpCatchUpSpan = (int)GUILayout.HorizontalSlider(Settings.XpCatchUpSpan, 1f, 40f, GUILayout.Width(110));
-            GUILayout.Label(L.F("{0} 级吃满", Settings.XpCatchUpSpan), GUILayout.Width(70));
-            GUILayout.Label(L.T("上限"), GUILayout.Width(34));
-            Settings.XpCatchUpMax = (int)GUILayout.HorizontalSlider(Settings.XpCatchUpMax, 80f, 500f, GUILayout.Width(110));
-            GUILayout.Label("×" + (Settings.XpCatchUpMax / 100f).ToString("F1"), GUILayout.Width(46));
+            GUILayout.Label(L.T("界面语言"), GUILayout.Width(70));
+            string[] _langs = { L.T("跟随游戏"), "中文", "English" };
+            for (int i = 0; i < _langs.Length; i++)
+                if (GUILayout.Toggle(Settings.Language == i, _langs[i], "Button", GUILayout.Width(i == 0 ? 90 : 70))
+                    && Settings.Language != i)
+                    L.Apply(i);   // 立刻生效：重读译文 + 重命名卫兵 + 刷新已开的窗口
+            // 原文提到 LocalizationManager.CurrentLocale / l10n_en.json / archetypes.json 的 *_en 字段
+            // —— 全是实现细节，玩家看了只会更困惑。想改译文的人自己会去翻文件。
+            GUILayout.Label(L.T("<color=#aaaaaa>默认跟随游戏语言，也可以在这里手动切，不用重启。</color>"));
             GUILayout.EndHorizontal();
-            GUILayout.Label(L.T("<color=#aaaaaa>固定比例的问题是**差距只会单调拉大** —— 越往后招的卫兵越追不上。"
-                              + "追赶制：落后 0 级拿「经验比例」那个地板值，落后到设定级数拿满上限，中间线性插值；"
-                              + "追平后回落到地板，所以卫兵<b>永远不会反超主角</b>。</color>"));
+            GUILayout.Space(6);
 
-            }
 
             // ---------- 反馈（玩家可见）----------
             GUILayout.Space(8);
             GUILayout.BeginHorizontal();
-            if (GUILayout.Button(L.T("导出诊断包"), GUILayout.Width(120)))
+            if (Btn(L.T("导出诊断包"), 120f))
             {
                 var _p = DiagnosticReport.Export();
                 if (!string.IsNullOrEmpty(_p)) Log("[诊断包] 请把这个文件发给作者：" + _p);
@@ -1003,9 +1233,14 @@ namespace DynastyRetinue
             // 一键还原 —— 调坏了不用去翻 Settings.xml，也不用重装
             GUILayout.BeginHorizontal();
             DangerButton(ref _armReset, L.T("恢复默认设置"), 130f, 0, ResetSettingsToDefault);
-            GUILayout.Label(L.T("<color=#aaaaaa>把上面所有选项恢复成初始值。"
-                              + "调乱了、或者不确定改过什么的时候点它，比翻 Settings.xml 快。"
-                              + "不影响存档里已有的卫兵和座舰。</color>"));
+            {
+                string _tip = L.T("<color=#aaaaaa>把上面所有选项恢复成初始值。"
+                                + "调乱了、或者不确定改过什么的时候点它，比翻 Settings.xml 快。"
+                                + "不影响存档里已有的卫兵和座舰。</color>");
+                // 联机时面板顶部的合作块里已经有一个同样的按钮 + 差异列表，
+                // 这里不再重复提示，免得同一句话说两遍。
+                GUILayout.Label(_tip);
+            }
             GUILayout.EndHorizontal();
 
             // ★预览玩家视角★ 勾上之后，玩家区里所有「只有开发者看得到」的额外内容
@@ -1037,6 +1272,38 @@ namespace DynastyRetinue
             GUILayout.Label(L.T("<color=#aaaaaa>勾上后隐藏玩家区里所有开发者专属内容，"
                               + "开发区也只剩一行开关 —— 面板即玩家所见。拍发布截图用，不必删 flag 重启。</color>"));
             GUILayout.EndHorizontal();
+
+            // ★外观的开关不在这里★ 唯一入口是「外观」区的分配矩阵（以及游戏内窗口的「外观」页）。
+            //   这里曾经有两个开发开关，界面做好之后它们和矩阵是两套并行的判据 ——
+            //   矩阵设成「跟随装备」而开关还开着时，卫兵仍然是卡斯金，无从解释。已删除。
+            GUILayout.BeginHorizontal();
+            DangerButton(ref _armRefit, "重载配表并重发装备", 180f, RetinueRegistry.Count,
+                         RetinueTest.ReloadConfigAndRefit);
+            GUILayout.Label("<color=#aaaaaa>重读 archetypes.json / plans.json / looks.json，"
+                          + "然后给**全部在册卫兵**重跑一遍发装备，最后重建视图。"
+                          + "调配表不用再重启游戏、也不用重新招募。"
+                          + "★注意★ 你手动换过的装备，如果配表里那一格有更靠前的候选，会被换掉。</color>");
+            GUILayout.EndHorizontal();
+            GUILayout.Space(4);
+
+            GUILayout.BeginHorizontal();
+            if (Btn("导出卫兵装备清单", 150f))
+            {
+                var _gp = GearAudit.Export();
+                if (!string.IsNullOrEmpty(_gp)) Log("[装备清单] " + _gp);
+            }
+            GUILayout.Label("<color=#aaaaaa>把在册卫兵**实际穿在身上**的装备逐槽导出（含护甲吸收/偏转），按分型归组。"
+                          + "配表说的是「该发什么」，这个是「最后穿上了什么」—— 回退链落到第几个、有没有被挤掉，只有这里作数。</color>");
+            GUILayout.EndHorizontal();
+            if (!string.IsNullOrEmpty(GearAudit.LastPath))
+                GUILayout.Label("<color=#7ec8ff>最近导出：" + GearAudit.LastPath + "</color>");
+            GUILayout.Space(4);
+
+            GUILayout.BeginHorizontal();
+            if (Btn("重建卫兵视图", 110f))
+                DollLookPatch.RebuildAllGuardViews();
+            GUILayout.Label("<color=#aaaaaa>只重建视图，不重读配置。改了 looks.json 用「外观」区里的【重载风格】。</color>");
+            GUILayout.EndHorizontal();
             GUILayout.Space(6);
 
             // ---------- 工具 ----------
@@ -1044,19 +1311,19 @@ namespace DynastyRetinue
             // 从玩家区挪进来的：会整份覆盖 archetypes.json，产物丢掉
             // unit/unitFallback/brain/elites/gear，只有作者调方案时用得上。
             GUILayout.BeginHorizontal();
-            if (GUILayout.Button("导入 RTAutoBuilder", GUILayout.Width(150))) Archetypes.ImportFromAutoBuilder();
+            if (Btn("导入 RTAutoBuilder", 150f)) Archetypes.ImportFromAutoBuilder();
             GUILayout.Label("<color=#d08080>会覆盖 archetypes.json（先备份成 .bak）。产物只有 name/plan/chain，"
                           + "unit / brain / 精英 / 三档装备全丢。没装 RTAutoBuilder 的话点了不会有任何反应。</color>");
             GUILayout.EndHorizontal();
             GUILayout.Space(8);
             // ---------- 一键全测（只在开发模式可见，本区整体已被 DevMode 门住）----------
             GUILayout.BeginHorizontal();
-            if (GUILayout.Button("一键自检（只读）", GUILayout.Width(150))) FullTest.RunReadOnly();
+            if (Btn("一键自检（只读）", 150f)) FullTest.RunReadOnly();
             GUILayout.Label("<color=#7ec87e>唯一一个不清场的</color><color=#aaaaaa>：文件 / 分型 / 装备 GUID / 定价 / "
                           + "倒地豁免 / 命名。不生成任何单位，随便点。</color>");
             GUILayout.EndHorizontal();
             GUILayout.BeginHorizontal();
-            if (GUILayout.Button("一键全测（会清空卫兵）", GUILayout.Width(180))) FullTest.RunDestructive();
+            if (Btn("一键全测（会清空卫兵）", 180f)) FullTest.RunDestructive();
             GUILayout.Label("<color=#ff8080>自检 + 装备矩阵 + 死亡规则 + 卸载流程。"
                           + "<b>会清空全部卫兵、把座舰还原成原样</b>，跑完别存盘。</color>");
             GUILayout.EndHorizontal();
@@ -1068,9 +1335,9 @@ namespace DynastyRetinue
             GUILayout.Label("<b>实战测试</b>　<color=#aaaaaa>只生成、不清场；生成完去打一场，"
                           + "战斗结束会自动打一份「战斗行为总账」（谁动了、放了什么技能、还是只普攻）</color>");
             GUILayout.BeginHorizontal();
-            if (GUILayout.Button("生成 5 个普通", GUILayout.Width(130)))  RetinueTest.SpawnAll(true,  false);
-            if (GUILayout.Button("生成 10 个精英", GUILayout.Width(130))) RetinueTest.SpawnAll(false, true);
-            if (GUILayout.Button("全生成（15 个）", GUILayout.Width(140))) RetinueTest.SpawnAll(true,  true);
+            if (Btn("生成 5 个普通", 130f))  RetinueTest.SpawnAll(true,  false);
+            if (Btn("生成 10 个精英", 130f)) RetinueTest.SpawnAll(false, true);
+            if (Btn("全生成（15 个）", 140f)) RetinueTest.SpawnAll(true,  true);
             GUILayout.Label("<color=#ffaa66>会绕过名额上限。装备档位用【规则】区那个设，"
                           + "但它不追溯 —— 要先设好再生成。</color>");
             GUILayout.EndHorizontal();
@@ -1089,13 +1356,13 @@ namespace DynastyRetinue
             // 而 RunGearMatrix 的日志里已经带了属性（上面那张属性对比表就是从它的输出里解的），
             // RunAll 独有的只剩 brain 记录。为了那一列跑第二遍 25 次生成不划算，
             // brain 已并进 GearTool 的每组日志。留一个入口，少一次误点、少一半时间。
-            if (GUILayout.Button("探测 brain", GUILayout.Width(110))) BrainTool.Probe();
-            if (GUILayout.Button("探测候选单位", GUILayout.Width(120))) Probe.ProbeUnits();
+            if (Btn("探测 brain", 110f)) BrainTool.Probe();
+            if (Btn("探测候选单位", 120f)) Probe.ProbeUnits();
             // 开发区的按钮不进本地化表 —— 这里的文案只给作者看
-            if (GUILayout.Button("字体覆盖检查", GUILayout.Width(120))) FontCheck.Run();
+            if (Btn("字体覆盖检查", 120f)) FontCheck.Run();
             // 职业链探测是真把单位一级级推上去 —— 55 级存档上全量跑会卡几分钟。
             // 用上面那个关键词框过滤，只测关心的那几个。
-            if (GUILayout.Button("职业链(按关键词)", GUILayout.Width(130)))
+            if (Btn("职业链(按候选名)", 130f))
                 Probe.ProbePathsFiltered(Settings.InspectFilter);
             GUILayout.EndHorizontal();
             // 区域单位一览：走到目标面前点一下，游戏自己告诉你它的蓝图名。
@@ -1103,16 +1370,16 @@ namespace DynastyRetinue
             GUILayout.BeginHorizontal();
             GUILayout.Label("区域单位一览　关键词", GUILayout.Width(150));
             Settings.InspectFilter = GUILayout.TextField(Settings.InspectFilter ?? "", GUILayout.Width(160));
-            if (GUILayout.Button("列出", GUILayout.Width(80))) UnitInspect.Run(Settings.InspectFilter);
+            if (Btn("列出", 80f)) UnitInspect.Run(Settings.InspectFilter);
             // 全库按显示名搜：不受"必须在那个区域"限制，代价是要加载 3069 个蓝图
-            if (GUILayout.Button("全库搜显示名", GUILayout.Width(110)))
+            if (Btn("全库搜显示名", 110f))
                 UnitInspect.SearchByDisplayName(Settings.InspectFilter);
             GUILayout.EndHorizontal();
 
             // ★一键全测★ 每次改探针都要你重启一次游戏才能生效，
             // 而一次会话里逐个找按钮点又容易漏。串成一次点击，跑完一起看日志。
             GUILayout.BeginHorizontal();
-            if (GUILayout.Button("一键全测（单位+装备+职业链+字体）", GUILayout.Width(280)))
+            if (Btn("一键全测（单位+装备+职业链+字体）", 280f))
             {
                 Log("########## 一键全测开始 ##########");
                 try { Probe.ProbeUnitsAndPaths(); } catch (Exception e) { LogError("单位/职业链: " + e.Message); }
@@ -1122,9 +1389,9 @@ namespace DynastyRetinue
                 FlushLog(true);
             }
             GUILayout.Label("<color=#aaaaaa>会跑几十秒，期间游戏卡住是正常的。结果全在 dynasty_log.txt</color>");
-            GUILayout.Label("<color=#aaaaaa>留空=列全部；中英文都能匹配（蓝图名 + 游戏内显示名）</color>");
-            if (GUILayout.Button("批量试算方案", GUILayout.Width(120))) PlanProbe.Run();
-            if (GUILayout.Button("导出天赋名录", GUILayout.Width(120))) ItemTool.ExportFeatures();
+            GUILayout.Label("<color=#aaaaaa>【列出】【全库搜显示名】按游戏内显示名；【职业链】按候选名（如 z_Blood_Raven）</color>");
+            if (Btn("批量试算方案", 120f)) PlanProbe.Run();
+            if (Btn("导出天赋名录", 120f)) ItemTool.ExportFeatures();
             GUILayout.EndHorizontal();
             // ★这里原来挂着一条描述【一键测装备】/【一键全测】的说明★，但那两个入口
             // 一个已合并、一个（AutoTest.RunAll → autotest.tsv）已是死代码。更糟的是它紧贴在
@@ -1136,20 +1403,20 @@ namespace DynastyRetinue
             GUILayout.BeginHorizontal();
             GUILayout.Label("经验数:", GUILayout.Width(60));
             Settings.DebugXpAmount = GUILayout.TextField(Settings.DebugXpAmount, GUILayout.Width(70));
-            if (GUILayout.Button("给卫兵发经验", GUILayout.Width(130)))
+            if (Btn("给卫兵发经验", 130f))
             {
                 int amt; if (!int.TryParse(Settings.DebugXpAmount, out amt)) amt = 5000;
                 RetinueTest.GrantXp(amt);
             }
-            if (GUILayout.Button("立即结算成长", GUILayout.Width(130))) RetinueTest.ForceGrowth();
+            if (Btn("立即结算成长", 130f)) RetinueTest.ForceGrowth();
             GUILayout.EndHorizontal();
 
             GUILayout.BeginHorizontal();
             GUILayout.Label("查物品:", GUILayout.Width(60));
             Settings.ItemQuery = GUILayout.TextField(Settings.ItemQuery, GUILayout.Width(160));
-            if (GUILayout.Button("查 GUID", GUILayout.Width(90))) ItemTool.Search(Settings.ItemQuery);
-            if (GUILayout.Button("导出物品名录", GUILayout.Width(130))) ItemTool.Export();
-            if (GUILayout.Button("护甲排名", GUILayout.Width(90))) ItemTool.RankArmor();
+            if (Btn("查 GUID", 90f)) ItemTool.Search(Settings.ItemQuery);
+            if (Btn("导出物品名录", 130f)) ItemTool.Export();
+            if (Btn("护甲排名", 90f)) ItemTool.RankArmor();
             GUILayout.Label("<i>首次点击要读 2940 条蓝图，需几秒。</i>");
             GUILayout.EndHorizontal();
 
@@ -1166,7 +1433,7 @@ namespace DynastyRetinue
                     GUILayout.Space(16);
                     GUILayout.Label(r.ZhName, GUILayout.Width(200));
                     GUILayout.Label(r.Type.Replace("Equipment.BlueprintItem", "").Replace("BlueprintItem", ""), GUILayout.Width(110));
-                    if (GUILayout.Button("装配", GUILayout.Width(60))) Archetypes.AddPlayerGear(_cur, r.Guid);
+                    if (Btn("装配", 60f)) Archetypes.AddPlayerGear(_cur, r.Guid);
                     GUILayout.Label(r.Guid, GUILayout.Width(250));
                     GUILayout.EndHorizontal();
                 }
@@ -1192,7 +1459,7 @@ namespace DynastyRetinue
                         GUILayout.BeginHorizontal();
                         GUILayout.Space(16);
                         GUILayout.Label(ItemTool.NameOf(pg[i]), GUILayout.Width(200));
-                        if (GUILayout.Button("移除", GUILayout.Width(60))) { Archetypes.RemovePlayerGear(_cur, pg[i]); break; }
+                        if (Btn("移除", 60f)) { Archetypes.RemovePlayerGear(_cur, pg[i]); break; }
                         GUILayout.Label(pg[i], GUILayout.Width(250));
                         GUILayout.EndHorizontal();
                     }
@@ -1202,12 +1469,12 @@ namespace DynastyRetinue
             GUILayout.BeginHorizontal();
             GUILayout.Label("默认单位 AssetId", GUILayout.Width(110));
             Settings.UnitAssetId = GUILayout.TextField(Settings.UnitAssetId, GUILayout.Width(240));
-            if (GUILayout.Button("在游戏内面板打开选中卫兵", GUILayout.Width(200))) RetinueTest.OpenNativePanel();
+            if (Btn("在游戏内面板打开选中卫兵", 200f)) RetinueTest.OpenNativePanel();
             GUILayout.EndHorizontal();
             GUILayout.BeginHorizontal();
             GUILayout.Label("<color=#ff8080>死亡规则测试（会真的打死）:</color>", GUILayout.Width(200));
-            if (GUILayout.Button("打死一个普通卫兵", GUILayout.Width(150))) RetinueTest.TestKill("normal");
-            if (GUILayout.Button("打死一个精英", GUILayout.Width(130))) RetinueTest.TestKill("elite");
+            if (Btn("打死一个普通卫兵", 150f)) RetinueTest.TestKill("normal");
+            if (Btn("打死一个精英", 130f)) RetinueTest.TestKill("elite");
             GUILayout.EndHorizontal();
             GUILayout.Label("<color=#aaaaaa>走的是原版同一条判定路径（SetHitPointsLeft(0) → UnitLifeController.ForceTickOnUnit），"
                           + "不是模拟。预期：普通卫兵 <b>Dead</b> 且从名册移除、名额释放；精英 <b>Unconscious</b> 且仍在册。</color>");
@@ -1218,7 +1485,7 @@ namespace DynastyRetinue
             Settings.SpawnKeyName = GUILayout.TextField(Settings.SpawnKeyName, GUILayout.Width(70));
             GUILayout.Label("遣散热键:", GUILayout.Width(70));
             Settings.DespawnKeyName = GUILayout.TextField(Settings.DespawnKeyName, GUILayout.Width(70));
-            if (GUILayout.Button("应用热键", GUILayout.Width(90))) ApplyHotkeys();
+            if (Btn("应用热键", 90f)) ApplyHotkeys();
             GUILayout.Label("<i>填 Unity KeyCode 名（F7 / G / None）。按住 Ctrl/Alt/Shift 时热键一律不触发，避免和 Ctrl+F10 打架。遣散建议留 None。</i>");
             GUILayout.EndHorizontal();
             }
@@ -1302,6 +1569,32 @@ namespace DynastyRetinue
             ModEntry?.Logger.Log(msg);
             WriteFile("INFO", msg);
         }
+
+        /// <summary>
+        /// 只在「详细日志」打开时才写的日志。
+        ///
+        /// ★为什么要分级★
+        ///   全库 383 处 Main.Log，其中相当一部分是"管道怎么接上的"这类过程记录：
+        ///   挑了哪个字体、按钮模板从哪来、对话选项插到第几位、每个卫兵摆到哪 ——
+        ///   实测一份日志里光 `[背包] 已拦截` 就 194 行、`[帷幕] 跳过累积` 495 行。
+        ///   这些在复现问题时有用，平时只是让日志涨得飞快、把真正的错误淹掉。
+        ///
+        /// ★分界线★
+        ///   · 留在 Log：**低频且不可逆**的事实 —— 版本、卸载须知、DLC 回落、
+        ///     招募/换船的结果、联机指令收发（要和不同步的 tick 对时间）
+        ///   · 转到 LogVerbose：**每次开窗/每个卫兵/每条指令**都会打的过程记录
+        ///   · 错误一律走 LogError，永远不受开关影响
+        ///
+        /// ★为什么不用条件编译或日志级别枚举★
+        ///   这个 mod 只有"平时"和"作者让你复现问题时"两种状态，
+        ///   一个 bool 足够；多一级抽象只会让人犹豫某条该放哪一级。
+        /// </summary>
+        public static void LogVerbose(string msg)
+        {
+            if (Settings == null || !Settings.WatchMomentum) return;
+            ModEntry?.Logger.Log(msg);
+            WriteFile("INFO", msg);
+        }
         public static void LogError(Exception e)
         {
             ModEntry?.Logger.Error(e.ToString());
@@ -1373,12 +1666,52 @@ namespace DynastyRetinue
         /// </summary>
         public bool WatchMomentum = false;
 
+
+        /// <summary>
+        /// 【实验中】不显示卫兵所穿装备的外观，只留合成外观（见 GearLookPatch）。
+        /// 只对分配了「拼部件」类风格的卫兵有意义 —— 借模型那种本来就不显示装备。
+        /// </summary>
+        public bool HideGearLook = false;
+
+        /// <summary>
+        /// 外观分配表。行=分型（按 archetypes.json 顺序），列=T1/T2/T3/精英。
+        /// 行用 | 分隔、格用 , 分隔，空格 = 跟随装备。
+        /// 存字符串而不是二维数组，是为了让老 Settings.xml 反序列化时不炸 —— 见 LookAssign。
+        /// </summary>
+        public string LookMatrix = "";
+
+        // 各分区的折叠状态。分区是 1.0.74 拆的（原来 14 件事挤在「规则」一区里）。
+        public bool PanelShowLook   = false;
+        public bool PanelShowGrowth = false;
+        public bool PanelShowCombat = false;
+        public bool PanelShowNaming = false;
+        public bool PanelShowUnlock = false;
+
         /// <summary>
         /// 卫兵卡住时自动挪回队长身边。
         /// 主要是给传奇档的恶魔引擎兜底 —— Gargantuan/Huge 体型过不了窄走廊，
         /// 没这个的话卫兵会永远留在上一个房间。战斗中一律不触发。
         /// </summary>
         public bool StuckRescue = true;
+
+        /// <summary>
+        /// 【已废弃，仅用于迁移】曾经的手动字体覆盖。
+        ///
+        /// 字段保留是为了**清掉**它：1.0.35 及更早版本的玩家可能选中了
+        /// HintFont 这种含 fallback 覆盖只有 14/55 的字体，那是真会缺字的。
+        /// 直接删字段的话，旧 Settings.xml 里的值虽然不再被读取，
+        /// 但也永远不会被清除；一旦以后有人复用同名字段就会诈尸。
+        /// 所以 OnLoad 时统一置空，跑一次就干净了。
+        ///
+        /// 开关本身已移除 —— 见 RetinueUI 里那段说明：四个中文可用字体
+        /// 自身汉字都是 0，换谁都走同一套 fallback，这个开关不可能有效果。
+        ///
+        /// 存的是**名字字符串**而不是引用：字体资产随场景加载/卸载，
+        /// 存引用等于存一个随时会失效的指针；名字则能跨存档、跨启动稳定复现。
+        /// 换语言或换游戏版本后这个名字可能不存在了 —— EnsureFont 里查不到就
+        /// 静默回自动，不报错、不留空白界面。
+        /// </summary>
+        public string FontOverride = "";
 
         /// <summary>开发区「区域单位一览」的关键词。纯 UI 状态，存起来免得每次重打。</summary>
         public string InspectFilter = "";

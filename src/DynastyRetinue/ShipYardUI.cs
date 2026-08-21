@@ -37,6 +37,9 @@ namespace DynastyRetinue.UI
 
         public static bool IsOpen { get { return _root != null; } }
 
+        /// <summary>对话入口开窗。曾经想"对话结束自动关"，行不通 —— 见 RetinueUI.OpenFromDialog 的注释。</summary>
+        public static void OpenFromDialog() { Open(); }
+
         public static void Open()
         {
             if (IsOpen) { Refresh(); return; }
@@ -297,19 +300,42 @@ namespace DynastyRetinue.UI
 
         // ------------------------------------------------------------ 动作
 
+        // ★换船同样必须两台一起做★
+        //   船体档位会改 State.Size、护盾、护甲、格子占位 —— 全是同步状态。
+        //   只有一台改了，帧末对哈希必然不一致。
+        //   参数取 PrefabAssetId：那是资源 id，跟着 mod 数据走，两台能各自查回同一条目。
         private static void OnBuy(ShipDialog.Offer o)
         {
-            _replyText = ShipDialog.BuyOffer(o.Tier, o.Model);
-            // 换船会重建 view，延两帧再刷，让分档/价格读到新值
-            Deferred.NextFrames(2, Refresh);
-            Refresh();
+            if (o == null || o.Model == null) return;
+            CoopCommand.Send("refit",
+                             ((int)o.Tier).ToString(System.Globalization.CultureInfo.InvariantCulture),
+                             o.Model.PrefabAssetId ?? "");
         }
 
         private static void OnRevert()
         {
+            CoopCommand.Send("shiprevert");
+        }
+
+        /// <summary>指令送达后真正换船 —— 两台机器都会走到这里。</summary>
+        internal static void ExecuteRefit(int tier, string prefabAssetId)
+        {
+            var m = ShipModelCatalog.ByPrefab(prefabAssetId);
+            if (m == null)
+            {
+                Main.LogError("[船坞] 找不到船模 " + prefabAssetId + " —— 两边的 mod 数据可能不是同一版。");
+                return;
+            }
+            _replyText = ShipDialog.BuyOffer((Size)tier, m);
+            // 换船会重建 view，延两帧再刷，让分档/价格读到新值
+            if (IsOpen) { Refresh(); Deferred.NextFrames(2, Refresh); }
+        }
+
+        /// <summary>指令送达后真正还原 —— 两台机器都会走到这里。</summary>
+        internal static void ExecuteRevert()
+        {
             _replyText = ShipDialog.Revert();
-            Deferred.NextFrames(2, Refresh);
-            Refresh();
+            if (IsOpen) { Refresh(); Deferred.NextFrames(2, Refresh); }
         }
 
     }

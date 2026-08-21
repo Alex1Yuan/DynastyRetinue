@@ -96,6 +96,23 @@ namespace DynastyRetinue
             ///   天然支持同蓝图多条目。
             /// </summary>
             public bool DualMelee;
+            /// <summary>
+            /// 可选：借这个单位蓝图的**模型**，属性仍用 UnitId 那个。
+            ///
+            /// ★用途★ 传奇层要「血鸦战团的阿斯塔特」，但 Blood_Raven 实测只有 192 血，
+            ///   而够强的通用星际战士（Spacemarine_melta 613 / _bolter 565）是别的配色。
+            ///   把外观和数值拆开：UnitId 决定属性/装备槽/自带能力，
+            ///   AppearanceUnitId 只决定看上去是谁。
+            ///
+            /// ★不进存档、不进哈希★ 实现方式是 patch PartUnitViewSettings.PrefabGuid
+            ///   的 getter（见 AppearancePatch），**从不写 m_CustomPrefabGuid**。
+            ///   所以卸载 mod 之后外观自动回到 UnitId 那个蓝图本来的样子，
+            ///   玩家不需要做任何清理；联机时那个字段两边永远是 null，哈希天然一致。
+            ///
+            /// ★解析不到就退回原版外观★ 缺 DLC 时不影响其余功能。
+            /// </summary>
+            public string AppearanceUnitId;
+
             /// <summary>专属名字。旧格式，只在没有 Rank 时用。</summary>
             public string Name;
             /// <summary>英文位阶（archetypes.json 的 "rank_en"）。缺失回落中文。</summary>

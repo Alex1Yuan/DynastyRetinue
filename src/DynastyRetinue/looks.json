@@ -1,0 +1,73 @@
+{
+  "_README": "外观风格配方。矩阵（当前卫队页）里每格选的就是这里的 id。",
+
+  "_两种做法": [
+    "unit  = 借某个原版单位的整体模型。真实、零穿模风险、而且烘焙模型本来就不吃装备视觉，",
+    "        所以自动就是'统一外观'。缺点是每个卫兵长得一模一样。",
+    "parts = 用捏脸部件拼。脸会从 5 个原版预设角色里按性别挑，所以有变化；",
+    "        但要自己挑件，可能穿模，而且装备护甲会叠上来（靠'不显示装备外观'开关挡）。",
+    "两者二选一，unit 优先。都没有 = 无效条目，会被跳过并记一条日志。"
+  ],
+
+  "_unitByArchetype": [
+    "借模型时可以按分型指定不同的单位，键是 archetypes.json 里的 name。",
+    "没匹配到就回落到 unit。这样'克里格'风格下，狙击分型自动借克里格狙击手、",
+    "军官借政委，不用玩家在界面上再配一层。"
+  ],
+
+  "_零新增 AssetId": [
+    "下面每个 guid 都是 vanilla 蓝图。parts 里是 KingmakerEquipmentEntity 蓝图 guid",
+    "（不是 EE 资源 AssetId，运行时通过 GetLinks(gender,race) 转换）；",
+    "unit 里是 BlueprintUnit guid。mod 不发明任何 AssetId。"
+  ],
+
+  "looks": [
+    {
+      "id": "kasrkin",
+      "name": "卡斯金",
+      "name_en": "Kasrkin",
+      "_note": "卡迪亚精锐突击兵。拼 EE，脸有 5 种变化。",
+      "parts": [
+        "394e4b94f1284fefa4f47f1df0e42161",
+        "a777e0dba135405998b713aaf4bb67a4",
+        "f344c7545656456aaa52ea4bd85bb214",
+        "650f2260c8634abeb4d74c28c15c884a",
+        "7b79c080d9ac4bb7afbe87f2f9c3e1d9",
+        "193dcc8d662e41a9a7093c01a2381244",
+        "9e28bfffe6114efea852b1cdcc2d8f59"
+      ],
+      "_parts_names": [
+        "KEE_OccupationAstraMilitarumClothes 基础外套",
+        "KEE_ArmorKasrkin1 护甲",
+        "KEE_HelmetKasrkin1 头盔",
+        "KEE_BootsKasrkin 靴",
+        "KEE_GlovesKasrkinArmor 手套",
+        "KEE_Randomizer_BeltArmorVoidsmen 腰带",
+        "KEE_HellGunEquipmentEntity 背包"
+      ]
+    },
+
+    {
+      "id": "krieg",
+      "name": "克里格",
+      "name_en": "Death Korps of Krieg",
+      "_note": "DLC3 的克里格小队。借整体模型，所以需要 DLC3；解析不到会自动回落成跟随装备。",
+      "unit": "89c64997da9242ff9e2fa0f18180e99c",
+      "_unit_name": "Krieg_Infantry_Ranged_Exhibition 步兵",
+      "unitByArchetype": {
+        "狙击": "396ab8425c1d416a9effb1551efdcb85",
+        "连射": "381be604bc45493cb1cdb60e9eeccddf",
+        "军官": "6d16a5ba6da14494ac439068324b5b58",
+        "近战": "2fad2fe6af3a4b00861bffc3a3adcd78",
+        "灵能": "5fd444bee33c4f5ca4c72afab7702881"
+      },
+      "_unitByArchetype_names": {
+        "狙击": "Krieg_Sniper 狙击手",
+        "连射": "Krieg_Flamer 喷火兵",
+        "军官": "Krieg_Commissar 政委",
+        "近战": "Krieg_Watchmaster 纠察长",
+        "灵能": "Krieg_Engineer 工兵"
+      }
+    }
+  ]
+}

@@ -42,7 +42,7 @@ namespace DynastyRetinue
             {
                 _instance = new RetinueLifecycle();
                 EventBus.Subscribe(_instance);
-                Main.Log("区域生命周期已订阅。");
+                Main.LogVerbose("区域生命周期已订阅。");
             }
             catch (Exception e) { _instance = null; Main.LogError("订阅失败: " + e); }
         }
@@ -50,7 +50,7 @@ namespace DynastyRetinue
         public static void Unsubscribe()
         {
             if (_instance == null) return;
-            try { EventBus.Unsubscribe(_instance); Main.Log("区域生命周期已退订。"); }
+            try { EventBus.Unsubscribe(_instance); Main.LogVerbose("区域生命周期已退订。"); }
             catch (Exception e) { Main.LogError("退订失败: " + e); }
             finally { _instance = null; _pendingPlaceFrames = 0; }
         }
@@ -231,9 +231,27 @@ namespace DynastyRetinue
                         try { if (g.View != null && g.View.AgentASP != null) g.View.AgentASP.Stop(); } catch { }
                         g.Position = leader.Position;
                         g.SnapToGrid();
-                        Main.Log("[生命周期] 摆位 " + before + " -> " + g.Position);
+                        Main.LogVerbose("[生命周期] 摆位 " + before + " -> " + g.Position);
                     }
                     catch (Exception e) { Main.LogError("摆位失败: " + e.Message); }
+
+                    // ★读档/过图之后必须重新套 brain★
+                    //
+                    //   原版 PartUnitBrain.OnAttachOrPostLoad() 会**无条件**
+                    //   SetBrain(Blueprint.DefaultBrain)。BrainKeepPatch 本来是拦这个的，
+                    //   但它靠 RetinueRegistry.ArchetypeOf 认人，而那个函数第一句就是
+                    //   `if (u.Progression == null) return -1;` —— PostLoad 期间各个
+                    //   EntityPart 还在挂载，Progression 未必就位，于是守卫**主动放行**。
+                    //   事后又没有任何东西补回来。
+                    //
+                    //   实机症状：连射（战斗修女）读档后变回 DLC3_DL_Sororitas_HBolter_Brain，
+                    //   而那个 brain 的 AbilityPriorityOrder 只有一条指向多管熔火枪的
+                    //   Equipment 条目 —— 也就是 v0.81.0 修掉过的「只会打单发」。
+                    //
+                    //   这里是过图摆位那一步，名册已经热了、Progression 也挂好了，
+                    //   正是补这一下的最佳时机。开销：卫兵个位数，每次过图一次。
+                    try { RetinueTest.ReapplyBrain(g); }
+                    catch (Exception e) { Main.LogError("补 brain 失败: " + e.Message); }
                 }
             }
             catch (Exception e) { Main.LogError("TickPending: " + e); }

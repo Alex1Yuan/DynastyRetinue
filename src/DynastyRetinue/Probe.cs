@@ -92,6 +92,29 @@ namespace DynastyRetinue
             // ★血量只能实测★ 蓝图名字和实际数值没有关系，
             //   Ch05Inquisitor_Psyker_unit 听着跟 DLC3_DL_Inquisitor_Unit 一档，
             //   实测一个 1040 一个 700。
+            // ---- 传奇卫兵候选（v1.0.58 加）----
+            //   目的：不能只看血量。探测会打出 brain / 武器 / 体型 / 血量 / 装备槽，
+            //   这几项决定了它到底能不能当卫兵用 ——
+            //   Gargantuan 体型过不了走廊、装备槽全空的话我们发的毕业套装无处可穿、
+            //   brain 是 UseOnlyListed 的话职业链练出来的技能一条都不会用。
+            //   恶魔引擎（血量已实测 Helbrute 1575 / Defiler 1925 / ForgeFiend 240，
+            //   但武器和技能一直没有数据）
+            ("d_Helbrute_Ulfar",        "56c0155a432f4e8593bd542ca92c860c"),
+            ("d_HellBrute_Ulfar",       "0c20b1b0fc8d4e62bc7603ad5c686141"),
+            ("d_Defiler_Electro",       "da50661ad29a47318662acc75c3bb7d0"),
+            ("d_Defiler_Exhibition",    "bef0077774f145f793fa43abb8c663ef"),
+            ("d_HelBrute_Exhibition",   "94f1c2b53a9e4900a1c1e307da6f026e"),
+            //   阿斯塔特（血鸦只有 192，另外四个 565/613 —— 血鸦要靠外观覆盖，
+            //   所以需要知道它的 prefab 长什么样、以及强单位的装备槽够不够）
+            ("a_Blood_Raven",           "88651654158644c699669d2ecb1ebc94"),
+            ("a_Spacemarine_melta",     "49c31d218b03419a83bd6b6efd733e04"),
+            ("a_Spacemarine_bolter",    "5270cd1e8a5642bdbb1cc648ace0ba32"),
+            ("a_Spacemarine_axe",       "4b81380dc07245849efcf0bc6572025e"),
+            ("a_Regind_Spacewolf",      "e1b33ed2d2ca4962a9cac40f682b95ad"),
+            ("a_Halbrandt_Spacewolf",   "3fd86919340247f7a2d510b5d91f0258"),
+            //   被挤出来的那个灵能（1040），传奇候选
+            ("p_Ch05Inquisitor_Psyker", "d1287134a3e64a4dbdae16b58d21bd8b"),
+
             // 灵能 / 亚空间系
             ("c_Starport_Psyker",       "9a351e6271ef43a197bb9f7ad99f894e"),
             ("c_BlackshipPsyker_Ghost", "c696080db8ca4cb49d9c1fd577f6a1d2"),
@@ -235,6 +258,21 @@ namespace DynastyRetinue
                     var before = all.Count;
                     all = all.Where(x => x.Name.IndexOf(filter, StringComparison.OrdinalIgnoreCase) >= 0).ToList();
                     Main.Log($"按「{filter}」过滤：{before} -> {all.Count} 个");
+
+                    // ★匹配不到时必须告诉玩家能填什么★
+                    //   关键词框是和「区域单位一览」共用的，而那边按**游戏内显示名**匹配、
+                    //   这边按**候选名**匹配 —— 同一个框两种语义，必然有人填错。
+                    //   实际踩到：填「佐拉尔」得到 0 个，日志只有一行"80 -> 0"，
+                    //   看不出该改成什么。把候选名列出来就自解释了。
+                    if (all.Count == 0)
+                    {
+                        Main.Log("★没有匹配的候选★ 这个按钮按**候选名**匹配（不是游戏内显示名）。可填的有：");
+                        var names = Candidates.Concat(ArchetypeCandidates()).Select(x => x.Name).Distinct().ToList();
+                        for (int i = 0; i < names.Count; i += 6)
+                            Main.Log("    " + string.Join("  ", names.Skip(i).Take(6)));
+                        Main.FlushLog(true);
+                        return;
+                    }
                 }
 
                 foreach (var c in all)
@@ -273,6 +311,16 @@ namespace DynastyRetinue
                             $"    CharacterLevelLimit={(lim == null ? "无" : lim.LevelLimit.ToString())}\n" +
                             $"    武器={DescribeWeapons(u)}\n" +
                             $"    体型={bp.Size}\n" +
+                            // ★外观走哪条路★ 决定能不能套 EE_* 部件（捏人系统）。
+                            //   PartUnitViewSettings.PrefabGuid 第一句是
+                            //   `if (Doll?.RacePreset != null) return null;` ——
+                            //   有 RacePreset 就是 doll 合成，可以逐件换 EE_* 部件；
+                            //   没有就是烘焙好的整体 prefab，套不上。
+                            //   玩家想让普通卫兵统一成某套外观（Kasrkin 那种），
+                            //   能不能做全看这一行。
+                            $"    外观={DescribeDoll(u)}" + System.Environment.NewLine +
+                            $"    种族={bp.Race?.name ?? "无"}" + System.Environment.NewLine +
+                            $"    模型={DescribeAvatar(bp)}" + System.Environment.NewLine +
                             $"    血量={DescribeHp(u)}\n" +
                             $"    装备槽={DescribeSlots(u)}");
 
@@ -473,6 +521,84 @@ namespace DynastyRetinue
         ///   分型选蓝图时必须看这一列，否则"挑了个看着合适的模型"就会顺手
         ///   把一个 Boss 的血条带进队伍。
         /// </summary>
+        /// <summary>这个单位走 doll 合成还是烘焙 prefab。见调用处注释。</summary>
+        /// <summary>
+        /// 这个单位的模型是**整体烘焙**的，还是**由 EE 部件拼出来**的。
+        ///
+        /// ★为什么不看 View★
+        ///   探测是 spawn 完同帧就销毁，UnityEngine 的视图是异步挂上来的，
+        ///   `u.View` 多半还是 null。拿 null 当"没有 Character"会得出反的结论。
+        ///   蓝图的 prefab 是同步能载的，作者填在上面的组件也都在，所以查 prefab。
+        ///
+        /// ★这一行决定什么★
+        ///   `AddEquipmentEntity` 组件的实现是
+        ///       var characterAvatar = Owner.View.CharacterAvatar;
+        ///       if (characterAvatar != null) characterAvatar.AddEquipmentEntity(link);
+        ///   没有 Character 组件 = 静默什么都不做。所以"给普通卫兵统一套一身
+        ///   Kasrkin"能不能成，全看这里有没有 Character。
+        ///   顺带把作者预挂的 EE 列出来 —— 如果烘焙模型本身就是 EE 拼的，
+        ///   那我们想要的那套外观的 id 直接从这儿抄，不用另外挖目录。
+        /// </summary>
+        private static string DescribeAvatar(BlueprintUnit bp)
+        {
+            try
+            {
+                var link = bp != null ? bp.Prefab : null;
+                if (link == null) return "无 Prefab 链接";
+
+                Kingmaker.View.UnitEntityView view = null;
+                try { view = link.Load(); }
+                catch (Exception e) { return "prefab 载入抛异常: " + e.Message; }
+                if (view == null) return "prefab 载入为 null";
+
+                var ch = view.GetComponentInChildren<Kingmaker.Visual.CharacterSystem.Character>(true);
+                if (ch == null) return "✗ 整体烘焙（无 Character）—— 套不上 EE";
+
+                // ★有 Character 还不够★
+                //   UnitEntityView.UpdateBodyEquipmentModel 第一句是
+                //       if (CharacterAvatar == null || (bool)CharacterAvatar.BakedCharacter) return;
+                //   BakedCharacter 非空 = 整套网格已经合批烘死，连**装备的护甲视觉都不生效**，
+                //   我们往上加 EE 自然也不会渲染。只看 Character 在不在会得出假阳性。
+                if (ch.BakedCharacter != null)
+                    return "✗ 有 Character 但已合批烘焙（BakedCharacter=" + ch.BakedCharacter.name + "）—— 装备视觉本身就不生效，EE 改不动";
+
+                var pre = ch.EquipmentEntitiesForPreload;
+                int n = pre != null ? pre.Count : 0;
+                if (n == 0) return "√ 可拼装（有 Character、未烘焙），但预挂 0 件";
+
+                var sb = new System.Text.StringBuilder();
+                sb.Append("√ 可拼装（有 Character、未烘焙）预挂 ").Append(n).Append(" 件:");
+                int shown = 0;
+                for (int i = 0; i < n && shown < 12; i++)
+                {
+                    var l = pre[i];
+                    if (l == null || string.IsNullOrEmpty(l.AssetId)) continue;
+                    string nm = null;
+                    try { var ee = l.Load(); if (ee != null) nm = ee.name; } catch { }
+                    sb.Append(System.Environment.NewLine).Append("        ")
+                      .Append(l.AssetId).Append("  ").Append(nm ?? "(载不出名字)");
+                    shown++;
+                }
+                if (n > shown) sb.Append(System.Environment.NewLine).Append("        …还有 ").Append(n - shown).Append(" 件");
+                return sb.ToString();
+            }
+            catch (Exception e) { return "探测失败: " + e.Message; }
+        }
+
+        private static string DescribeDoll(BaseUnitEntity u)
+        {
+            try
+            {
+                var vs = u.GetOptional<Kingmaker.UnitLogic.Parts.PartUnitViewSettings>();
+                if (vs == null) return "无 ViewSettings";
+                var doll = vs.Doll;
+                if (doll == null) return "prefab（无 Doll）";
+                if (doll.RacePreset == null) return "prefab（有 Doll 但无 RacePreset）";
+                return "★doll 合成，可套 EE_* 部件★  RacePreset=" + doll.RacePreset.name;
+            }
+            catch (Exception e) { return "读取失败: " + e.Message; }
+        }
+
         private static string DescribeHp(BaseUnitEntity u)
         {
             try

@@ -73,12 +73,12 @@ namespace DynastyRetinue
                         if (!already) part.AddInteraction(new RecruitInteraction());
                         if (uid != null) _done.Add(uid);
                         n++;
-                        if (verbose) Main.Log("[招募] 已挂到 " + bp);
+                        if (verbose) Main.LogVerbose("[招募] 已挂到 " + bp);
                     }
                     catch (Exception e) { Main.LogError("[招募] 挂载失败 " + bp + ": " + e.Message); }
                 }
-                if (n > 0) Main.Log("[招募] 本区域挂载 " + n + " 个入口");
-                else if (verbose) Main.Log("[招募] 没有新增挂载 —— 要么本区域没有匹配的 NPC（当前关键字: "
+                if (n > 0) Main.LogVerbose("[招募] 本区域挂载 " + n + " 个入口");
+                else if (verbose) Main.LogVerbose("[招募] 没有新增挂载 —— 要么本区域没有匹配的 NPC（当前关键字: "
                                            + Main.Settings.RecruitNpcKeys + "），要么已经挂过了。");
             }
             catch (Exception e) { Main.LogError("[招募] AttachInArea 异常: " + e.Message); }

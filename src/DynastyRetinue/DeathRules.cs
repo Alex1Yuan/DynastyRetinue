@@ -50,7 +50,7 @@ namespace DynastyRetinue
             {
                 _instance = new DeathRules();
                 EventBus.Subscribe(_instance);
-                Main.Log("[死亡规则] 已订阅。普通卫兵永久死亡（原版行为），精英倒地可救。");
+                Main.LogVerbose("[死亡规则] 已订阅。普通卫兵永久死亡（原版行为），精英倒地可救。");
             }
             catch (Exception e) { _instance = null; Main.LogError("[死亡规则] 订阅失败: " + e); }
         }
