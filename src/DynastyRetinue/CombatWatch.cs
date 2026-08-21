@@ -84,7 +84,7 @@ namespace DynastyRetinue
             {
                 _instance = new CombatWatch();
                 EventBus.Subscribe(_instance);
-                Main.Log("[战斗记录] 已挂载 —— 每场战斗结束后会打一份「谁做了什么」的总账。");
+                Main.LogVerbose("[战斗记录] 已挂载 —— 每场战斗结束后会打一份「谁做了什么」的总账。");
             }
             catch (Exception e) { Main.LogError("[战斗记录] 挂载失败: " + e); _instance = null; }
         }

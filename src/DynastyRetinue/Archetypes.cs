@@ -114,6 +114,9 @@ namespace DynastyRetinue
             }
         }
 
+        /// <summary>career path 解析失败是否已经用 ERROR 喊过一次。见下面那段。</summary>
+        private static bool _chainWarned;
+
         /// <summary>
         /// 上一次加载失败是不是**暂时性**的（蓝图还没就绪）。是就不缓存失败，下次访问重试。
         ///
@@ -192,7 +195,23 @@ namespace DynastyRetinue
                         // 只校验能不能解析成 career path —— 解析不到就整条跳过，
                         // 免得运行时才发现 GUID 打错
                         if (ResourcesLibrary.TryGetBlueprint<BlueprintCareerPath>(s) == null)
-                        { Main.LogError("分型「" + name + "」里的 career path 解析不到: " + s); bad = true; break; }
+                        {
+                            // ★这多半是时序、不是数据错★
+                            //   蓝图缓存还没就绪时读 Archetypes.All 就会全军覆没，
+                            //   而失败不缓存、下次重试（见本文件顶部那段事故记录）。
+                            //   所以它**注定会连着失败好几轮**，实测一次启动刷了 45 行 ERROR。
+                            //   用 ERROR 刷屏会把真正的错误淹掉，也会让玩家以为 mod 崩了。
+                            //   只在**第一次**用 ERROR 喊一声，之后转 verbose ——
+                            //   真的是 GUID 打错的话，那一行照样会出现在默认日志里。
+                            if (!_chainWarned)
+                            {
+                                _chainWarned = true;
+                                Main.LogError("分型「" + name + "」里的 career path 解析不到: " + s
+                                            + "（若蓝图尚未就绪会自动重试，后续同类失败转入详细日志）");
+                            }
+                            else Main.LogVerbose("分型「" + name + "」里的 career path 解析不到: " + s);
+                            bad = true; break;
+                        }
                         chain.Add(s);
                     }
                     if (bad) continue;
@@ -231,6 +250,8 @@ namespace DynastyRetinue
                                 UnitFallback = ReadGuidList(e["unitFallback"]),
                                 DualMelee    = e["dualMelee"] != null && (bool)e["dualMelee"],
                                 BrainId  = (string)e["brain"],   // 可选：不填沿用分型的
+                                // 借别人的模型、属性仍用 unit 那个（见 EliteDef.AppearanceUnitId）
+                                AppearanceUnitId = (string)e["appearanceUnit"],
                                 Name     = (string)e["name"],
                                 Rank     = (string)e["rank"],
                                 RankEn   = (string)e["rank_en"],
@@ -269,6 +290,7 @@ namespace DynastyRetinue
                                    : ""));
                     return null;
                 }
+                _chainWarned = false;   // 载入成功，下次真出问题还能再喊一次
                 Main.Log("已从 archetypes.json 载入 " + list.Count + " 个分型。");
                 return list.ToArray();
             }

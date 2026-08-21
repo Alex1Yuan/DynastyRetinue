@@ -52,6 +52,10 @@
     <Reference Include="0Harmony"><HintPath>$(GameManaged)\0Harmony.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="Newtonsoft.Json"><HintPath>$(GameManaged)\Newtonsoft.Json.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="Utility.DotNetExtensions"><HintPath>$(GameManaged)\Utility.DotNetExtensions.dll</HintPath><Private>false</Private></Reference>
+    <!-- UnitEntityView 的基类链（RegisteredBehaviour）在这里。探测卫兵模型是不是
+         EE 拼装时要 Load() prefab 上的 UnitEntityView，不引它编译不过。 -->
+    <Reference Include="Owlcat.Runtime.Core"><HintPath>$(GameManaged)\Owlcat.Runtime.Core.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Kingmaker.Blueprints.Base"><HintPath>$(GameManaged)\Kingmaker.Blueprints.Base.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="StateHasher"><HintPath>$(GameManaged)\StateHasher.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine"><HintPath>$(GameManaged)\UnityEngine.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine.CoreModule"><HintPath>$(GameManaged)\UnityEngine.CoreModule.dll</HintPath><Private>false</Private></Reference>

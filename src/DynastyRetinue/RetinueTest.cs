@@ -220,6 +220,10 @@ namespace DynastyRetinue
                 Main.Log("已生成 " + bp.name + "  落点 " + before + " -> " + u.Position
                          + "  uid=" + u.UniqueId + "  (在册约 " + (RetinueRegistry.Count + 1) + " 名)");
                 DumpUnit(u, "spawn 后");
+                // 外观：视图要过若干帧才挂上（见 RebuildWhenReady 的注释），
+                // 那时才认得出这是卫兵，所以排队等它出现再重建一次。
+                if (Main.Settings != null && !string.IsNullOrEmpty(Main.Settings.LookMatrix))
+                    DollLookPatch.RebuildWhenReady(u.UniqueId);
                 return u;
             }
             catch (Exception e) { Main.LogError(e); }
@@ -568,9 +572,28 @@ namespace DynastyRetinue
 
             if (pool != null && pool.Length > 0)
             {
-                // 从一个随机起点开始扫，避免每次都从池头拿、名字总是那几个
+                // 从一个起点开始扫，避免每次都从池头拿、名字总是那几个。
+                //
+                // ★起点必须是确定性的，不能用 Random★
+                //   官方合作模式是**锁步同步 + 状态哈希校验**
+                //   （Kingmaker.Networking 里有 CommandsForStep / HashableState /
+                //     Desync 一整套）。两端各自 roll 会挑出不同的名字 →
+                //   CustomName 不一致 → 实体状态哈希对不上 → 直接 desync。
+                //   改成从卫兵自己的 UniqueId 派生：同一个实体在两端是同一个 id
+                //   （锁步下两端在同一步生成同一个实体），所以结果必然一致，
+                //   同时仍然是"看起来随机"的分布。
                 int start = 0;
-                try { start = UnityEngine.Random.Range(0, pool.Length); } catch { }
+                try
+                {
+                    string uid = self != null ? self.UniqueId : null;
+                    if (!string.IsNullOrEmpty(uid))
+                    {
+                        int h = 17;
+                        foreach (char c in uid) h = unchecked(h * 31 + c);
+                        start = (h & 0x7fffffff) % pool.Length;
+                    }
+                }
+                catch { }
                 for (int i = 0; i < pool.Length; i++)
                 {
                     var cand = pool[(start + i) % pool.Length];
@@ -709,10 +732,35 @@ namespace DynastyRetinue
             int idx = 0;
             try
             {
+                // ★槽位序号必须由**同步数据**决定，不能靠枚举顺序★
+                //
+                //   原来是直接拿 RetinueRegistry.All() 里的下标。那个顺序来自
+                //   AllEntityData 的内部列表，**不保证两台机器一致** ——
+                //   实体的入册顺序、区域加载路径稍有差别，同一个卫兵在两边就会
+                //   算出不同的队形偏移，摆位落点当场分叉。而位置是进哈希的。
+                //
+                //   UniqueId 来自 Uuid.Instance（StatefulRandom，随游戏状态同步），
+                //   两台机器上同一个卫兵的 id 必然相同。按它排序取序号，
+                //   顺序就和枚举实现彻底脱钩。
+                //
+                //   ★开销★ 卫兵个位数，排序成本可以忽略；而且这个函数只在
+                //   摆位（过图、生成）时调，不在每帧路径上。
                 var all = RetinueRegistry.All(false);
+                var ids = new List<string>(all.Count);
+                string mine = null;
                 for (int i = 0; i < all.Count; i++)
                 {
-                    if (ReferenceEquals(all[i], guard)) { idx = i; break; }
+                    string uid = null;
+                    try { uid = all[i].UniqueId; } catch { }
+                    if (string.IsNullOrEmpty(uid)) uid = "";
+                    ids.Add(uid);
+                    if (ReferenceEquals(all[i], guard)) mine = uid;
+                }
+                if (mine != null)
+                {
+                    ids.Sort(StringComparer.Ordinal);
+                    int at = ids.IndexOf(mine);
+                    if (at >= 0) idx = at;
                 }
             }
             catch { /* 拿不到序号就当第 0 个，至少不会崩 */ }
@@ -795,6 +843,62 @@ namespace DynastyRetinue
                 }
                 catch (Exception e) { Main.LogError("发经验失败: " + e.Message); }
             }
+        }
+
+        /// <summary>
+        /// 重读配置文件 + 给全部在册卫兵重跑一遍发装备。
+        ///
+        /// ★为什么需要★
+        ///   调配表是「改一行、看一眼」的循环，而配置是**惰性加载**的：
+        ///   `Archetypes` 读一次就缓存，之后改 archetypes.json 不重启游戏不生效。
+        ///   而且装备**不追溯** —— 就算重读了配表，已经穿在身上的也不会换，
+        ///   要重新招募才看得到。两条加起来，验证一次配表改动的代价是"改文件 + 重启 + 重招"。
+        ///
+        /// ★为什么不用先扒光装备★
+        ///   `GearTool.TryPlace` 本来就会替换占用的槽位，而且顺序是
+        ///   **先验证新的能装、再摘旧的**（见那里的注释：反过来会变成"新的装不上 + 旧的没了"）。
+        ///   所以直接重跑 Equip 就能升级，不需要先清空 —— 也就不会误伤玩家手动给的东西。
+        ///
+        /// ★哪些不会变★
+        ///   等级、天赋、职业链不动（那些走 ApplyRuntimeState）。这里只重发装备。
+        /// </summary>
+        public static void ReloadConfigAndRefit()
+        {
+            Main.Log("=== 重载配表 + 重发装备 ===");
+
+            // ① 重读配置。三份都要，否则改了 looks.json 却只重载了 archetypes 会很困惑。
+            try { Archetypes.Reload(); Main.Log("  archetypes.json 已重读"); }
+            catch (Exception e) { Main.LogError("  重读 archetypes.json 失败: " + e.Message); }
+            try { BuildPlans.Reload(); Main.Log("  plans.json 已重读"); }
+            catch (Exception e) { Main.LogError("  重读 plans.json 失败: " + e.Message); }
+            try { LookCatalog.Invalidate(); AppearancePatch.Invalidate(); DollLook.Invalidate();
+                  Main.Log("  looks.json 与外观缓存已失效"); }
+            catch (Exception e) { Main.LogError("  外观缓存失效失败: " + e.Message); }
+
+            // ② 重发装备
+            var list = RetinueRegistry.All();
+            if (list.Count == 0) { Main.Log("  没有在册卫兵，只重读了配置。"); return; }
+
+            int changed = 0, total = 0;
+            foreach (var g in list)
+            {
+                try
+                {
+                    int ai = RetinueRegistry.ArchetypeOf(g);
+                    var arch = ai >= 0 ? Archetypes.Get(ai) : null;
+                    if (arch == null) { Main.Log("  " + (g.CharacterName ?? "?") + " 认不出分型，跳过。"); continue; }
+                    int n = GearTool.Equip(g, arch);
+                    total++;
+                    if (n > 0) { changed++; Main.Log("  " + (g.CharacterName ?? "?") + " 换上 " + n + " 件"); }
+                }
+                catch (Exception e) { Main.LogError("  " + (g != null ? g.CharacterName : "?") + " 重发失败: " + e.Message); }
+            }
+
+            // ③ 外观也重建一遍 —— 换了装备/改了 looks.json 之后模型才对得上
+            try { DollLookPatch.RebuildAllGuardViews(); } catch (Exception e) { Main.LogError("  重建视图失败: " + e.Message); }
+
+            Main.Log("=== 完成：" + total + " 名过了一遍，其中 " + changed + " 名有变化 ===");
+            Main.FlushLog(true);
         }
 
         /// <summary>
@@ -1146,5 +1250,47 @@ namespace DynastyRetinue
             }
             catch (Exception e) { Main.LogError("[批量生成] 异常: " + e); }
         }
+
+        /// <summary>
+        /// 把这名卫兵**应该**用的 brain 重新套上。和上面 c2 段同一套判据
+        /// （精英优先用自己的，没配就用分型的），供读档/过图后补一次。
+        ///
+        /// ★为什么必须补★
+        ///   原版 PartUnitBrain.OnAttachOrPostLoad() 无条件 SetBrain(蓝图默认)。
+        ///   BrainKeepPatch 靠 RetinueRegistry.ArchetypeOf 认人，而它第一句是
+        ///   `if (u.Progression == null) return -1;` —— PostLoad 期间 Progression
+        ///   未必已挂上，守卫于是放行。事后没有任何东西补回来，
+        ///   结果就是连射（战斗修女）读档后变回原生 brain、只会打单发。
+        ///
+        /// ★幂等★ 当前 brain 已经对就什么都不做，不打日志、不触发行为树重建。
+        /// </summary>
+        public static void ReapplyBrain(BaseUnitEntity g)
+        {
+            if (g == null) return;
+            try
+            {
+                int ai = RetinueRegistry.ArchetypeOf(g);
+                if (ai < 0) return;                      // 认不出来就别乱套
+                var a = Archetypes.Get(ai);
+                string brainId = a != null ? a.BrainId : null;
+                try
+                {
+                    var ed = GearTool.EliteDefOf(g, a);
+                    if (ed != null && !string.IsNullOrEmpty(ed.BrainId)) brainId = ed.BrainId;
+                }
+                catch { }
+                if (string.IsNullOrEmpty(brainId)) return;
+
+                string cur = null;
+                try { cur = g.Brain != null && g.Brain.Blueprint != null
+                          ? g.Brain.Blueprint.AssetGuid.ToString() : null; } catch { }
+                if (string.Equals(cur, brainId, StringComparison.OrdinalIgnoreCase)) return;   // 已经对了
+
+                if (BrainTool.Apply(g, brainId))
+                    Main.Log("[生命周期] 读档/过图后补回 brain: " + (cur ?? "无") + " -> " + brainId);
+            }
+            catch (Exception e) { Main.LogError("[生命周期] 补 brain: " + e.Message); }
+        }
+
     }
 }

@@ -32,8 +32,12 @@ namespace DynastyRetinue
                 var u = __instance.ConcreteOwner as BaseUnitEntity;
                 if (u == null || !RetinueRegistry.IsProtected(u)) return true;
 
-                Main.Log("[背包] 已拦截 RestoreSharedInventory —— 保住卫兵 "
-                         + (u.Blueprint != null ? u.Blueprint.name : "?") + " 的自带装备");
+                // ★门在「详细日志」后面★ 这行说的是"按设计正常工作了"，
+                //   而它对**每个卫兵、每次换阵营/读档**都会打 —— 实测一份日志里 194 行。
+                //   拦截失败才是需要知道的事，而那种情况会走下面的 catch。
+                if (Main.Settings != null && Main.Settings.WatchMomentum)
+                    Main.Log("[背包] 已拦截 RestoreSharedInventory —— 保住卫兵 "
+                             + (u.Blueprint != null ? u.Blueprint.name : "?") + " 的自带装备");
                 return false;
             }
             catch { return true; }   // 补丁自身出错绝不能影响原版流程

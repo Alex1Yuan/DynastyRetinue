@@ -218,6 +218,24 @@ namespace DynastyRetinue
         /// 前者是新方案的落点，后者兜底旧存档里遗留的卫兵（v0.0.x 时代生成的）。
         /// </summary>
         /// <summary>开放给 UnitInspect 用：它要扫的是**全部**单位，不只是卫兵。</summary>
+        /// <summary>按 UniqueId 找卫兵。指令通道用 —— 对象不能跨机器传，只能传 id。</summary>
+        public static BaseUnitEntity ByUniqueId(string uid)
+        {
+            if (string.IsNullOrEmpty(uid)) return null;
+            try
+            {
+                var all = All(false);
+                for (int i = 0; i < all.Count; i++)
+                {
+                    string s2 = null;
+                    try { s2 = all[i].UniqueId; } catch { }
+                    if (string.Equals(s2, uid, StringComparison.Ordinal)) return all[i];
+                }
+            }
+            catch { }
+            return null;
+        }
+
         internal static IEnumerable<SceneEntitiesState> AllStates() { return States(); }
 
         private static IEnumerable<SceneEntitiesState> States()
@@ -326,7 +344,21 @@ namespace DynastyRetinue
                 // 先摘掉身份标记 —— 这一步必须**立刻**做：名额当场释放，
                 // 而且全 mod 那 15 处 IsGuard 门控（镜头/帷幕/士气/经验/击杀归属…）
                 // 从这一刻起不再处理它。摘晚了会每帧去碰一个正在死的实体。
-                try { var cg = g.CombatGroup; if (cg != null) cg.Id = DeadTag + Guid.NewGuid().ToString("N").Substring(0, 8); }
+                // ★后缀必须确定性，不能用 Guid.NewGuid★
+                //   CombatGroup.Id 是实体状态、进哈希。合作模式是锁步同步，
+                //   两端各自 NewGuid 会得到不同的 id → 卫兵一阵亡就 desync。
+                //   用实体自己的 UniqueId：本来就唯一，且两端一致。
+                try
+                {
+                    var cg = g.CombatGroup;
+                    if (cg != null)
+                    {
+                        string uid = null;
+                        try { uid = g.UniqueId; } catch { }
+                        if (string.IsNullOrEmpty(uid)) uid = "x";
+                        cg.Id = DeadTag + (uid.Length > 8 ? uid.Substring(uid.Length - 8) : uid);
+                    }
+                }
                 catch { }
                 try { g.Remove<UnitPartFollowUnit>(); } catch { }
                 try { g.Remove<UnitPartCompanion>(); } catch { }

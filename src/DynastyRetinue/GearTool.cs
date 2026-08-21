@@ -112,18 +112,35 @@ namespace DynastyRetinue
                 //       ③ 异形装备装不上时退到普通装备
                 var candidates = entry.Split('|');
 
-                // 逐件幂等：这一格的任意候选已经穿着了就跳过。
-                // ApplyRuntimeState 每次过图/读档都会跑，没这个判据植入物会一层层叠加。
-                bool have = false;
-                foreach (var c in candidates)
-                    if (!string.IsNullOrEmpty(c) && worn.Contains(c.Trim())) { have = true; break; }
-                if (have) { already++; continue; }
+                // 逐件幂等：**按顺序走到第一个"已经穿着"的候选就停**，不再往后发。
+                //
+                // ★为什么不是"任意候选已穿就整格跳过"★
+                //   v1.0.88 之前是那样写的。赏金猎手换成裁判庭狙击手之后，
+                //   它的单位**自带 DLC3_DL_Arbites_StandartArmour（45/6）**，而那件正好是
+                //   这一格的第四候选 —— 于是整格被判为"已满足"，首选的厚重虚空护甲(85/7)
+                //   一次都没发过。同线的寂静之眼候选列表**一模一样**却拿到了 85/7，
+                //   唯一差别就是它的单位不自带那件。
+                //
+                // ★为什么也不能"只看首选"★
+                //   那样的话，首选装不上（比如磐石首席的雕血师是种族限定）时，
+                //   每次过图都会把已经穿着的那件摘下来重装一遍，白白折腾。
+                //
+                //   按顺序走：排在已穿着那件**前面**的才尝试 —— 那才是真正的升级；
+                //   走到已穿着的那件就说明没有更好的了，停手。
+                int stopAt = candidates.Length;
+                for (int ci = 0; ci < candidates.Length; ci++)
+                {
+                    string c = candidates[ci];
+                    if (!string.IsNullOrEmpty(c) && worn.Contains(c.Trim())) { stopAt = ci; break; }
+                }
+                if (stopAt == 0) { already++; continue; }   // 首选就穿着，无事可做
 
                 bool placed = false;
                 var tried = new List<string>();
 
-                foreach (var guid in candidates)
+                for (int ci = 0; ci < stopAt; ci++)
                 {
+                    string guid = candidates[ci];
                     if (string.IsNullOrEmpty(guid)) continue;
                     BlueprintItem bp = null;
                     try { bp = ResourcesLibrary.TryGetBlueprint<BlueprintItem>(guid.Trim()); } catch { }
@@ -290,11 +307,11 @@ namespace DynastyRetinue
                     if (!slotOk)
                     {
                         why.Add("[" + SlotName(body, slot) + "]"
-                                + (unitOk ? "槽位不收" : "单位不够格(缺熟练度/种族限制?)"));
+                                + (unitOk ? "槽位不收" : "单位不够格 —— " + WhyNotEquippable(bp, g)));
                         continue;
                     }
                     if (bp is BlueprintItemEquipment && !unitOk)
-                    { why.Add("[" + SlotName(body, slot) + "]单位不够格(缺熟练度/种族限制?)"); continue; }
+                    { why.Add("[" + SlotName(body, slot) + "]单位不够格 —— " + WhyNotEquippable(bp, g)); continue; }
 
                     // 到这里才动旧装备
                     try { if (slot.MaybeItem != null && slot.IsPossibleRemoveItems()) slot.RemoveItem(false); } catch { }
@@ -315,6 +332,39 @@ namespace DynastyRetinue
                 reason = "异常:" + e.Message;
                 return false;
             }
+        }
+
+        /// <summary>
+        /// 「单位不够格」到底卡在哪一条。
+        ///
+        /// ★为什么值得单独查★
+        ///   CanBeEquippedBy 把一族限制裹成一个 bool，原来日志只能写
+        ///   「缺熟练度/种族限制?」—— 那个问号是猜的。而实际可能是属性门槛、
+        ///   需要某个天赋、职业限定、只有主角能穿、甚至干脆标了不可装备。
+        ///   这几种的应对完全不同（补属性 / 补天赋 / 换件），猜错就白改。
+        ///   逐条测一遍，把**失败的那条组件名**打出来，一眼定位。
+        /// </summary>
+        private static string WhyNotEquippable(BlueprintItem bp, BaseUnitEntity g)
+        {
+            try
+            {
+                var eq = bp as Kingmaker.Blueprints.Items.Equipment.BlueprintItemEquipment;
+                if (eq == null) return "非装备类";
+                // GetComponents 返回的是结构体枚举器，不是引用类型，不能和 null 比
+                var comps = bp.GetComponents<Kingmaker.Blueprints.Items.Components.EquipmentRestriction>();
+                var bad = new List<string>();
+                int n = 0;
+                foreach (var c in comps)
+                {
+                    n++;
+                    bool ok = true;
+                    try { ok = c.CanBeEquippedBy(g); } catch (Exception e) { bad.Add(c.GetType().Name + "(测试抛异常:" + e.GetType().Name + ")"); continue; }
+                    if (!ok) bad.Add(c.GetType().Name.Replace("EquipmentRestriction", ""));
+                }
+                if (n == 0) return "没有限制组件（那问题不在限制上）";
+                return bad.Count == 0 ? "限制全过（卡在别处）" : "卡在: " + string.Join(", ", bad.ToArray());
+            }
+            catch (Exception e) { return "查限制失败:" + e.GetType().Name; }
         }
 
         /// <summary>当前穿戴/装填在身上的全部蓝图 GUID（含植入物槽）。</summary>

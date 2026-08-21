@@ -38,8 +38,15 @@ namespace DynastyRetinue
                 TextKey    = YardKey,
                 Text       = delegate { return L.T("（船坞）关于座舰的改装事宜……"); },
                 Enabled    = delegate { return Main.Settings != null && Main.Settings.ShipDialogEntry; },
-                KeepDialog = true,          // 留在对话里，好让顾问说完话
-                OnPicked   = UI.ShipYardUI.Open,
+                // ★1.0.67 起也改成"选中即关对话"，和招募统一★
+                //   原来是 true（留在对话里，好让顾问成交后还能说话，关窗回到顾问面前）。
+                //   但留在对话里就意味着答案列表不重建 —— 刚点过的那一条**不变暗**，
+                //   而原版点过的都会变暗，同一个列表两套显示逻辑。
+                //   试过在选中时刷新、在关窗时刷新（1.0.63 / 1.0.64），都没能让它变暗。
+                //   取舍：成交后回到顾问面前是"偶尔更顺手"，显示不一致是"每次都看得见"。
+                //   代价：改装完会被带出对话，要重新和顾问说话。
+                // KeepDialog 保持默认 false
+                OnPicked   = UI.ShipYardUI.OpenFromDialog,
             });
         }
 
