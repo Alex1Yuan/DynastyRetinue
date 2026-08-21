@@ -785,15 +785,19 @@ namespace DynastyRetinue.UI
             MarkLayerDirty();
         }
 
+        /// <summary>名册行高。★别再压低★ 上半放 22 号名字、下半放 17 号副标题，
+        /// 高度不够时 TMP 会把整串清空（见 AddRosterRow 里的注释）。</summary>
+        private const float RowH = 96f;
+
         private static void AddRosterRow(BaseUnitEntity g)
         {
             if (g == null) return;
             string uid = g.UniqueId;
 
             GameObject row = NewUI("Guard", _rosterContent);
-            ((RectTransform)row.transform).sizeDelta = new Vector2(0f, 86f);
+            ((RectTransform)row.transform).sizeDelta = new Vector2(0f, RowH);
             LayoutElement le = row.AddComponent<LayoutElement>();
-            le.minHeight = 86f; le.preferredHeight = 86f;
+            le.minHeight = RowH; le.preferredHeight = RowH;
             PaintPanel(row.AddComponent<Image>(), RowTex(), VanillaSkin.RowBg);
 
             GameObject port = NewUI("Portrait", row.transform);
@@ -816,15 +820,23 @@ namespace DynastyRetinue.UI
 
             TextMeshProUGUI nameTxt = MakeLabel(row.transform, g.CharacterName ?? L.T("(未命名)"), 22f,
                                                 VanillaSkin.Text, TextAlignmentOptions.Left);
+            // ★必须设成 Overflow★ 默认的 Ellipsis/Truncate 在 rect 高度不够时
+            //   **把整串字符清空**而不是截断 —— 现象是"名字整个不见了"，
+            //   而副标题字号小一号却正常显示，看起来像是数据丢了，其实是排版。
+            //   本 mod 的利润因子条踩过同一个坑（16px 配 17 号字，一片空白）。
+            nameTxt.enableWordWrapping = false;
+            nameTxt.overflowMode = TextOverflowModes.Overflow;
             RectTransform nrt = (RectTransform)nameTxt.transform;
-            nrt.anchorMin = new Vector2(0f, 0.5f); nrt.anchorMax = new Vector2(1f, 1f);
-            nrt.offsetMin = new Vector2(84f, 0f); nrt.offsetMax = new Vector2(-190f, -8f);
+            nrt.anchorMin = new Vector2(0f, 0.46f); nrt.anchorMax = new Vector2(1f, 1f);
+            nrt.offsetMin = new Vector2(84f, 0f); nrt.offsetMax = new Vector2(-190f, -6f);
 
             TextMeshProUGUI subTxt = MakeLabel(row.transform, RosterSubtitle(g), 17f,
                                                VanillaSkin.TextDim, TextAlignmentOptions.Left);
+            subTxt.enableWordWrapping = false;
+            subTxt.overflowMode = TextOverflowModes.Overflow;
             RectTransform srt = (RectTransform)subTxt.transform;
-            srt.anchorMin = new Vector2(0f, 0f); srt.anchorMax = new Vector2(1f, 0.5f);
-            srt.offsetMin = new Vector2(84f, 8f); srt.offsetMax = new Vector2(-190f, 0f);
+            srt.anchorMin = new Vector2(0f, 0f); srt.anchorMax = new Vector2(1f, 0.46f);
+            srt.offsetMin = new Vector2(84f, 6f); srt.offsetMax = new Vector2(-190f, 0f);
 
             // ★遣散要点两次★ 这一步不可撤销（卫兵连同身上的装备一起没），
             //   而按钮就排在每一行的同一个位置 —— 手滑的代价太大。
@@ -871,13 +883,16 @@ namespace DynastyRetinue.UI
             _confirmUid = null;
             // ★必须走指令通道★ 直接调 RemoveOne 只在本机生效，联机时双方人数不一致 = 失步。
             CoopCommand.Send("dismiss", uid);
-            Deferred.NextFrames(2, delegate { if (IsOpen && _tab == 0) RebuildRoster(); });
+            // ★刷全窗口而不只是名册★ 遣散会改名额，而名额同时影响
+            //   顶部那条利润因子/名额，以及招募页按钮的可点状态（CapReached）。
+            //   只重建名册的话，人少了但顶部还写着旧数字、招募按钮还灰着。
+            Deferred.NextFrames(2, delegate { if (IsOpen) Refresh(); });
         }
 
         private static void OnDismissAll()
         {
             CoopCommand.Send("dismissall");
-            Deferred.NextFrames(2, delegate { if (IsOpen && _tab == 0) RebuildRoster(); });
+            Deferred.NextFrames(2, delegate { if (IsOpen) Refresh(); });
         }
 
         // ------------------------------------------------------------- 外观页
@@ -917,8 +932,9 @@ namespace DynastyRetinue.UI
             if (_looksContent == null) return;
             ClearChildren(_looksContent);
 
-            MakeLabel(_looksContent, L.T("影响所有卫兵（含之后招募的）。外观是本地设置，联机不同步 —— 各人可以设自己喜欢的。"),
-                      17f, VanillaSkin.TextDim, TextAlignmentOptions.Left);
+            var tip = MakeLabel(_looksContent, L.T("影响所有卫兵（含之后招募的）。外观是本地设置，联机不同步 —— 各人可以设自己喜欢的。"),
+                                17f, VanillaSkin.TextDim, TextAlignmentOptions.Left);
+            tip.enableWordWrapping = false; tip.overflowMode = TextOverflowModes.Overflow;
 
             LookDef[] looks = LookCatalog.All;
 
