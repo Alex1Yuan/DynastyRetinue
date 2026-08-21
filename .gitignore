@@ -39,6 +39,11 @@ src/KgdRetinue/_*.py
 # 发布物料（截图/录屏，体积大且是二进制）与本机 mod 目录备份
 _press/*
 !_press/*.md
+# ★子目录要单独豁免★ !_press/*.md 只作用于顶层；_press/* 把子目录整个挡在外面，
+#   git 连进去看都不看。各次更新的发布文案放在 _press/<版本>/ 下，要显式放行。
+!_press/update/
+_press/update/*
+!_press/update/*.md
 
 # 宣传片：★源码进版本控制，素材不进★
 #   public/footage 是 122 MB 的切片、out/ 是渲染产物、vo/ 是 TTS 输出，
