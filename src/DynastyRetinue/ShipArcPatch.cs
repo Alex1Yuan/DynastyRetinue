@@ -290,30 +290,69 @@ namespace DynastyRetinue
                     }
                 }
 
-                // ---- 点击 → 移动 的链路（绿格 A 方案要用）----
-                //   绿格铺出去的格子不是合法落点，点上去游戏直接忽略。
-                //   要让它们可点，就得在"点击解析成目标格"那一步把格子映射回所属落点。
-                //   ShipPathManager 这条路径预览的链已经摸到了，缺的是点击入口。
-                sb.AppendLine("点击/移动入口：");
-                foreach (string tn in new string[] {
-                    "Kingmaker.UI.PathRenderer.ShipPathManager",
-                    "Kingmaker.Controllers.Clicks.Handlers.SpaceCombatMoveHandler",
-                    "Kingmaker.Controllers.Clicks.ClickEventsController",
-                    "Kingmaker.UnitLogic.Commands.UnitMoveToProper",
-                })
+                // ---- 点击 → 移动 的链路（绿格方块要可点就得改这里）----
+                //
+                //   方块里只有中心那一格是合法落点，另外几格是画上去的装饰 ——
+                //   看着像能点、实际点不了。玩家反馈"单格太难理解"，所以方块不能去掉，
+                //   只能让它真的能点：在**点击解析成目标格**那一步，
+                //   把落在方块里的点击映射回它所属的落点。
+                //   这是输入层，最终下达的指令仍指向合法落点，寻路/碰撞/联机都不受影响。
+                //
+                //   ★改成按名字扫描★
+                //     原来写死了三个类型名，实测两个根本不存在（日志：「没有这个类型」），
+                //     等于什么都没探到。类名在不同版本里会变，扫描才靠得住。
+                sb.AppendLine("点击/移动入口（按名字扫描）：");
+                try
                 {
-                    var ty = AccessTools.TypeByName(tn);
-                    if (ty == null) { sb.AppendLine("  " + tn + " —— 没有这个类型"); continue; }
-                    var names = new List<string>();
-                    foreach (var m in ty.GetMethods(System.Reflection.BindingFlags.Public
-                                                  | System.Reflection.BindingFlags.NonPublic
-                                                  | System.Reflection.BindingFlags.Instance
-                                                  | System.Reflection.BindingFlags.Static
-                                                  | System.Reflection.BindingFlags.DeclaredOnly))
-                        names.Add(m.Name + "(" + m.GetParameters().Length + ")");
-                    names.Sort();
-                    sb.AppendLine("  " + ty.Name + ": " + string.Join(" ", names.ToArray()));
+                    var seenT = new HashSet<string>(StringComparer.Ordinal);
+                    foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
+                    {
+                        string an = asm.GetName().Name;
+                        if (an.IndexOf("Kingmaker", StringComparison.OrdinalIgnoreCase) < 0
+                         && an.IndexOf("Assembly-CSharp", StringComparison.OrdinalIgnoreCase) < 0) continue;
+                        Type[] types;
+                        try { types = asm.GetTypes(); } catch { continue; }
+                        foreach (var ty in types)
+                        {
+                            string n = ty.Name;
+                            bool nameHit = (n.IndexOf("Click", StringComparison.Ordinal) >= 0
+                                         || n.IndexOf("Cursor", StringComparison.Ordinal) >= 0)
+                                        && (n.IndexOf("Handler", StringComparison.Ordinal) >= 0
+                                         || n.IndexOf("Controller", StringComparison.Ordinal) >= 0);
+                            if (!nameHit) continue;
+                            if (!seenT.Add(ty.FullName)) continue;
+                            var names = new List<string>();
+                            try
+                            {
+                                foreach (var m in ty.GetMethods(System.Reflection.BindingFlags.Public
+                                                              | System.Reflection.BindingFlags.NonPublic
+                                                              | System.Reflection.BindingFlags.Instance
+                                                              | System.Reflection.BindingFlags.Static
+                                                              | System.Reflection.BindingFlags.DeclaredOnly))
+                                {
+                                    // 只留参数里带节点/坐标的 —— 那才可能是"点到哪一格"
+                                    bool useful = false;
+                                    foreach (var p in m.GetParameters())
+                                    {
+                                        string pn = p.ParameterType.Name;
+                                        if (pn.IndexOf("Node", StringComparison.Ordinal) >= 0
+                                         || pn.IndexOf("Vector3", StringComparison.Ordinal) >= 0
+                                         || pn.IndexOf("Target", StringComparison.Ordinal) >= 0) { useful = true; break; }
+                                    }
+                                    if (useful) names.Add(m.Name + "(" + m.GetParameters().Length + ")");
+                                }
+                            }
+                            catch { }
+                            if (names.Count == 0) continue;
+                            names.Sort();
+                            sb.AppendLine("  " + ty.FullName + ": " + string.Join(" ", names.ToArray()));
+                            if (seenT.Count > 30) break;
+                        }
+                        if (seenT.Count > 30) break;
+                    }
+                    if (seenT.Count == 0) sb.AppendLine("  一个都没扫到");
                 }
+                catch (Exception e3) { sb.AppendLine("  扫描中断: " + e3.Message); }
 
                 Main.Log(sb.ToString());
                 Main.FlushLog(true);

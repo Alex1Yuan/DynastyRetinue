@@ -47,24 +47,61 @@ namespace DynastyRetinue
     [HarmonyPatch]
     internal static class ShipArcAlign
     {
-        private static MethodBase TargetMethod()
+        /// <summary>
+        /// 只挂 **GetOriented 的九参重载** —— 它是所有射界的共同出口。
+        ///
+        /// ★两个重载的关系（离线读 IL 确认，见 tools/il_calls.ps1）★
+        ///       GetOriented(applicationNode, direction)              两参
+        ///           └─ 内部调用 →  GetOriented(checkLosFromNode, applicationNode, direction, 6个bool)
+        ///
+        ///   所以：
+        ///     · 只挂两参 → 直接调九参的炮（舷炮）碰不到  ← 1.3.7 之前"舷炮没修好"的真因
+        ///     · 两个都挂 → 走两参那条路的炮（艏炮）被改**两遍**，位移叠加
+        ///                  （1.3.8 实测：入参已是修正值 +0.50，最终被推到 +1.50）
+        ///     · 只挂九参 → 两条路都经过它，且每次只改一遍　✓
+        ///
+        /// ★为什么按参数名而不是参数个数挑★
+        ///   九参那个的**第一个**参数也是 CustomGridNodeBase（checkLosFromNode），
+        ///   按位置绑定会改错对象。Harmony 的 Prefix 按名字绑定，
+        ///   所以这里也用名字来认，两边口径一致。
+        /// </summary>
+        private static System.Collections.Generic.IEnumerable<MethodBase> TargetMethods()
         {
+            var list = new System.Collections.Generic.List<MethodBase>();
             var t = AccessTools.TypeByName("Kingmaker.UnitLogic.Abilities.Components.Patterns.AoEPattern");
-            if (t == null) return null;
+            if (t == null) return list;
+
+            MethodBase best = null;
+            int bestParams = -1;
             foreach (var m in t.GetMethods(BindingFlags.Public | BindingFlags.NonPublic
                                          | BindingFlags.Instance | BindingFlags.Static))
             {
                 if (m.Name != "GetOriented") continue;
-                var ps = m.GetParameters();
-                if (ps.Length == 2 && ps[1].ParameterType == typeof(Vector3)) return m;
+                bool hasNode = false, hasDir = false, hasLos = false;
+                foreach (var p in m.GetParameters())
+                {
+                    if (p.Name == "applicationNode" && p.ParameterType == typeof(CustomGridNodeBase)) hasNode = true;
+                    if (p.Name == "direction" && p.ParameterType == typeof(Vector3)) hasDir = true;
+                    if (p.Name == "checkLosFromNode") hasLos = true;
+                }
+                if (!hasNode || !hasDir) continue;
+                // 认 checkLosFromNode 这个特征参数；万一将来改名，退回"参数最多的那个"，
+                // 因为共同出口必然是签名最全的那一个。
+                int np = m.GetParameters().Length;
+                if (hasLos) { best = m; break; }
+                if (np > bestParams) { bestParams = np; best = m; }
             }
-            return null;
+            if (best != null) list.Add(best);
+            return list;
         }
 
         private static bool Prepare()
         {
-            var m = TargetMethod();
-            Main.Log("[射界·对齐] 补丁挂载 " + (m != null ? "成功" : "失败：找不到 AoEPattern.GetOriented(node, Vector3)"));
+            MethodBase m = null;
+            foreach (var x in TargetMethods()) { m = x; break; }
+            Main.Log("[射界·对齐] 补丁挂载 "
+                   + (m != null ? "成功 → GetOriented(" + m.GetParameters().Length + " 参，共同出口)"
+                                : "失败：找不到带 applicationNode/direction 的 GetOriented"));
             return m != null;
         }
 
@@ -122,6 +159,26 @@ namespace DynastyRetinue
         {
             try
             {
+                // ★★ 已停用 —— 这个补丁打在了错误的地方 ★★
+                //
+                //   九参 AoEPattern.GetOriented 不是舰炮射界的生成点。它是
+                //   RestrictedFiringAreaComponent.GetRestrictedArea 用的**角度限制蒙版**
+                //   （日志里那个恒为 93/87 格的东西）。真正的射界是：
+                //       WeaponSlot 按 槽位类型 + OffsetFromProw + BatteryWidth + SizeRect + 朝向
+                //       算出炮组源格 → FiringArcHelper.TraverseGraph 展开射程
+                //       → 与角度蒙版求交 → 多源格 UnionWith → 减去船体自身占格
+                //   在这里挪蒙版只会把射界扭曲成别的形状，治不了根。
+                //
+                //   另外：我一直当判据的「最终 pattern 原点」是
+                //   restrictedFiringArcNodes.FirstOrDefault() —— HashSet 的第一个元素，
+                //   不是炮口位置。基于它做的"原点随朝向翻面"分析全部作废。
+                //
+                //   正确的下手点是 WeaponSlot.GetFiringArcSourceNodesOffsets(...)，
+                //   它同时被显示、CanTargetFromNode、UnitUseAbilityParams.IsDirectionCorrect 三条路径经过。
+                //   保留本文件只为记住：**改之前先确认这个方法真的产出你要改的那个东西**。
+                return;
+
+#pragma warning disable 162
                 var s = Main.Settings;
                 if (s == null || !s.ShipArcFix) return;
                 if (applicationNode == null) { Why("applicationNode 为空"); return; }
@@ -172,26 +229,27 @@ namespace DynastyRetinue
 
                 Vector3 f = fwd.normalized;
 
-                // ★指纹匹配：只认这条船自己的那个 node★
+                // ★限流：node 必须落在本舰船体附近★
                 //
-                //   逆向出的原版公式（5 个朝向零误差）：
-                //       applicationNode = RoundHalfUp(占位中心) + (sgn(f.x), sgn(f.z))
-                //   先按它算出"如果这次调用是本舰的，node 应该正好是谁"，
-                //   然后要求传进来的 node **精确等于**它，否则一律放行。
+                //   原来要求 node **精确等于** RoundHalfUp(占位中心)+step，
+                //   假设"全船的炮共用一个原点"。实测打脸 —— 每门炮的 applicationNode 不同：
+                //       node=(250,251) ≠ 期望(251,251)     ← 本舰的炮，被当成别人挡掉了
+                //       node=(259,261) ≠ 期望(259,260)
+                //       node=(253,258) ≠ 期望(253,259)
+                //   炮装在船体不同位置，原点本来就该不同。于是只有一门炮被修，
+                //   其余全被自己的指纹拦在门外 —— 玩家看到的正是"光矛改了、舷炮没改"。
                 //
-                //   比"离船多近"之类的距离阈值干净得多：
-                //     · 别的单位的技能不可能撞上这个精确坐标 → 不会误伤
-                //     · 点击路和悬停路拿到的是同一个 node → 两条路行为必然一致
-                //     · 万一这个公式是错的，补丁就永远不触发 = 退回原版，属于安全失败；
-                //       而且会打一条不匹配日志，下一轮就知道错在哪
-                int ex = Mathf.FloorToInt(cx + 0.5f) + (f.x > 0.001f ? 1 : (f.x < -0.001f ? -1 : 0));
-                int ez = Mathf.FloorToInt(cz + 0.5f) + (f.z > 0.001f ? 1 : (f.z < -0.001f ? -1 : 0));
+                //   改成范围判定：本舰所有炮的原点都在船体那一小片里。
+                //   半径取 max(W,H)/2 + 1：巡洋 = 3 格，斜向档包围盒最大也只有 4×4，够用。
+                //   配合上面的 direction 一致性检查，别的单位要误伤，得同时满足
+                //   "朝向完全相同"且"贴着我们的船" —— 而且后果只是显示位移一格。
+                float rad = UnityEngine.Mathf.Max(rect.Width, rect.Height) * 0.5f + 1f;
                 int nx = applicationNode.XCoordinateInGrid, nz = applicationNode.ZCoordinateInGrid;
-                if (nx != ex || nz != ez)
+                if (Mathf.Abs(nx - cx) > rad || Mathf.Abs(nz - cz) > rad)
                 {
-                    Why("node=(" + nx + "," + nz + ") ≠ 本舰应有的 (" + ex + "," + ez + ")　"
-                      + "占位中心=(" + cx.ToString("F2") + "," + cz.ToString("F2") + ")　"
-                      + "（多半是别的单位；若本舰射界也不修，说明这条公式该改了）");
+                    Why("node=(" + nx + "," + nz + ") 离本舰占位中心 ("
+                      + cx.ToString("F1") + "," + cz.ToString("F1") + ") 超过 "
+                      + rad.ToString("F0") + " 格，判定为别的单位");
                     return;
                 }
 
@@ -215,26 +273,72 @@ namespace DynastyRetinue
                 //
                 //   保留指纹：它是唯一正确的下手点。
                 //
-                // ★这一版射界只量不改★
+                // ★把射界原点挪回它相对船体应有的位置★
                 //
-                //   玩家实测把两种平移都否掉了：
-                //     1.2.2（不平移）→ 270° 射界不对
-                //     1.2.3（平移 Δ）→ 90°/135°/180° 射界不对
-                //   而 0° 和 45° 两档**始终正确**，恰好就是 Δ=0 的两档。
-                //   所以射界的偏差不是一个简单的平移，±Δ 都不是答案 ——
-                //   继续猜位移量只会白费玩家的测试轮次。
+                //   原版的病：占位中心落在格线上（巡洋宽 2 格、长 4 格都是偶数），
+                //   原点必须在相邻两格里二选一，而引擎恒定朝世界 +x/+z 挑、不随朝向转。
+                //   把原点换算到船体坐标就一目了然（用真实船中心，八档实测占位）：
                 //
-                //   改成先把覆盖换算到**船体坐标**（相对修正后的船中心）量出来，
-                //   拿 0°/45° 当基准，其余档的差值就是要补的量。见下面的 Postfix。
+                //       0°    船首 1.5    右舷 +0.5      45°   船首 2.121  右舷 0
+                //       90°   船首 1.5    右舷 −0.5      135°  船首 1.414  右舷 −0.707
+                //       180°  船首 0.5    右舷 −0.5      225°  船首 0.707  右舷 0
+                //       270°  船首 0.5    右舷 +0.5      315°  船首 1.414  右舷 +0.707
+                //
+                //   同一门炮，横向在 0°/90° 之间**翻了个面** —— 这就是玩家一直说的
+                //   "原版射界也是错的"。0° 和 45° 是玩家确认正确的基准档。
+                //
+                //   补到基准所需的位移 = −(平局残差)，换算成世界坐标**恰好全是整格**：
+                //       0°/45° (0,0)   90°/135° (0,−1)   180°/225° (−1,−1)   270°/315° (−1,0)
+                //
+                // ★为什么改这里，不改船★
+                //   曾经反过来做：把**船**挪 +残差。射界相对船确实对上了，
+                //   但船离开了它逻辑上占的格子 —— 引擎立刻用「无法用在自己身上」
+                //   点破（那格落在渲染出的船体之外）。占位、落点、命中判定都读逻辑位置，
+                //   挪画面治标不治本。改 applicationNode 则只动 pattern，
+                //   船、占位、落点、判定一格不动，而显示与命中共用同一个 pattern，两边一起对。
+                //
+                // ★0° 上是恒等变换★
+                //   玩家唯一从头到尾确认正确的朝向上一格不改 ——
+                //   任何在 0° 上会动的方案都可以直接否掉（上一版就是这么被否的）。
+                Vector3 tb = ShipViewCenterPatch.TieBreakOffset(rect, fwd, cell);
+                int dx = -Mathf.FloorToInt(tb.x / cell + 0.5f);
+                int dz = -Mathf.FloorToInt(tb.z / cell + 0.5f);
+
+                // ★测量现场要在提前返回**之前**记★
+                //   原来放在函数末尾，于是 0°/45° 走"无需修正"直接 return，
+                //   基准档一条测量都留不下 —— 而基准正是算其它档修正量的唯一依据。
+                //   仪器本身漏采数据，比数据不对更难发现。
                 _mValid = true;
                 _mSlot = slot ?? "?";
+                _mNx = nx; _mNz = nz;
                 _mBucket = Mathf.RoundToInt(ship.Orientation / 45f) & 7;
-                _mCx = cx + dcx; _mCz = cz + dcz;          // 修正后的船中心
+                _mCx = cx; _mCz = cz;
                 _mF = f;
                 _mR = Quaternion.AngleAxis(90f, Vector3.up) * f;
                 _mW = rect.Width; _mH = rect.Height;
+
+                if (dx == 0 && dz == 0) { Why("本朝向无需修正（0°/45° 恒等）"); return; }
+
+                var target = Walk(applicationNode, dx, dz);
+                if (target == null) { Why("走到图边界，放弃修正"); return; }
+
+                if (s.WatchMomentum)
+                {
+                    int bk = _mBucket;
+                    if (_seen.Add("arc|" + bk + "|" + (slot ?? "?") + "|" + nx + "," + nz))
+                    {
+                        Main.Log("[射界·修正] 朝向档=" + (bk * 45) + "°　" + (slot ?? "?")
+                               + "　原点 (" + nx + "," + nz + ") → (" + (nx + dx) + "," + (nz + dz) + ")"
+                               + "　位移 " + dx + "," + dz + " 格"
+                               + "　（= −平局残差；船与占位一格未动）");
+                        Main.FlushLog(true);
+                    }
+                }
+
+                applicationNode = target;
                 return;
             }
+#pragma warning restore 162
             catch (Exception e)
             {
                 if (!_warned) { _warned = true; Main.LogError("[射界·基准] 失败（射界保持原样）: " + e.Message); }
@@ -244,7 +348,7 @@ namespace DynastyRetinue
         // Prefix 记下的现场，供 Postfix 把覆盖换算到船体坐标
         private static bool _mValid;
         private static string _mSlot;
-        private static int _mBucket, _mW, _mH;
+        private static int _mBucket, _mW, _mH, _mNx, _mNz;
         private static float _mCx, _mCz;
         private static Vector3 _mF, _mR;
         private static readonly System.Collections.Generic.HashSet<string> _measured =
@@ -272,8 +376,9 @@ namespace DynastyRetinue
 
                 var s = Main.Settings;
                 if (s == null || !s.WatchMomentum) return;
-                string key = _mSlot + "|" + _mBucket;
-                if (!_measured.Add(key)) return;
+                // ★按原点去重，不按槽位★ 槽位经常读成 "?"，
+                // 第一条 "?" 记完之后舷炮就被去重吃掉了 —— 手里只剩光矛的数据。
+                // 原点唯一标识一门炮，不依赖读不读得到槽位。
 
                 int n = 0;
                 float fMin = float.MaxValue, fMax = float.MinValue;
@@ -293,10 +398,51 @@ namespace DynastyRetinue
                 }
                 if (n == 0) return;
 
+                // ★去重键必须含格数★
+                //   只用原点的话，舷炮和艏炮共用同一个 node（90° 都是 (259,260)/(259,261)），
+                //   舷炮的 pattern 会被当成重复丢掉 —— 手里就永远只有艏炮的数据。
+                //   格数能区分模板（艏炮 93/87、舷炮 80/44），所以放进键里。
+                string key = _mBucket + "|" + _mNx + "," + _mNz + "|" + n;
+                if (!_measured.Add(key)) return;
+
                 float halfH = (_mH - 1) * 0.5f;   // 船首在 +halfH
                 float halfW = (_mW - 1) * 0.5f;   // 右舷边在 +halfW
 
-                Main.Log("[射界·船体坐标] " + _mSlot + "　朝向档=" + (_mBucket * 45) + "°　共" + n + "格"
+                // ★原点本身的船体坐标 —— 这才是能跨朝向直接比的量★
+                //   同一门炮的炮口装在船体固定位置，所以这两个数**应当与朝向无关**。
+                //   0°/45° 是玩家确认正确的基准档；其余档与基准的差，就是这门炮要补的量。
+                //   覆盖范围会被地图边缘和船体自身裁剪，格数不稳定，不适合当判据；原点稳定。
+                float odx = _mNx - _mCx, odz = _mNz - _mCz;
+                float oF = odx * _mF.x + odz * _mF.z;
+                float oR = odx * _mR.x + odz * _mR.z;
+
+                // ★最终 pattern 原点也量一遍★
+                //   applicationNode 只是入参；pattern 模板自带一份偏移，
+                //   而那份偏移**每门炮、每个朝向档各不相同**（烘焙出来的）。
+                //   实测：同一门 MacroPlasma，最终原点在 0° 是「船首向 1.5」、
+                //   90° 变成 2.5 —— 而 applicationNode 两档已经一致了。
+                //   所以真正还没对齐的是这一步。两个原点并排打出来，
+                //   差在哪一步一眼可见，不用再靠推。
+                string fin = "读不到";
+                try
+                {
+                    var app = __result.ApplicationNode;
+                    if (app != null)
+                    {
+                        float fdx = app.XCoordinateInGrid - _mCx, fdz = app.ZCoordinateInGrid - _mCz;
+                        fin = "(" + app.XCoordinateInGrid + "," + app.ZCoordinateInGrid + ")"
+                            + "　船首向 " + (fdx * _mF.x + fdz * _mF.z).ToString("F2")
+                            + "　右舷向 " + (fdx * _mR.x + fdz * _mR.z).ToString("F2");
+                    }
+                }
+                catch { }
+
+                Main.Log("[射界·船体坐标] " + _mSlot + "　朝向档=" + (_mBucket * 45) + "°"
+                       + "　原点=(" + _mNx + "," + _mNz + ")　共" + n + "格"
+                       + "\n    入参原点(原版) 船首向 " + oF.ToString("F2")
+                       + "　右舷向 " + oR.ToString("F2")
+                       + "\n    ★最终pattern原点 " + fin
+                       + "\n    （同一门炮各朝向这两行都应相同；0°/45° 为基准）"
                        + "\n    船首向 " + fMin.ToString("F2") + " ~ " + fMax.ToString("F2")
                        + "　（船首在 +" + halfH.ToString("F1") + "，最远端超出船首 "
                        + (fMax - halfH).ToString("F2") + " 格）"

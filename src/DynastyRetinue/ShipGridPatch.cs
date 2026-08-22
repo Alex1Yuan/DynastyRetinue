@@ -133,15 +133,43 @@ namespace DynastyRetinue
                 //   问出来的是"一个 W×W 的东西放这格会占哪儿"，正是步长方块该在的位置。
                 //   1.1.80 我改成传 unit.SizeRect（整条船 2×4），位置和大小一起变了 ——
                 //   之后又去猜方块该往哪边铺，四版全被否。玩家："1.1.79 的绿格才是好的"。
-                var offs = Footprint(rect);
+                //
+                // ★1.4.9 恢复★ 1.4.7 曾把这里停掉，理由是"原版 marker 已是 W×W，
+                //   两套绿色会分家"。那个理由站不住：玩家看到的**常驻**绿色是
+                //   CombatHUDRenderer 的 1×1 区域格（原版 marker 默认 SetActive(false)，
+                //   只有光标底下那一个会亮）。停掉它 = 整片绿色退回 1×1，这正是
+                //   玩家说的"绿格还原成 1×1 了"。
+                //
+                //   而且这套格子本来就画在**船模位置**上（Footprint 走船体占位、随朝向刚性旋转），
+                //   与 ShipMarkerAlign 的 S = −TieBreakOffset 逐格相同 —— 不是两套，是同一处。
+                //   现在 marker 和鼠标都被挪到这儿来，三者才第一次真正重合。
+                UnityEngine.Vector2Int[] offs = Footprint(rect);
                 if (offs != null && offs.Length > 1)
                 {
+                    // ★把方块整体平移到船首那一块★
+                    //   形状仍是 1.1.79 验收过的 W×W（也正是点击吸附等价类的形状），
+                    //   只把**位置**挪到船模上。marker 和 m_DecalOffset 加的是同一个量的
+                    //   世界坐标版 —— 三者是同一个平移，所以不会分家。
+                    //
+                    //   1.4.9 只挪了 marker 和光标、漏了这里，玩家实测正是
+                    //   "实际落点对齐了模型，绿格还在原地"。
+                    UnityEngine.Vector2Int org;
+                    bool has = TryGetBlockOrigin(ShipPathContext.Current, out org);
+                    if (has && (org.x != 0 || org.y != 0))
+                    {
+                        var shifted = new UnityEngine.Vector2Int[offs.Length];
+                        for (int i = 0; i < offs.Length; i++)
+                            shifted[i] = new UnityEngine.Vector2Int(offs[i].x + org.x, offs[i].y + org.y);
+                        offs = shifted;
+                    }
+
                     // 每个区块用自己的颜色：占位格跟着它所属的落点走，
                     // 方块整体同色，「本回合可达 / 冲刺可达 / 更远」的层次也保住。
                     // src 和 shade 传同一个 list 是有意的 —— Shade 内部先取 count 快照。
                     Shade(movementAreaPhaseOneNodes, offs, movementAreaPhaseOneNodes);
                     Shade(movementAreaPhaseTwoNodes, offs, movementAreaPhaseTwoNodes);
                     Shade(movementAreaPhaseThreeNod, offs, movementAreaPhaseThreeNod);
+                    if (has) CrossCheck(org);
                 }
 
                 // ★把两个候选占位同时画出来，让玩家直接指认★（只在诊断开关打开时）
@@ -151,22 +179,15 @@ namespace DynastyRetinue
                 //   谁也证不了两边说的是同一件事。而我每次只画一个候选，
                 //   玩家只能回答"不对"，回答不了"应该是哪个"，于是又轮到我猜。
                 //
-                //   现在两个一起画，颜色不同：
-                //     A = GetBlockedNodes(SizeRect, Forward)      ← 原版认为船占的格
-                //     D = A + Δ，Δ = e − Rot(朝向)·e              ← 修正后的位置
+                // ★把船的**真实逻辑占位**画出来（只在诊断开关打开时）★
                 //
-                //   修正生效后，**船应当正好压在 D 上**。
-                //   Δ 和 ShipViewCenterPatch 用的是同一个式子（改一处两处必须一起改），
-                //   所以这两片高亮同时也是那个补丁的回归测试：
-                //   哪天公式被人改动，船和 D 立刻分开，一眼可见。
+                //   这是引擎认定的占位：射界、命中判定、「无法用在自己身上」全都基于它。
+                //   ★不加任何本 mod 的偏移★ —— 一旦加了，就变成"拿我挪过的东西
+                //   去验证我挪过的东西"，必然吻合、毫无信息量。这个坑已经踩过两次。
                 //
-                //   纯视觉：走绿格同一条渲染通道，不碰寻路、不碰落点合法性、
-                //   不进存档、不影响联机。关掉开关完全不画。
-                if (s.WatchMomentum)
-                {
-                    ShadeHull(movementAreaPhaseOneNodes, false);  // A：原版占位
-                    ShadeHull(movementAreaPhaseThreeNod, true);   // D：修正后（船该在这）
-                }
+                //   判据：**船模应当正好压在这片高亮上**。
+                //   若压不上，说明视图层和逻辑层脱节，射界就会离船一个身位。
+                if (s.WatchMomentum) ShadeHull(movementAreaPhaseThreeNod, false);
 
                 // 存一份给全量探针。三个 phase 合起来才是玩家看到的整片绿色，
                 // 分开存的话读日志时还得自己拼，没意义。
@@ -184,6 +205,188 @@ namespace DynastyRetinue
             {
                 if (!_warned) { _warned = true; Main.LogError("[移动格] 扩展失败: " + e.Message); }
             }
+        }
+
+        private static string _lastCheck = "";
+        private static readonly Dictionary<string, UnityEngine.Vector2Int> _org =
+            new Dictionary<string, UnityEngine.Vector2Int>();
+
+        /// <summary>
+        /// 落点方块该平移到哪 —— 「船首那 W×W 块」相对锚点的最小角，单位：格。
+        ///
+        /// ================== 为什么需要它 ==================
+        /// Footprint 传的是**压成正方形**的 rect，而 GetBlockedNodes 对正方形 rect
+        /// 的结果**不随朝向变**（2×2 绕锚点转还是那 4 格）。所以它恒是锚点上的 2×2 ——
+        /// 正好等于点击吸附的等价类，这就是"绿格和鼠标一直对得上"的原因：本就是同一个东西。
+        /// 但船体是**刚性旋转**的，于是船一转向，这块就不在船身上了。
+        ///
+        /// 位移必须从会转的那条路取：传整条船的 SizeRect，把每格投影到航向，
+        /// 只留最靠船首的 W 层，取最小角。
+        ///
+        /// ================== 与玩家实测表的关系 ==================
+        /// 玩家逐档指认出的 Δ（那时用来把**船**挪去追绿格）取负后，应当等于本函数的结果。
+        /// 已核对的三档（实测船体包围盒来自 1.1.89 的探针日志）：
+        ///     0°   船体 x:0~1  z:−2~1  → 船首层 z:0~1  → 最小角 ( 0, 0)   Δ=(0,0)   ✓
+        ///     90°  船体 x:−2~1 z:−1~0  → 船首层 x:0~1  → 最小角 ( 0,−1)   Δ=(0,1)   ✓
+        ///     180° 船体 x:−1~0 z:−1~2  → 船首层 z:−1~0 → 最小角 (−1,−1)   Δ=(1,1)   ✓
+        ///
+        /// ★展开成通式★ 最小角 = 0°(0,0)　90°(0,−(W−1))　180°(−(W−1),−(W−1))　270°(−(W−1),0)
+        ///     W=1 护卫舰 → 恒 (0,0)，天生不用修（与玩家"护卫舰八向都对"完全吻合）
+        ///     W=2 巡洋   → (0,±1)   与实测表逐格相同
+        ///     W=3 大巡   → (0,±2)   **整格，不是半格**
+        ///   之前我说大巡会出半格，那是沿用 e−Rot·e 那个拟合式的结论；
+        ///   该式只在 W=2 上碰巧成立（W−1 恰好 = 2×0.5），换成真几何后半格根本不存在。
+        ///
+        /// ★1.1.89 被否不是因为算错★
+        ///   那版也是切船首 W 层，玩家反馈"方块被挪走了，能点的落点还在原地"——
+        ///   问题在于当时**只挪了绿格，没挪光标**。现在 marker 和 m_DecalOffset 加的是
+        ///   同一个量的世界坐标版，三者是同一个平移。
+        ///
+        /// ★取不到就返回 false★ 贴图边、拿不到 BlockManager 时一律不挪；
+        ///   此时绿格/标记/光标全部退回原版，仍然自洽。
+        /// </summary>
+        internal static bool TryGetBlockOrigin(StarshipEntity unit, out UnityEngine.Vector2Int origin)
+        {
+            origin = new UnityEngine.Vector2Int(0, 0);
+            try
+            {
+                if (unit == null) return false;
+                var full = unit.SizeRect;
+                int w = full.Width;
+                if (w <= 1) return false;                    // 护卫舰：恒 (0,0)，不用算
+
+                var node = unit.CurrentUnwalkableNode as CustomGridNodeBase;
+                if (node == null) return false;
+
+                var fwd = unit.Forward;
+                int bucket = UnityEngine.Mathf.RoundToInt(
+                    UnityEngine.Mathf.Atan2(fwd.x, fwd.z) * UnityEngine.Mathf.Rad2Deg / 45f) & 7;
+                string key = full.Width + "x" + full.Height + "|" + bucket;
+                if (_org.TryGetValue(key, out origin)) return true;
+
+                if (!_probed)
+                {
+                    _probed = true;
+                    var t0 = AccessTools.TypeByName("Kingmaker.Pathfinding.WarhammerBlockManager");
+                    if (t0 != null)
+                    {
+                        _bmInstProp = AccessTools.Property(t0, "Instance");
+                        _bmGet = AccessTools.Method(t0, "GetBlockedNodes", new Type[] {
+                            typeof(GraphNode), typeof(IntRect), typeof(UnityEngine.Vector3) });
+                    }
+                }
+                if (_bmGet == null || _bmInstProp == null) return false;
+                var inst = _bmInstProp.GetValue(null);
+                if (inst == null) return false;
+
+                // ★贴图边时形状是残缺的★ 枚举器会静默跳过越界节点，
+                //   残缺的最小角一旦缓存，会平移给每个落点，地图中央也跟着错。
+                var graph = node.Graph as CustomGridGraph;
+                int pad = UnityEngine.Mathf.Max(full.Width, full.Height);
+                int ax = node.XCoordinateInGrid, az = node.ZCoordinateInGrid;
+                if (graph != null &&
+                    (ax - pad < 0 || az - pad < 0 || ax + pad >= graph.width || az + pad >= graph.depth))
+                    return false;
+
+                var cells = new List<UnityEngine.Vector2Int>(32);
+                object res = null;
+                try
+                {
+                    res = _bmGet.Invoke(inst, new object[] { node, full, fwd });
+                    var en = res as System.Collections.IEnumerable;
+                    if (en != null)
+                        foreach (var o in en)
+                        {
+                            var gn = o as CustomGridNodeBase;
+                            if (gn == null) continue;
+                            cells.Add(new UnityEngine.Vector2Int(
+                                gn.XCoordinateInGrid - ax, gn.ZCoordinateInGrid - az));
+                        }
+                }
+                finally
+                {
+                    var d = res as IDisposable;
+                    if (d != null) d.Dispose();
+                }
+                if (cells.Count == 0) return false;
+
+                // 投影到航向，只留最靠船首的 W 层。
+                // 斜向档上这一层不是轴对齐的方块，但我们只取最小角，仍然良定义。
+                float fx = fwd.x, fz = fwd.z;
+                float mag = UnityEngine.Mathf.Sqrt(fx * fx + fz * fz);
+                if (mag < 0.0001f) return false;
+                fx /= mag; fz /= mag;
+
+                float best = float.NegativeInfinity;
+                for (int i = 0; i < cells.Count; i++)
+                {
+                    float p = cells[i].x * fx + cells[i].y * fz;
+                    if (p > best) best = p;
+                }
+                float cut = best - w + 0.5f;   // 留半格容差，免得浮点把边界那层切掉
+
+                int ox = int.MaxValue, oz = int.MaxValue;
+                for (int i = 0; i < cells.Count; i++)
+                {
+                    if (cells[i].x * fx + cells[i].y * fz < cut) continue;
+                    if (cells[i].x < ox) ox = cells[i].x;
+                    if (cells[i].y < oz) oz = cells[i].y;
+                }
+                if (ox == int.MaxValue) return false;
+
+                origin = new UnityEngine.Vector2Int(ox, oz);
+                _org[key] = origin;
+                return true;
+            }
+            catch { return false; }
+        }
+
+        /// <summary>
+        /// 自检：把「实际用的平移量」和「玩家八档实测表」并排打出来。
+        ///
+        /// ★两个数来源完全独立★
+        ///   平移量 ← 引擎 GetBlockedNodes 的逻辑占位，切船首 W 层取最小角
+        ///   实测表 ← 玩家逐档肉眼指认**船模**位置拟合出的 TieBreakOffset，取负
+        ///   中间没有共用量，所以吻合不是自证 —— 过去两次"验证通过"翻车都是因为
+        ///   拿同一个量挪过的两样东西互证，必然吻合且零信息量。
+        ///
+        /// ★不吻合时以哪个为准★
+        ///   以平移量（占位）为准并照打日志。实测表只在 W=2 上验证过，
+        ///   且它是拟合式，W≠2 时本就不该外推。差值直接给出，不用再让玩家逐档指认一轮。
+        /// </summary>
+        private static void CrossCheck(UnityEngine.Vector2Int org)
+        {
+            try
+            {
+                var cfg = Main.Settings;
+                if (cfg == null || !cfg.WatchMomentum) return;
+                var unit = ShipPathContext.Current;
+                if (unit == null) return;
+
+                float cell = Kingmaker.Pathfinding.GraphParamsMechanicsCache.GridCellSize;
+                if (cell <= 0.001f) return;
+
+                var fwd = unit.Forward;
+                int bucket = UnityEngine.Mathf.RoundToInt(
+                    UnityEngine.Mathf.Atan2(fwd.x, fwd.z) * UnityEngine.Mathf.Rad2Deg / 45f) & 7;
+
+                var t = -ShipViewCenterPatch.TieBreakOffset(unit.SizeRect, fwd, cell) / cell;
+                string fit = "(" + t.x.ToString("F1") + "," + t.z.ToString("F1") + ")";
+                bool same = UnityEngine.Mathf.Abs(t.x - org.x) < 0.01f
+                         && UnityEngine.Mathf.Abs(t.z - org.y) < 0.01f;
+
+                string line = "[三件套自检] 朝向档=" + (bucket * 45) + "°"
+                            + "　船 " + unit.SizeRect.Width + "×" + unit.SizeRect.Height
+                            + "　平移量(占位)=(" + org.x + "," + org.y + ")"
+                            + "　实测表(−Δ)=" + fit
+                            + (same ? "　✔ 两来源一致"
+                                    : "　△ 不同 —— 以占位为准（实测表只在 2×4 上验证过）");
+                if (line == _lastCheck) return;
+                _lastCheck = line;
+                Main.Log(line);
+                Main.FlushLog(true);
+            }
+            catch { }
         }
 
         /// <summary>

@@ -103,7 +103,40 @@ namespace DynastyRetinue
         /// ★大巡自动覆盖★ 3×6 的 W 是奇数 → e=(0,0.5)，式子自然给出较小的修正量，
         ///   不需要再单独测一张表。
         /// </summary>
-        internal static Vector3 Delta(IntRect size, Vector3 direction, float cell)
+        /// <summary>
+        /// 平局取整残差：原版把占位中心取整到格时，**恒定朝世界 +x/+z 挑**所造成的偏移。
+        ///
+        ///     偏移 = e − Rot(朝向向下取整到 90° 的倍数)·e
+        ///     e    = (Width 偶 ? 0.5 : 0,  Height 偶 ? 0.5 : 0)
+        ///
+        /// e 是半格残差：占位在某条世界轴上跨度为偶数时中心落在格线上，必须二选一；
+        /// 跨度为奇数时中心本就在格心，无平局，该轴 e = 0。
+        /// 「向下取整到 90°」是关键 —— 这个裁决按**象限**决定，而象限边界比朝向落后 45°，
+        /// 所以 0°/45° 同值、90°/135° 同值。不取整的版本四个斜向档全漂。
+        ///
+        /// 巡洋 2×4（e=0.5,0.5）展开：0°/45°(0,0) 90°/135°(0,1) 180°/225°(1,1) 270°/315°(1,0)
+        ///
+        /// ★这个量本身不用来挪船★
+        ///   曾经拿它去修**视图位置**（把船画到 中心+偏移），八个朝向"验证通过"，
+        ///   但那是假象：对照高亮画的也是 占位+偏移，两个用同一个量挪过的东西必然吻合。
+        ///   引擎自己戳破了它 —— 把炮指向船体附近时提示「无法用在自己身上」，
+        ///   而那格落在渲染出的船体**之外**，偏移量正好等于它：说明逻辑占位根本没动，
+        ///   是画面被我挪离了逻辑。
+        ///
+        /// ★正确用法：反过来用★（见 ShipMarkerAlign）
+        ///   这个量量的是「绿格 − 船模」。船和占位一格不动，
+        ///   把**绿格标记和鼠标取格**一起挪 −TieBreakOffset，两者就落到船模上。
+        ///
+        /// ★非恒等式的互证★ 这是本问题上第一份两方独立吻合的证据：
+        ///   本式来自玩家肉眼逐档指认**船模**；
+        ///   ShipGridPatch.Footprint 来自引擎 GetBlockedNodes 的**逻辑占位**。
+        ///   把 −TieBreakOffset 换算成落点方块的最小角，与 Footprint 逐格相同：
+        ///       0°  (0,0)     Footprint x:0~1 z:0~1   → (0,0)
+        ///       90° (0,−1)    Footprint x:0~1 z:−1~0  → (0,−1)
+        ///       180°(−1,−1)   Footprint x:−1~0 z:−1~0 → (−1,−1)
+        ///   两条来源没有共用中间量，所以这次吻合不是自证。
+        /// </summary>
+        internal static Vector3 TieBreakOffset(IntRect size, Vector3 direction, float cell)
         {
             if (size.Width <= 1) return Vector3.zero;
             if (direction.sqrMagnitude < 0.0001f || cell <= 0.001f) return Vector3.zero;
@@ -114,11 +147,20 @@ namespace DynastyRetinue
 
             int bucket = Mathf.RoundToInt(
                 Mathf.Atan2(direction.x, direction.z) * Mathf.Rad2Deg / 45f) & 7;
-            int quadrantDeg = (bucket / 2) * 90;          // ★向下取整到 90°★
+            int quadrantDeg = (bucket / 2) * 90;
 
             var e = new Vector3(ex, 0f, ez);
             var q = Quaternion.AngleAxis(quadrantDeg, Vector3.up);
             return (e - q * e) * cell;
+        }
+
+        /// <summary>
+        /// 视图位置修正 —— **永久返回零**。船画在原版位置才和逻辑占位一致，
+        /// 详见 TieBreakOffset 的说明。保留这个入口只是为了让调用方不必改签名。
+        /// </summary>
+        internal static Vector3 Delta(IntRect size, Vector3 direction, float cell)
+        {
+            return Vector3.zero;
         }
 
 

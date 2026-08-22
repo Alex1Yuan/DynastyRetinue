@@ -52,6 +52,14 @@ namespace DynastyRetinue
             }
             catch { DevMode = false; }
 
+            // ★热重载只在开发模式开放★
+            //   它能把"改一个数 → 验一次"从"退游戏、重进战斗、把船转到指定朝向"
+            //   压到面板上点一下，调坐标时价值极大。
+            //   但热重载有残留风险（补丁没卸干净会变双重补丁、效果叠加两次），
+            //   而普通玩家从中得不到任何好处 —— 不给他们这个隐患。
+            //   UMM 是按 OnUnload 是否为 null 决定能不能 Reload 的，不赋值即彻底关闭。
+            if (DevMode) modEntry.OnUnload = OnUnload;
+
             // ★检测旧版残留★ 0.8x 时 mod 叫 KgdRetinue，文件夹也叫这个名。
             // UMM 是按「子目录里有没有 Info.json」装载的，**不认目录名** ——
             // 所以解压新版只会多出一个文件夹，旧的照样被加载，两份程序集同时跑：
@@ -202,6 +210,44 @@ namespace DynastyRetinue
             try { if (fromDialog) UI.RetinueUI.OpenFromDialog(); else UI.RetinueUI.Open(); return; }
             catch (Exception e) { LogError("[UI] 新窗口开启失败，回退到旧窗口: " + e); }
             RecruitWindow.Open(npc);
+        }
+
+        /// <summary>
+        /// UMM 热重载入口 —— 返回 true 才允许在**不退游戏**的前提下重新加载 DLL。
+        ///
+        /// ★为什么值得加★
+        ///   调海战坐标这种事，一个数字要验一次就得重启一次游戏、重进一场战斗、
+        ///   再把船转到指定朝向。加上它之后在 UMM 面板点一下 Reload 就行，
+        ///   一轮从几分钟压到几秒。
+        ///
+        /// ★必须做的三件事★
+        ///   1. 走一遍"禁用"流程：退订事件、销毁窗口、归还 hold 住的资源。
+        ///      漏掉会留下悬空的订阅和 GameObject，下次加载就变成双份。
+        ///   2. **卸掉 Harmony 补丁**。不卸的话旧补丁还挂在原方法上，
+        ///      新 DLL 再打一遍就是双重补丁 —— 位移之类的效果会叠加两次，
+        ///      而现象看起来像"公式错了"，极难排查。
+        ///   3. 把攒着的日志刷盘，否则最后几行会随卸载一起丢掉。
+        ///
+        /// ★哪些东西热重载还原不了★
+        ///   已经写进存档的量（自定义船模 prefab、分档）不会因为重载而回退 ——
+        ///   那本来就是持久状态，和这里无关。OnToggle(false) 里已有相应提示。
+        ///
+        /// ★可靠性提示★
+        ///   连续重载很多次之后若出现说不清的怪现象，先重启再复现一次 ——
+        ///   不能把热重载的残留当成 mod 的 bug 来查。
+        /// </summary>
+        private static bool OnUnload(UnityModManager.ModEntry modEntry)
+        {
+            try { OnToggle(modEntry, false); } catch (Exception e) { LogError("[卸载] 停用流程出错: " + e.Message); }
+
+            try
+            {
+                if (HarmonyInstance != null) HarmonyInstance.UnpatchAll(modEntry.Info.Id);
+            }
+            catch (Exception e) { LogError("[卸载] 卸补丁出错: " + e.Message); }
+
+            try { Log("[卸载] 已卸载补丁并清理，可以热重载。"); FlushLog(true); } catch { }
+            return true;
         }
 
         private static bool OnToggle(UnityModManager.ModEntry modEntry, bool value)
