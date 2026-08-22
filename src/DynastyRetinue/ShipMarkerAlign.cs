@@ -2,7 +2,8 @@ using System;
 using System.Reflection;
 using HarmonyLib;
 using Kingmaker.EntitySystem.Entities;
-using Pathfinding;
+using Kingmaker.Pathfinding;          // CustomGridNodeBase / CustomGridGraph 在这儿，不在 Pathfinding 下
+using Pathfinding;                    // GraphNode / IntRect 才是 A* 包自己的
 using UnityEngine;
 
 namespace DynastyRetinue
@@ -112,6 +113,76 @@ namespace DynastyRetinue
                 if (!_warned) { _warned = true; Main.LogError("[三件套对齐] 算位移失败: " + e.Message); }
                 return Vector3.zero;
             }
+        }
+
+        /// <summary>
+        /// 吸附到 metagrid 锚点 —— 公式逐字抄自
+        /// `PartStarshipNavigation.GetNodeInMetagrid`（PartStarshipNavigation.cs:426）。
+        ///
+        /// ★为什么圆圈会落在方块边界上★
+        ///   落点锚点在一个**间距 W** 的子格上（巡洋 W=2），相位由座舰起点决定：
+        ///       num = -startNode.X % W;   snapped.X = (cur.X + num) / W * W - num - xmin;
+        ///   而圆圈画在 `CurrentNode + m_DecalOffset`，m_DecalOffset 是 ±半格，
+        ///   于是圆圈落在**间距 1** 的顶点格上 —— 两个子格不同，有一半概率
+        ///   落在方块的角或边中点而不是中心。
+        ///   护卫舰 W=1 时 `m_DecalScale==1` 让 m_DecalOffset 恒为零，圆圈正好在格心，
+        ///   所以原版从来没暴露过这个问题。
+        ///
+        /// ★所以不再靠算术，靠构造★
+        ///   把圆圈和高亮块**都**吸附到同一个 metagrid 锚点，圆圈画在该锚点方块的中心。
+        ///   这样「圆圈 == 高亮块 == 实际被指令的落点」是构造出来的，
+        ///   不是靠调偏移量凑出来的 —— 这套算术我已经猜错三次了。
+        ///
+        /// 拿不到图/起点就原样返回，绝不瞎猜。
+        /// </summary>
+        internal static CustomGridNodeBase SnapToMetagrid(StarshipEntity ship, CustomGridNodeBase current)
+        {
+            try
+            {
+                if (ship == null || current == null) return current;
+                var rect = ship.SizeRect;
+                int w = rect.Width;
+                if (w <= 1) return current;
+
+                var graph = current.Graph as CustomGridGraph;
+                if (graph == null) return current;
+
+                var active = AstarPath.active;
+                if (active == null) return current;
+                var start = active.GetNearest(ship.Position).node as CustomGridNodeBase;
+                if (start == null) return current;
+
+                var s2 = graph.GetNode(start.XCoordinateInGrid + rect.xmin,
+                                       start.ZCoordinateInGrid + rect.ymin);
+                if (s2 == null) return current;
+
+                int nx = -s2.XCoordinateInGrid % w;
+                int nz = -s2.ZCoordinateInGrid % w;
+                var snapped = graph.GetNode(
+                    (current.XCoordinateInGrid + nx) / w * w - nx - rect.xmin,
+                    (current.ZCoordinateInGrid + nz) / w * w - nz - rect.ymin);
+                return snapped ?? current;
+            }
+            catch { return current; }
+        }
+
+        /// <summary>
+        /// 锚点 → 该锚点 W×W 方块中心的偏移。与原版 marker 用的
+        /// `GetSizePositionOffset(压方 rect)` 逐字等价：((W-1)/2)·格宽。
+        /// </summary>
+        internal static Vector3 BlockCenter(StarshipEntity ship)
+        {
+            try
+            {
+                if (ship == null) return Vector3.zero;
+                int w = ship.SizeRect.Width;
+                if (w <= 1) return Vector3.zero;
+                float cell = Kingmaker.Pathfinding.GraphParamsMechanicsCache.GridCellSize;
+                if (cell <= 0.001f) return Vector3.zero;
+                float h = (w - 1) * 0.5f * cell;
+                return new Vector3(h, 0f, h);
+            }
+            catch { return Vector3.zero; }
         }
 
         internal static void LogOnce(Vector3 s)
@@ -378,13 +449,129 @@ namespace DynastyRetinue
                 var click = game != null ? game.ClickEventsController : null;
                 if (click == null) return;
 
-                var node = Kingmaker.Pathfinding.GridAreaHelper.GetNearestNodeXZ(click.WorldPosition - s);
+                var raw = Kingmaker.Pathfinding.GridAreaHelper.GetNearestNodeXZ(click.WorldPosition - s);
+                // ★吸附到 metagrid★ marker 只存在于间距 W 的锚点上（ShipPath.Result 的键
+                //   就是这些锚点，见 PartStarshipNavigation.cs:379 先 GetNodeInMetagrid 再查表）。
+                //   不吸附的话 nearest(...) 落在非锚点格上，UpdatePathNodeMarkers 找不到匹配、
+                //   什么都不亮 —— W=2 时四格里有三格会这样。
+                var node = ShipMarkerAlign.SnapToMetagrid(ship, raw);
                 _fNode.SetValue(__instance, node);
                 _fChanged.SetValue(__instance, !ReferenceEquals(node, _prev));
             }
             catch (Exception e)
             {
                 if (!_warned) { _warned = true; Main.LogError("[三件套对齐] 高亮块修正失败: " + e.Message); }
+            }
+        }
+    }
+
+    /// <summary>
+    /// 圆圈落点：吸附到 metagrid 锚点，画在该锚点 W×W 方块的**中心**。
+    ///
+    /// ================== 病灶 ==================
+    /// 原版 `m_CurrentDecalPosition = CurrentNode.Vector3Position + m_DecalOffset`
+    /// （UnitPathManager.cs:373 / :427），而 `m_DecalOffset` 是 ±半格的象限向量。
+    /// 于是圆圈落在**间距 1 的顶点格**上；而落点方块的中心在**间距 W 的子格**上
+    /// （PartStarshipNavigation.cs:426 的 metagrid 公式）。
+    /// 两个子格不同 ⇒ W=2 时圆圈有一半概率落在方块的角或边中点。
+    ///
+    /// ★为什么 Δ / S 修不了它★
+    ///   Δ 是平移。平移会把圆圈和方块中心**一起**挪动，`mod W` 的余数不变，
+    ///   所以任何常量都改变不了「圆圈落在哪个子格」。必须做**量化**（吸附），不是平移。
+    ///   护卫舰 W=1 时两个子格重合，且 `m_DecalScale==1` 使 m_DecalOffset 恒为零
+    ///   （UnitPathManager.cs:300），圆圈正好在格心 —— 所以原版从未暴露。
+    ///
+    /// ★构造而非算术★
+    ///   位置 = SnapToMetagrid(CurrentNode) + BlockCenter + S
+    ///   与高亮块用的是同一个吸附函数、同一个 S ⇒ 三者重合是构造出来的。
+    ///
+    /// ★只接管光标圆圈★
+    ///   SetDecalPosition 有三个调用点（UnitPathManager.cs:374 / :428 是光标圆圈，
+    ///   :678 是另一个 decal）。按 transform 精确门禁，别的一律放行。
+    ///
+    /// ★挂载点安全★ SetDecalPosition 的 IL 是 174 字节，远超 Mono 约 20 字节的内联阈值。
+    /// </summary>
+    [HarmonyPatch]
+    internal static class ShipDecalCenterPatch
+    {
+        private static MethodBase TargetMethod()
+        {
+            var t = AccessTools.TypeByName("Kingmaker.UI.PathRenderer.UnitPathManager");
+            return t == null ? null : AccessTools.Method(t, "SetDecalPosition");
+        }
+
+        private static bool Prepare()
+        {
+            var m = TargetMethod();
+            Main.Log("[三件套对齐] 圆圈落点挂载 " + (m != null
+                ? "成功 → UnitPathManager.SetDecalPosition()"
+                : "失败：找不到 SetDecalPosition —— 圆圈会留在方块边界上"));
+            return m != null;
+        }
+
+        private static FieldInfo _fDecal;
+        private static bool _probed, _warned, _logged;
+
+        private static void Prefix(object __instance, Transform decalTransform,
+                                   GraphNode node, ref Vector3? overridePosition)
+        {
+            try
+            {
+                var cfg = Main.Settings;
+                if (cfg == null || !cfg.ShipGridBySize) return;
+                if (__instance == null || decalTransform == null) return;
+
+                if (!_probed)
+                {
+                    _probed = true;
+                    _fDecal = AccessTools.Field(__instance.GetType(), "m_CreatedPointerCellDecal");
+                }
+                if (_fDecal == null)
+                {
+                    if (!_warned) { _warned = true; Main.LogError("[三件套对齐] 找不到 m_CreatedPointerCellDecal —— 圆圈保持原样"); }
+                    return;
+                }
+
+                // ★只接管光标圆圈★ 别的 decal 原样放行
+                var pointer = _fDecal.GetValue(__instance) as Component;
+                if (pointer == null || !ReferenceEquals(pointer.transform, decalTransform)) return;
+
+                var ship = ShipPathContext.Current;
+                if (ship == null)
+                {
+                    var g = Kingmaker.Game.Instance;
+                    ship = g != null && g.Player != null ? g.Player.PlayerShip : null;
+                }
+                if (ship == null || ship.SizeRect.Width <= 1) return;
+
+                var cur = node as CustomGridNodeBase;
+                if (cur == null) return;
+                var anchor = ShipMarkerAlign.SnapToMetagrid(ship, cur);
+                if (anchor == null) return;
+
+                var pos = (Vector3)anchor.Vector3Position
+                        + ShipMarkerAlign.BlockCenter(ship)
+                        + ShipMarkerAlign.Shift(ship);
+                // y 保持原样：原版随后会 CheckHeight 贴地，别把高度按死
+                if (overridePosition.HasValue) pos.y = overridePosition.Value.y;
+                overridePosition = pos;
+
+                if (!_logged && cfg.WatchMomentum)
+                {
+                    _logged = true;
+                    float c = Kingmaker.Pathfinding.GraphParamsMechanicsCache.GridCellSize;
+                    if (c <= 0.001f) c = 1f;
+                    Main.Log("[三件套对齐] 圆圈已吸附到 metagrid 锚点("
+                           + anchor.XCoordinateInGrid + "," + anchor.ZCoordinateInGrid + ")"
+                           + "　原始格(" + cur.XCoordinateInGrid + "," + cur.ZCoordinateInGrid + ")"
+                           + "　方块中心偏移=" + (ShipMarkerAlign.BlockCenter(ship).x / c).ToString("F2") + " 格"
+                           + "\n    圆圈 / 高亮块 / 实际落点现在用同一个吸附函数 + 同一个 S。");
+                    Main.FlushLog(true);
+                }
+            }
+            catch (Exception e)
+            {
+                if (!_warned) { _warned = true; Main.LogError("[三件套对齐] 圆圈落点修正失败: " + e.Message); }
             }
         }
     }
