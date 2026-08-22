@@ -276,6 +276,11 @@ namespace DynastyRetinue
         private static void OnUpdate(UnityModManager.ModEntry modEntry, float dt)
         {
             if (!Enabled) return;
+            // 舰船帧级采样：只在「详细日志」开着时工作，且一次会话最多记 60 条。
+            // 放在最前面是因为它自己就有节流，不需要等后面那些判定。
+            ShipFrameProbe.Tick();
+            ShipAllProbe.Tick();
+            StarMapShipModel.Tick();     // 自带 1s 节流
             try
             {
                 // 热键。★ 必须先排除修饰键 ★
@@ -871,6 +876,103 @@ namespace DynastyRetinue
             GUILayout.EndHorizontal();
             GUILayout.Label(L.T("<color=#aaaaaa>护卫舰/袭击舰无加成，保持原版手感。数值是「额外」次数：+1 = 两打。</color>"));
 
+
+            // ---------- 海战镜头 ----------
+            GUILayout.Space(8);
+            Settings.CamPushEnabled = GUILayout.Toggle(Settings.CamPushEnabled,
+                L.T("<b>海战镜头</b>　大船把镜头往后推"));
+            GUILayout.Label(L.T("<color=#aaaaaa>原版海战滚轮是「滑动变焦」：视野变窄的同时相机后退，两者抵消，"
+                              + "**船的大小根本不变**，变的只是背景 —— 所以大船顶满屏幕时怎么滚都退不开。"
+                              + "这里在相机管线的**最末端**直接把镜头沿视线推远，绕开那套抵消，"
+                              + "并且**接在滚轮上**：滚到最远推满，滚到最近就是原版画面。"
+                              + "护卫舰和袭击舰不受影响。下面的数值是最远端推多少米。</color>"));
+            if (Settings.CamPushEnabled)
+            {
+                GUILayout.BeginHorizontal();
+                GUILayout.Label(L.T("巡洋舰 后推"), GUILayout.Width(110));
+                Settings.CamPushCruiser = (float)Math.Round(
+                    GUILayout.HorizontalSlider(Settings.CamPushCruiser, 0f, 40f, GUILayout.Width(140)));
+                GUILayout.Label(Settings.CamPushCruiser.ToString("F0") + " m", GUILayout.Width(44));
+                GUILayout.Label(L.T("大巡洋 后推"), GUILayout.Width(110));
+                Settings.CamPushGrand = (float)Math.Round(
+                    GUILayout.HorizontalSlider(Settings.CamPushGrand, 0f, 60f, GUILayout.Width(140)));
+                GUILayout.Label(Settings.CamPushGrand.ToString("F0") + " m", GUILayout.Width(44));
+                GUILayout.EndHorizontal();
+                GUILayout.Label(L.T("<color=#aaaaaa>改完即刻生效，不用读档。调成 0 就是原版。"
+                                  + "每帧重算，不改任何持久值 —— 关掉或离开海战下一帧就复原，也绝不会影响地面。"
+                                  + "上面那个勾去掉就是完全不启用这套镜头。</color>"));
+            }
+
+            // ---------- 移动格 ----------
+            GUILayout.Space(8);
+            Settings.ShipGridBySize = GUILayout.Toggle(Settings.ShipGridBySize,
+                L.T("<b>移动格</b>　绿色可走格按船的大小铺开"));
+            GUILayout.Label(L.T("<color=#aaaaaa>补一个原版的疏漏：地面战斗的大型单位会把可走区域铺满，"
+                              + "海战那条路径整个跳过了这一步，于是巡洋舰、大巡的绿格永远一格一个、散成一片。"
+                              + "打开后巡洋舰画成 2×2、大巡 3×3 —— 正好是它们的移动步长，绿块就连成片了。"
+                              + "护卫舰和袭击舰本来就是一格，没有区别。**纯视觉，不改寻路和落点**。</color>"));
+            if (Settings.ShipGridBySize && !Settings.ShipViewCenterFix)
+            {
+                GUILayout.BeginHorizontal();
+                GUILayout.Label("绿格微调　左移", GUILayout.Width(90));
+                Settings.GridShiftX = (int)Math.Round(
+                    GUILayout.HorizontalSlider(Settings.GridShiftX, -3f, 3f, GUILayout.Width(110)));
+                GUILayout.Label(Settings.GridShiftX.ToString(), GUILayout.Width(24));
+                GUILayout.Label("下移", GUILayout.Width(34));
+                Settings.GridShiftZ = (int)Math.Round(
+                    GUILayout.HorizontalSlider(Settings.GridShiftZ, -3f, 3f, GUILayout.Width(110)));
+                GUILayout.Label(Settings.GridShiftZ.ToString(), GUILayout.Width(24));
+                if (Btn("清空探针记录", 110f)) { ShipRangeProbe.Reset(); ShipAllProbe.Reset(); Log("[探针] 记录已清空，同一门炮、同一个位置可以再打一次全量坐标了。"); }
+                GUILayout.EndHorizontal();
+                GUILayout.Label("<color=#aaaaaa>★调试用★ 自动算出来的平移量之外再加这个数，改完立刻生效、不用重进游戏。"
+                              + "**打开上面的「船位对齐」后这两个会被自动屏蔽** —— 那时绿格就该待在判定位置上不动，"
+                              + "再挪只会调出「看着齐了、点击还是错位」。</color>");
+            }
+            else if (Settings.ShipGridBySize)
+            {
+                GUILayout.BeginHorizontal();
+                GUILayout.Label("<color=#aaaaaa>绿格微调已被「船位对齐」接管（绿格 = 真实判定位置，不再平移）。</color>");
+                if (Btn("清空探针记录", 110f)) { ShipRangeProbe.Reset(); ShipAllProbe.Reset(); Log("[探针] 记录已清空，同一门炮、同一个位置可以再打一次全量坐标了。"); }
+                GUILayout.EndHorizontal();
+            }
+
+            // ---------- 全息影像 ----------
+            GUILayout.Space(8);
+            Settings.ShipHologramFix = GUILayout.Toggle(Settings.ShipHologramFix,
+                L.T("<b>全息影像</b>　拖动时的绿色轮廓用本船的模型和尺寸"));
+            GUILayout.Label(L.T("<color=#aaaaaa>又一处「地面有、海战漏」：所有舰船共用同一个通用低模"
+                              + "（1552 面，而巡洋舰本体 75989 面），而且舰船那条路径没有同步缩放"
+                              + "（全息 1.0、本体 1.515）。所以不管开什么船，拖动时看到的都是同一个偏小的轮廓。"
+                              + "打开后换成本船的模型、尺寸对齐 —— 绿色着色不受影响。**纯视觉**。</color>"));
+
+            // ---------- 星图船模 ----------
+            GUILayout.Space(8);
+            Settings.StarMapShipModel = GUILayout.Toggle(Settings.StarMapShipModel,
+                L.T("<b>星图船模</b>　星图上的座舰也用当前船模"));
+            GUILayout.Label(L.T("<color=#aaaaaa>星图那条船由另一套视图管，模型写死在场景里（还是那个通用低模），"
+                              + "跟换船模用的设置完全无关 —— 所以换了大船，星图上仍是原来那条。"
+                              + "打开后按当前船模换掉，并按包围盒比例重算缩放（不然大小会突变）。**纯视觉**。</color>"));
+
+            // ---------- 船的渲染位置 ----------
+            GUILayout.Space(8);
+            Settings.ShipViewCenterFix = GUILayout.Toggle(Settings.ShipViewCenterFix,
+                L.T("<b>船位对齐</b>　把大船画回它真正占的格子"));
+            GUILayout.Label(L.T("<color=#aaaaaa>游戏算船视图偏移的那个函数**只读宽度、不读长度**，而且量级上限是半格 —— "
+                              + "对原版 1×2 护卫舰刚好够（所以原版各朝向都正确），2×4 差一格、3×6 差两格。"
+                              + "表现是船被画在实际占位的前面：船头那格点不了，船尾一侧反而多出一格能点。"
+                              + "补偿量按尺寸自动算（长度每多两格往船尾拉一格，宽度每多两格往右舷推一格），"
+                              + "巡洋舰和大巡的值都是玩家实测反推出来的，装上就对，不用调。"
+                              + "**只改画在哪，不改占哪几格** —— 寻路和判定完全不动。护卫舰/劫掠舰保持原版。</color>"));
+
+            // ---------- 武器范围焦点 ----------
+            GUILayout.Space(8);
+            Settings.ShipRangeFocusFix = GUILayout.Toggle(Settings.ShipRangeFocusFix,
+                L.T("<b>武器范围</b>　把射程范围的焦点对回船身"));
+            GUILayout.Label(L.T("<color=#aaaaaa>射程范围的基准矩形以「锚点」为中心，而船是从锚点朝一侧长出去的，"
+                              + "偏差正好等于船的半个身位。原版护卫舰 1×2 只偏半格、看不出来；"
+                              + "换成巡洋舰/大巡之后，大巡横向偏一整格（表现为「靠船一侧缺一格」）、纵向偏三格。"
+                              + "打开后把焦点挪回船真正占的格子 —— **只改画出来的范围，不改变任何一发炮能不能打中**。</color>"));
+
             GUILayout.BeginHorizontal();
             GUILayout.Label(L.T("换船（默认：巡洋/大巡都用 Gothic）"), GUILayout.Width(210));
             if (Btn(L.T("护卫舰"), 80f))   StarshipViewTool.ApplyTierDefault(Kingmaker.Enums.Size.Frigate_1x2);
@@ -1287,6 +1389,21 @@ namespace DynastyRetinue
             GUILayout.Space(4);
 
             GUILayout.BeginHorizontal();
+            if (Btn("海战坐标全量", 130f)) ShipCoordDump.Dump();
+            GUILayout.Label("<color=#aaaaaa>把船的逻辑坐标、视图坐标、两者之差（=实际生效的偏移）、底座位置、占位格、"
+                          + "各武器槽的槽型，一次全打进日志。★想看射程/射界就先悬停一门炮再点★。</color>");
+            GUILayout.EndHorizontal();
+            GUILayout.Space(4);
+
+            GUILayout.BeginHorizontal();
+            if (Btn("海战现场诊断", 130f)) SpaceCombatProbe.Dump();
+            GUILayout.Label("<color=#aaaaaa>相机参数 + 座舰占位尺寸 + 场景里的移动格/落点框/全息影像对象，一次取齐。"
+                          + "★必须在海战里、而且鼠标悬停着让绿色移动格正显示的那一刻点★ —— "
+                          + "那些格子是临时对象，不显示的时候扫不到。</color>");
+            GUILayout.EndHorizontal();
+            GUILayout.Space(4);
+
+            GUILayout.BeginHorizontal();
             if (Btn("导出卫兵装备清单", 150f))
             {
                 var _gp = GearAudit.Export();
@@ -1666,6 +1783,86 @@ namespace DynastyRetinue
         /// </summary>
         public bool WatchMomentum = false;
 
+        /// <summary>
+        /// 海战里把相机沿视线往后推（见 ShipCameraPush）。
+        ///
+        /// ★为什么是"推相机"而不是"调缩放"★
+        ///   原版海战滚轮是滑动变焦（FOV 变窄 + 相机后退，互相抵消），**船的大小根本不变**，
+        ///   玩家怎么滚都退不开。而改 CameraZoom 的两个参数（PhysicalZoomMin / FovMax）
+        ///   实测都到不了终点：VcMain 没有 Body 组件，位置经 CinemachineBrain 的
+        ///   damping/blend 一路衰减。所以改在最末端 —— Brain 写完之后再推一把。
+        /// </summary>
+        public bool CamPushEnabled = true;
+
+        /// <summary>巡洋舰（2×4）相机往后推多少米。0 = 原版。</summary>
+        public float CamPushCruiser = 8f;
+
+        /// <summary>大巡洋舰（3×6）相机往后推多少米。船更长，推得更多。</summary>
+        public float CamPushGrand = 14f;
+
+        /// <summary>
+        /// 海战全息影像用本船的模型和尺寸（见 ShipHologramPatch）。
+        ///
+        /// ★为什么默认开★ 又是一处"地面有、海战漏"：所有舰船共用同一个
+        /// DefaultStarshipHologramPrefab（通用低模，1552 顶点），而且 SetupStarship
+        /// 没有同步缩放（全息 1.0、本体 1.515）。所以不管开什么船，
+        /// 拖动时看到的都是同一个偏小的占位轮廓。
+        /// </summary>
+        public bool ShipHologramFix = true;
+
+        /// <summary>
+        /// 星图上的座舰也用当前船模（见 StarMapShipModel）。
+        ///
+        /// ★为什么需要★ 星图那条船归 StarSystemStarshipView 管，那个类只做位置和朝向插值，
+        /// 模型写死在场景里（通用低模 `Ship`，和海战全息影像同一个），
+        /// 跟换船模用的 PrefabGuid 完全没关系 —— 所以换了大船，星图上还是原来那条。
+        /// </summary>
+        public bool StarMapShipModel = true;
+
+        /// <summary>
+        /// 修正海战武器范围的焦点（见 ShipRangeFocusPatch）。
+        ///
+        /// ★为什么默认开★ 射程环的基准矩形以「锚点」为中心，而船是从锚点朝一侧长出去的，
+        /// 偏差正好等于 SizeRect 的中心。原版 1×2 只偏半格看不出来；
+        /// 换成 2×4 / 3×6 后，大巡横向偏一整格（"左边缺一格"）、纵向偏三格。
+        /// **纯显示** —— 只影响画出来的范围，不改变任何一发炮能不能打中。
+        /// </summary>
+        public bool ShipRangeFocusFix = true;
+
+        /// <summary>
+        /// 移动格平移的手动微调（格）。自动计算之外再加这个数。
+        /// ★为什么需要★ 自动值已经算错三轮，每轮都要玩家重进游戏验一次。
+        /// 开成可调的，让有画面的人直接拖到对，再照着反推公式。
+        /// </summary>
+        public int GridShiftX = 0;
+        public int GridShiftZ = 0;
+
+        /// <summary>
+        /// 把大船的渲染位置挪回真正占的格子（见 ShipViewCenterPatch）。
+        ///
+        /// ★根因★ 游戏算船视图偏移的那个函数**只读 size.Width、不读 Height**，
+        /// 而且量级上限是半格 —— 对原版 1×2 刚好够，2×4 差一格、3×6 差两格。
+        /// 表现是船被画在实际占位的后半截：船头那格点不了、船尾后面反而多一格。
+        /// 只对 Width>1 生效，护卫舰和劫掠舰保持原版。
+        /// </summary>
+        public bool ShipViewCenterFix = true;
+
+        /// <summary>
+        /// 舰炮射界按船的真实占位重建（见 ShipArcPatch）。
+        /// ★不进 CoopState.LocalOnly★ 它改的是命中判定，联机必须两端一致。
+        /// </summary>
+        public bool ShipArcFix = true;
+
+        /// <summary>
+        /// 海战里绿色可走格按座舰尺寸铺开（见 ShipGridPatch）。
+        ///
+        /// ★为什么默认开★ 这是补一个 vanilla 的疏漏：地面战斗的大型单位有
+        /// ExtendMovementAreaByUnitSize 把可走区域铺满，海战那条路径整个跳过了它，
+        /// 于是巡洋舰、大巡的绿格永远一格一个、散成一片。护卫舰和袭击舰本来就是一格，
+        /// 打开也没有任何区别。
+        /// </summary>
+        public bool ShipGridBySize = true;
+
 
         /// <summary>
         /// 【实验中】不显示卫兵所穿装备的外观，只留合成外观（见 GearLookPatch）。
@@ -1679,6 +1876,13 @@ namespace DynastyRetinue
         /// 存字符串而不是二维数组，是为了让老 Settings.xml 反序列化时不炸 —— 见 LookAssign。
         /// </summary>
         public string LookMatrix = "";
+
+        /// <summary>
+        /// 舰船转向不再"最后一节瞬移"。见 ShipTurnSmooth ——
+        /// 原版那段提速在快到路点时除以趋近 0 的剩余时间，把残余角度一帧转完。
+        /// 纯表现层：不影响移动速度、路径和占位判定。
+        /// </summary>
+
 
         // 各分区的折叠状态。分区是 1.0.74 拆的（原来 14 件事挤在「规则」一区里）。
         public bool PanelShowLook   = false;

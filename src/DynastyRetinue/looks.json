@@ -1,6 +1,5 @@
 {
   "_README": "外观风格配方。矩阵（当前卫队页）里每格选的就是这里的 id。",
-
   "_两种做法": [
     "unit  = 借某个原版单位的整体模型。真实、零穿模风险、而且烘焙模型本来就不吃装备视觉，",
     "        所以自动就是'统一外观'。缺点是每个卫兵长得一模一样。",
@@ -8,19 +7,16 @@
     "        但要自己挑件，可能穿模，而且装备护甲会叠上来（靠'不显示装备外观'开关挡）。",
     "两者二选一，unit 优先。都没有 = 无效条目，会被跳过并记一条日志。"
   ],
-
   "_unitByArchetype": [
     "借模型时可以按分型指定不同的单位，键是 archetypes.json 里的 name。",
     "没匹配到就回落到 unit。这样'克里格'风格下，狙击分型自动借克里格狙击手、",
     "军官借政委，不用玩家在界面上再配一层。"
   ],
-
   "_零新增 AssetId": [
     "下面每个 guid 都是 vanilla 蓝图。parts 里是 KingmakerEquipmentEntity 蓝图 guid",
     "（不是 EE 资源 AssetId，运行时通过 GetLinks(gender,race) 转换）；",
     "unit 里是 BlueprintUnit guid。mod 不发明任何 AssetId。"
   ],
-
   "looks": [
     {
       "id": "kasrkin",
@@ -46,7 +42,6 @@
         "KEE_HellGunEquipmentEntity 背包"
       ]
     },
-
     {
       "id": "krieg",
       "name": "克里格",
@@ -67,6 +62,38 @@
         "军官": "Krieg_Commissar 政委",
         "近战": "Krieg_Watchmaster 纠察长",
         "灵能": "Krieg_Engineer 工兵"
+      }
+    },
+    {
+      "id": "skitarii",
+      "name": "天穹机神",
+      "name_en": "Skitarii",
+      "_note": "DLC3 的天穹机神战团。借整体模型，需要 DLC3；解析不到会自动回落成跟随装备。★体型未实测★ 若比 Medium 大会和占位格不匹配，第一次用请先看一眼。",
+      "unit": "737fc140e70f4ac08b642a67deef64a4",
+      "_unit_name": "DLC3_OP_Dogmatic_Skitarii_Unit 教条派天穹机神",
+      "unitByArchetype": {
+        "近战": "aa02b505be774674ae924f19dc17e6f6",
+        "灵能": "b8ec45b228034db48d1658e35d59193a"
+      },
+      "_unitByArchetype_names": {
+        "近战": "DLC3_OP_Dogmatic_SicarianRuststalker 锈行者（双持超音速刃，近战刺客）",
+        "灵能": "DLC3_OP_Xenarite_Skitarii 异端派天穹机神（配色不同，做区分）"
+      }
+    },
+    {
+      "id": "servitor",
+      "name": "战斗仆从",
+      "name_en": "Combat Servitor",
+      "_note": "机械教的战斗仆从。★体型未实测★ 仆从模型不少是 Large，借来可能和 Medium 的占位格对不上 —— 第一次用务必先看一眼，不合适就换 unitByArchetype 里的别的。",
+      "unit": "5ba73a4183c24e909d691acabadc1db8",
+      "_unit_name": "CombatServitorMultiMelta 多重熔火仆从",
+      "unitByArchetype": {
+        "连射": "d789f69771864a15a033a4e922db9c8c",
+        "近战": "4dbb65442685427eaab2453280009873"
+      },
+      "_unitByArchetype_names": {
+        "连射": "CombatServitorBolter_Ranged 爆弹仆从",
+        "近战": "CombatServitorHeavyWarehouseJaeQ1 重型仆从"
       }
     }
   ]

@@ -115,6 +115,23 @@ namespace DynastyRetinue
             //   被挤出来的那个灵能（1040），传奇候选
             ("p_Ch05Inquisitor_Psyker", "d1287134a3e64a4dbdae16b58d21bd8b"),
 
+            // ---- 机械教线路候选（v1.1.3 加）----
+            //   目的：玩家提议把天穹机神/仆从做成**独立的第六条分型**（从机仆一路练到顶级兵），
+            //   而不是只当外观。做之前要先确认这些单位当得了卫兵 ——
+            //   看的还是那五项：血量档位、体型（Large 过不了走廊）、装备槽（全空就没法发毕业套）、
+            //   brain（UseOnlyListed 的话职业链练出来的技能一条都不会用）、武器。
+            //   ★锈行者已实测可穿重甲★（赏金猎手曾用它，实穿 HeavyVoidSuit 85/7），
+            //   所以这里主要验天穹机神和仆从。
+            ("m_Skitarii_Dogmatic",     "737fc140e70f4ac08b642a67deef64a4"),
+            ("m_Skitarii_Xenarite",     "b8ec45b228034db48d1658e35d59193a"),
+            ("m_SicarianRuststalker",   "56818fd6032643a39666f8fdffa2e581"),
+            ("m_ServitorMultiMelta",    "5ba73a4183c24e909d691acabadc1db8"),
+            ("m_ServitorBolter",        "d789f69771864a15a033a4e922db9c8c"),
+            ("m_ServitorHeavy",         "4dbb65442685427eaab2453280009873"),
+            ("m_ServitorCombat_Ch04",   "8ab7a7d8ca124ac8b0b602c18d31477a"),
+            ("m_AssassinTechpriest",    "2869eb5bcf614796b11d8cfc1089ec87"),
+            ("m_VeteranAssassinTechpr", "02835d88d9a541ce8bcebf0683681e93"),
+
             // 灵能 / 亚空间系
             ("c_Starport_Psyker",       "9a351e6271ef43a197bb9f7ad99f894e"),
             ("c_BlackshipPsyker_Ghost", "c696080db8ca4cb49d9c1fd577f6a1d2"),

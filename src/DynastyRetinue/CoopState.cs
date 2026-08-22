@@ -205,6 +205,22 @@ namespace DynastyRetinue
             "DespawnKeyName",    // 快捷键绑定
             "RecruitNpcKeys",    // 对话入口匹配的 NPC 关键词，只影响入口出现在哪
 
+            // —— 海战相机：**纯本地视觉**，改的是场景里 CameraZoom 的运行时字段 ——
+            //   不进存档、不影响任何判定，联机双方各看各的镜头本来就天经地义。
+            //   （硬要同步反而错：两个人的显示器和偏好不一样。）
+            // 移动格铺开也是纯视觉：只影响绿格画多大，不碰寻路、不碰落点合法性。
+            "ShipGridBySize",
+            "ShipHologramFix",
+            "StarMapShipModel",
+            "ShipRangeFocusFix",
+            "ShipViewCenterFix",
+            "GridShiftX",
+            "GridShiftZ",
+            // 相机后推：每帧重算的纯视觉量，不进任何判定。
+            "CamPushEnabled",
+            "CamPushCruiser",
+            "CamPushGrand",
+
             // —— 舰船挂点：**纯视觉**，且本来就不是"偏好" ——
             //   ProwDropRatio / ProwZBackRatio 在 ShipMountFallback 里只用来算
             //   舰首武器模型的挂载坐标（`broadsideY - ProwDropRatio * span` 之类），

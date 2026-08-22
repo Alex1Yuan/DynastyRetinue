@@ -56,6 +56,9 @@
          EE 拼装时要 Load() prefab 上的 UnitEntityView，不引它编译不过。 -->
     <Reference Include="Owlcat.Runtime.Core"><HintPath>$(GameManaged)\Owlcat.Runtime.Core.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="Kingmaker.Blueprints.Base"><HintPath>$(GameManaged)\Kingmaker.Blueprints.Base.dll</HintPath><Private>false</Private></Reference>
+    <!-- 海战移动格要按船的尺寸铺开，用到 GraphNode / CustomGridNodeBase / IntRect，
+         它们都在 A* 这个包里（见 ShipGridPatch）。 -->
+    <Reference Include="AstarPathfindingProject"><HintPath>$(GameManaged)\AstarPathfindingProject.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="StateHasher"><HintPath>$(GameManaged)\StateHasher.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine"><HintPath>$(GameManaged)\UnityEngine.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine.CoreModule"><HintPath>$(GameManaged)\UnityEngine.CoreModule.dll</HintPath><Private>false</Private></Reference>
