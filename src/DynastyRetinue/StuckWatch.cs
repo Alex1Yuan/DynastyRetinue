@@ -32,8 +32,19 @@ namespace DynastyRetinue
     /// </summary>
     public static class StuckWatch
     {
-        /// <summary>位移小于这个值算"没动"（单位：米）。</summary>
-        private const float MoveEpsilon = 0.35f;
+        /// <summary>
+        /// 「有没有进展」的半径（米）。窗口内没走出这个圈就算卡住。
+        ///
+        /// ★为什么不是「两次采样之间动没动」★（1.5.1 改）
+        ///   原来的判据是 `位移 < 0.35 米就算没动`，一旦超过就把计时清零。
+        ///   可卡住的单位**常常不是纹丝不动，而是在原地抖** —— 寻路反复失败、
+        ///   贴着几何体来回蹭。每秒抖过 35 厘米，计时就永远攒不到 6 秒，
+        ///   于是「看起来明明卡死了，却不传送」。玩家两种都实测遇到过。
+        ///
+        ///   改成对**窗口起点**量距离：走不出 1.5 米就是没进展，抖多厉害都一样。
+        ///   正常跟随的卫兵一步就出圈，不会误判。
+        /// </summary>
+        private const float ProgressRadius = 1.5f;
         /// <summary>离队长多远才认为"该跟上却没跟上"。</summary>
         private const float FarDistance = 12f;
 
@@ -66,15 +77,24 @@ namespace DynastyRetinue
         private const int ScanTicks = 1 * TicksPerSecond;
         private static int _lastScanTick;
 
+        /// <summary>
+        /// 两次扫描之间最多允许隔多久（60 秒）。超过就当作「中间读过档或过了图」，
+        /// 重新对基准并清账，而不是拿一个跨越加载的 elapsed 去累加静止时间。
+        /// </summary>
+        private const int MaxSaneElapsed = 60 * TicksPerSecond;
+
         /// <summary>每多少帧才去读一次同步 tick。见 Tick() 里那段说明。</summary>
         private const int FrameSkip = 10;
         private static int _frameSkip;
 
         private sealed class Row
         {
-            public Vector3 Last;
+            /// <summary>本次「没有进展」窗口的起点。走出 ProgressRadius 就重设。</summary>
+            public Vector3 Anchor;
             public int StillTicks;
             public int CooldownLeft;
+            /// <summary>「攒够时间了但离队长太近」这条只报一次，免得每秒刷屏。</summary>
+            public bool NearReported;
         }
 
         private static readonly Dictionary<string, Row> _rows =
@@ -110,6 +130,27 @@ namespace DynastyRetinue
                 int now;
                 try { now = game.RealTimeController.CurrentNetworkTick; } catch { return; }
                 int elapsed = now - _lastScanTick;
+
+                // ★★tick 会倒退，倒退一次这个功能就整场作废★★
+                //   CurrentNetworkTick 派生自 Player.RealTime —— 那是**存档里的游戏状态**，
+                //   而 UMM 的 mod 在读档之间是一直活着的。读一个更早的存档，now 就比
+                //   _lastScanTick 小一大截，elapsed 变成负数；而下面那句 `if (elapsed <
+                //   ScanTicks) return;` 又不更新 _lastScanTick —— 于是**永远**回不来，
+                //   直到玩家重启游戏。玩家实测反馈的「传送不是一直生效」就是这个。
+                //
+                //   本来该由 Reset() 兜底，可 Reset() **一个调用点都没有**（注释写着
+                //   「遣散/读档后清账」，但从没挂上去）。现在两头都补：这里自愈，
+                //   RetinueLifecycle.OnAreaLoadingComplete 也调 Reset()。
+                //
+                //   跳变过大同样要重新对基准：那意味着中间隔了读档或长时间加载，
+                //   _rows 里记的坐标已经没有意义了。
+                if (elapsed < 0 || elapsed > MaxSaneElapsed)
+                {
+                    _lastScanTick = now;
+                    _rows.Clear();
+                    return;
+                }
+
                 if (elapsed < ScanTicks) return;
                 _lastScanTick = now;
 
@@ -138,15 +179,16 @@ namespace DynastyRetinue
                     Row r;
                     if (!_rows.TryGetValue(id, out r))
                     {
-                        _rows[id] = new Row { Last = pos, StillTicks = 0, CooldownLeft = 0 };
+                        _rows[id] = new Row { Anchor = pos, StillTicks = 0, CooldownLeft = 0 };
                         continue;
                     }
 
                     if (r.CooldownLeft > 0) r.CooldownLeft -= elapsed;
 
-                    if ((pos - r.Last).sqrMagnitude > MoveEpsilon * MoveEpsilon)
+                    // ★量的是「离窗口起点多远」，不是「这一秒动了多少」★ 见 ProgressRadius 注释
+                    if ((pos - r.Anchor).sqrMagnitude > ProgressRadius * ProgressRadius)
                     {
-                        r.Last = pos; r.StillTicks = 0; continue;
+                        r.Anchor = pos; r.StillTicks = 0; r.NearReported = false; continue;
                     }
                     r.StillTicks += elapsed;
                     if (r.StillTicks < StuckTicks || r.CooldownLeft > 0) continue;
@@ -154,7 +196,21 @@ namespace DynastyRetinue
                     // ③ 站着不动但就在旁边 —— 那是正常的，不是卡住
                     float dist;
                     try { dist = Vector3.Distance(pos, leader.Position); } catch { continue; }
-                    if (dist < FarDistance) { r.StillTicks = 0; continue; }
+                    if (dist < FarDistance)
+                    {
+                        // ★这条要能查★ 距离用的是**直线**距离，不是路径距离。
+                        //   卡在一道门后面、直线才 8 米但绕路要 40 米的卫兵，会被
+                        //   这一条判成「就在旁边」而不传送。真遇到时，日志里这行
+                        //   就是唯一能把它和「压根没扫到」区分开的证据。
+                        if (Main.Settings.WatchMomentum && !r.NearReported)
+                        {
+                            r.NearReported = true;
+                            Main.Log($"[卡住] {NameOf(g)} 已 {r.StillTicks / TicksPerSecond} 秒没走出 "
+                                   + $"{ProgressRadius:F1} 米，但离队长直线只有 {dist:F0} 米"
+                                   + $"（阈值 {FarDistance:F0}）—— 按「就在旁边、属正常」处理，不传送。");
+                        }
+                        r.StillTicks = 0; continue;
+                    }
 
                     try
                     {
@@ -166,8 +222,9 @@ namespace DynastyRetinue
                     }
                     catch (Exception e) { Main.LogError("[卡住] 传送失败: " + e.Message); }
 
-                    r.Last = g.Position;
+                    r.Anchor = g.Position;
                     r.StillTicks = 0;
+                    r.NearReported = false;
                     r.CooldownLeft = CooldownTicks;
                 }
             }

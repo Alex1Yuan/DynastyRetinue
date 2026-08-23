@@ -133,6 +133,15 @@ namespace DynastyRetinue
         {
             if (!Main.Enabled) return;
             _pendingPlaceFrames = InPartyArea() ? 3 : 0;
+
+            // ★卡住检测必须在这里清账★
+            //   StuckWatch 用 Player.RealTime 派生的同步 tick 计时，而那是**存档状态**：
+            //   读一个更早的存档，tick 会倒退，它的节流判据就再也过不去（1.5.1 已让它
+            //   自愈，这里是第二道）。另外 _rows 按 UniqueId 记坐标，跨区域之后那些
+            //   坐标全是上一张图的，留着只会让刚过图的卫兵被误判成「一直没动」。
+            try { StuckWatch.Reset(); }
+            catch (Exception e) { Main.LogError("[卡住] 区域清账异常: " + e.Message); }
+
             // 招募入口是运行时交互、不进存档，所以每次进区域都要重挂一遍。
             // 放在这里而不是 TickPending 里：它不依赖导航图，也不限于队伍区域
             //（船上那些 NPC 所在的区域不一定被 InPartyArea 认作队伍区域）。

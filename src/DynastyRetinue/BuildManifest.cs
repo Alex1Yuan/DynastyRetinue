@@ -13,14 +13,14 @@ namespace DynastyRetinue
     /// </summary>
     public static class BuildManifest
     {
-        public const string Version = "1.0.92";
+        public const string Version = "1.5.2";
 
         public static readonly Dictionary<string, string> Hashes =
             new Dictionary<string, string>
         {
             { "archetypes.json", "3b52028c77237d8f3ce8fc61ac17d318b9436b152eb7be1ae5111a73b92cfbc8" },
             { "plans.json", "4853798d25d6d5eddf0f2a0f26220a1138e4357c9f64165481ec43dcb4d16f65" },
-            { "l10n_en.json", "78ae0e91d85694e81dd74b12324db97ed4caeae0b18a1d7b85b43a5c4a82b4ef" },
+            { "l10n_en.json", "6662fbeed2eb68d89b2372db073a3e23dc577028fe4c887ec557fea366ac1802" },
         };
     }
 }
