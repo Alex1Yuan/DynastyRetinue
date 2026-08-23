@@ -190,7 +190,9 @@ namespace DynastyRetinue
             catch { return current; }
         }
 
-        private static int _snapGen = -1, _snapW = -1, _snapNx, _snapNz;
+        // internal：诊断要把吸附的中间量一起打出来（相位 nx/nz 是 metagrid 公式的核心，
+        // 它一旦不稳，吸附结果就会在两个锚点之间来回跳）
+        internal static int _snapGen = -1, _snapW = -1, _snapNx, _snapNz;
 
         /// <summary>
         /// 锚点 → 该锚点 W×W 方块中心的偏移。与原版 marker 用的
@@ -506,11 +508,18 @@ namespace DynastyRetinue
                 //   不吸附的话 nearest(...) 落在非锚点格上，UpdatePathNodeMarkers 找不到匹配、
                 //   什么都不亮 —— W=2 时四格里有三格会这样。
                 var node = ShipMarkerAlign.SnapToMetagrid(ship, raw);
-                if (engaged)
-                {
-                    _fNode.SetValue(__instance, node);
-                    _fChanged.SetValue(__instance, !ReferenceEquals(node, _prev));
-                }
+                // ★吸附必须无条件做，不能被 engaged 挡住★
+                //   engaged 只表示「这个朝向要不要平移 S」，与「要不要吸附」无关。
+                //   1.4.21~1.4.23 误把 SetValue 一起关在 engaged 里，于是 S=0 的朝向
+                //   算了吸附、打了日志、却没写回去 —— 游戏继续用原版的 nearest(P)。
+                //   而那个值四次里有三次不是 metagrid 锚点，UpdatePathNodeMarkers
+                //   找不到匹配就 return（此前已 DisablePathNodeMarkers），高亮消失；
+                //   下一格又碰上锚点，又出现 —— 这就是玩家看到的 A→B→A 摆动。
+                //
+                //   自证：日志里连续两次同一个锚点却 changed=True，说明字段没被我写过
+                //   （_prev 拿到的是原版写的 raw 节点，不是我上次写的锚点）。
+                _fNode.SetValue(__instance, node);
+                _fChanged.SetValue(__instance, !ReferenceEquals(node, _prev));
 
                 // ★判据：光标那一格必须落在高亮块内★
                 //   块 = [锚点+S, 锚点+S+W-1]。在里面 = 2×2 粒度（改不掉）；
@@ -539,7 +548,27 @@ namespace DynastyRetinue
                                + "　S=(" + sx + "," + sz + ")"
                                + "　块 x:" + bx + "~" + (bx + w - 1) + " z:" + bz + "~" + (bz + w - 1)
                                + (inside ? "　OK 在块内" : "　BAD 在块外")
-                               + "　changed=" + (!ReferenceEquals(node, _prev))+ (engaged ? "" : "　[S=0 本补丁未介入，此处为原版行为]"));
+                               + "　changed=" + (!ReferenceEquals(node, _prev))+ (engaged ? "" : "　[S=0 本补丁未介入，此处为原版行为]")
+                               // ★量画面，不是量逻辑★
+                               //   前面 16/16 的「在块内」只证明了**逻辑**包含，
+                               //   没人量过那个块**画在哪**。绿格若与逻辑格错开，两者就是两回事；
+                               //   拿逻辑去否定玩家看到的画面，正是本项目栽过三次的恒等式陷阱。
+                               //   差值的绝对值若超过「半块」，说明画面上确实在块外。
+                               + "\n    光标世界=(" + (click.WorldPosition.x / cc).ToString("F2")
+                               + "," + (click.WorldPosition.z / cc).ToString("F2") + ")"
+                               + "  块中心=(" + ((node.Vector3Position.x + (w - 1) * 0.5f * cc + s.x) / cc).ToString("F2")
+                               + "," + ((node.Vector3Position.z + (w - 1) * 0.5f * cc + s.z) / cc).ToString("F2") + ")"
+                               + "  差=(" + ((click.WorldPosition.x - node.Vector3Position.x - (w - 1) * 0.5f * cc - s.x) / cc).ToString("F2")
+                               + "," + ((click.WorldPosition.z - node.Vector3Position.z - (w - 1) * 0.5f * cc - s.z) / cc).ToString("F2") + ")"
+                               + "  半块=" + (w * 0.5f).ToString("F2")
+                               // 吸附算法的全部中间量。metagrid 公式：
+                               //   nx = -起点.X % W;  锚点.X = (原始.X + nx) / W * W - nx - xmin
+                               // 相位 nx/nz 一旦不稳，锚点就会在两个值之间来回跳 ——
+                               // 这是「来回摆动」最可能的来源，而它只取决于座舰起点。
+                               + "\n    相位 nx=" + ShipMarkerAlign._snapNx + " nz=" + ShipMarkerAlign._snapNz
+                               + "　世代=" + ShipMarkerAlign._snapGen + "/" + ShipPathContext.Generation
+                               + "　rect.min=(" + ship.SizeRect.xmin + "," + ship.SizeRect.ymin + ")"
+                               + "　W=" + w);
                         Main.FlushLog(true);
                     }
                 }
