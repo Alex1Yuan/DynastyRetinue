@@ -128,6 +128,11 @@ namespace DynastyRetinue
         /// ★不要在这里做任何遍历或反射★ 这个 mod 之前就是在每帧路径上调 AccessTools.TypeByName 卡死过。
         /// </summary>
         private static string _lastTurnKey;
+
+        /// <summary>AI 决策耗时探针的状态；超过这个毫秒数才记一行。</summary>
+        private const float ThinkWarnMs = 250f;
+        private static string _thinkKey, _thinkName;
+        private static float _thinkAt;
         private static void TrackTurn()
         {
             try
@@ -144,6 +149,26 @@ namespace DynastyRetinue
 
                 if (!IsOurs(cur)) return;                          // 别人的回合，只更新游标
                 RowFor(cur).Turns++;
+
+                // ★AI 想了多久 —— 常驻探针★
+                //   玩家反馈「快速战斗时每次轮到卫队都卡一下」。把我们订阅的全部
+                //   游戏事件和 Harmony 目标过了一遍，**没有一个挂在回合开始上**
+                //   （见 HandleUnitCommandDidStart 的 IsOurs 注释：那条路径是 O(1)）。
+                //   所以嫌疑落在「AI 给每个可用技能对每个目标打分」上 ——
+                //   队友是玩家操控的不需要决策，卫兵是 AI，而我们的 T3 精英是 55 级、
+                //   天赋和灵能一大堆。
+                //
+                //   与其继续猜，不如量：从「轮到它」到「它发出第一条指令」的时间差
+                //   就是决策耗时。
+                //
+                //   ★为什么这条不挂在详细日志下★ 它只在真的卡了（超过阈值）才记一行，
+                //   一个回合最多一行，不会刷屏；而这种偶发问题恰恰是玩家不会
+                //   专门开日志去复现的。默认能抓到才有意义。
+                //   ★realtimeSinceStartup 只能用来记日志★ 真实时间不是同步量，
+                //   任何进判定的地方都不许用它（StuckWatch 头注有同一条教训）。
+                _thinkKey = key;
+                _thinkAt = UnityEngine.Time.realtimeSinceStartup;
+                _thinkName = RowFor(cur).Name;
             }
             catch { }
         }
@@ -185,6 +210,24 @@ namespace DynastyRetinue
                 if (command == null) return;
                 var u = command.Executor as BaseUnitEntity;
                 if (u == null || !IsOurs(u)) return;
+
+                // ★结算 AI 决策耗时★ 见 TrackTurn 里那段说明。
+                //   只认这个回合的第一条指令；超过阈值才记，一回合最多一行。
+                if (_thinkKey != null)
+                {
+                    string uid = null;
+                    try { uid = u.UniqueId; } catch { }
+                    if (uid != null && uid == _thinkKey)
+                    {
+                        _thinkKey = null;
+                        float ms = (UnityEngine.Time.realtimeSinceStartup - _thinkAt) * 1000f;
+                        if (ms >= ThinkWarnMs)
+                            Main.Log($"[卡顿] {_thinkName} 的回合：从轮到它到发出第一条指令用了 "
+                                   + $"{ms:F0} 毫秒。这段时间几乎全是 AI 在给技能打分——"
+                                   + $"本 mod 在回合开始时不执行任何代码。数值随可用技能数增长，"
+                                   + $"所以 T3 精英会比 T1 卫兵明显。");
+                    }
+                }
 
                 var row = RowFor(u);
                 var ua = command as UnitUseAbility;
