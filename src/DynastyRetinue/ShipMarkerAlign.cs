@@ -512,6 +512,62 @@ namespace DynastyRetinue
         private static FieldInfo _fDecal;
         private static bool _probed, _warned, _logged;
 
+        private static readonly System.Collections.Generic.HashSet<string> _seen =
+            new System.Collections.Generic.HashSet<string>(StringComparer.Ordinal);
+        private static FieldInfo _fMarkers, _fMkGo, _fMkX, _fMkZ;
+        private static bool _mkProbed;
+
+        /// <summary>
+        /// 取「真正被画出来的那个 W×W 绿格方块」的世界坐标。
+        ///
+        /// ShipPathManager 在 SetPathMarkers 里为每个可达锚点实例化一个 PathNodeMarker，
+        /// 位置 = node.position + sizePositionOffset（已被 ShipMarkerOffsetPatch 加过 S），
+        /// localScale *= Width。它就是玩家眼里那个方块。
+        /// 直接抄它的 transform.position，圆圈落在方块中心便是构造出来的，
+        /// 不依赖我对坐标的任何建模 —— 而那个建模已经连续对不上好几版了。
+        ///
+        /// 找不到对应锚点的 marker 时返回 null（调用方回退到自算坐标），
+        /// 并且日志会明说"没找到"—— 那本身就是重要信息：
+        /// 说明高亮块和圆圈根本不在同一个锚点上。
+        /// </summary>
+        private static Vector3? MarkerPos(CustomGridNodeBase anchor)
+        {
+            try
+            {
+                if (anchor == null) return null;
+                var t = AccessTools.TypeByName("Kingmaker.UI.PathRenderer.ShipPathManager");
+                if (t == null) return null;
+                var p = AccessTools.Property(t, "Instance");
+                var inst = p != null ? p.GetValue(null) : null;
+                if (inst == null) return null;
+
+                if (!_mkProbed) { _mkProbed = true; _fMarkers = AccessTools.Field(t, "m_PathNodeMarkers"); }
+                if (_fMarkers == null) return null;
+                var list = _fMarkers.GetValue(inst) as System.Collections.IEnumerable;
+                if (list == null) return null;
+
+                int ax = anchor.XCoordinateInGrid, az = anchor.ZCoordinateInGrid;
+                foreach (var e in list)
+                {
+                    if (e == null) continue;
+                    if (_fMkX == null)
+                    {
+                        var et = e.GetType();
+                        _fMkX = AccessTools.Field(et, "XCoordinateInGrid");
+                        _fMkZ = AccessTools.Field(et, "ZCoordinateInGrid");
+                        _fMkGo = AccessTools.Field(et, "GameObject");
+                    }
+                    if (_fMkX == null || _fMkZ == null || _fMkGo == null) return null;
+                    if ((int)_fMkX.GetValue(e) != ax) continue;
+                    if ((int)_fMkZ.GetValue(e) != az) continue;
+                    var go = _fMkGo.GetValue(e) as GameObject;
+                    return go != null ? (Vector3?)go.transform.position : null;
+                }
+                return null;
+            }
+            catch { return null; }
+        }
+
         private static void Prefix(object __instance, Transform decalTransform,
                                    GraphNode node, ref Vector3? overridePosition)
         {
@@ -552,21 +608,39 @@ namespace DynastyRetinue
                 var pos = (Vector3)anchor.Vector3Position
                         + ShipMarkerAlign.BlockCenter(ship)
                         + ShipMarkerAlign.Shift(ship);
+
+                // ★以「渲染出来的那个绿格方块」为准，而不是以我算的坐标为准★
+                //   1.4.12 的自检显示：我算的圆圈位置和我算的方块中心逐格吻合，
+                //   但玩家看到的仍然不吻合 —— 说明我的模型和实际渲染对不上，
+                //   再按模型调偏移量没有意义。
+                //   ShipPathManager 的 marker 是**真正被画出来**的那个 W×W 方块，
+                //   直接抄它的 transform.position，圆圈落在方块中心就是构造出来的。
+                var mk = MarkerPos(anchor);
+                if (mk.HasValue) pos = mk.Value;
+                LogCorners(pointer, anchor, ship);
+
                 // y 保持原样：原版随后会 CheckHeight 贴地，别把高度按死
                 if (overridePosition.HasValue) pos.y = overridePosition.Value.y;
                 overridePosition = pos;
 
-                if (!_logged && cfg.WatchMomentum)
+                if (cfg.WatchMomentum)
                 {
-                    _logged = true;
-                    float c = Kingmaker.Pathfinding.GraphParamsMechanicsCache.GridCellSize;
-                    if (c <= 0.001f) c = 1f;
-                    Main.Log("[三件套对齐] 圆圈已吸附到 metagrid 锚点("
-                           + anchor.XCoordinateInGrid + "," + anchor.ZCoordinateInGrid + ")"
-                           + "　原始格(" + cur.XCoordinateInGrid + "," + cur.ZCoordinateInGrid + ")"
-                           + "　方块中心偏移=" + (ShipMarkerAlign.BlockCenter(ship).x / c).ToString("F2") + " 格"
-                           + "\n    圆圈 / 高亮块 / 实际落点现在用同一个吸附函数 + 同一个 S。");
-                    Main.FlushLog(true);
+                    string key = anchor.XCoordinateInGrid + "," + anchor.ZCoordinateInGrid
+                               + "|" + (mk.HasValue ? "marker" : "calc");
+                    if (_seen.Add(key))
+                    {
+                        float c = Kingmaker.Pathfinding.GraphParamsMechanicsCache.GridCellSize;
+                        if (c <= 0.001f) c = 1f;
+                        var calc = (Vector3)anchor.Vector3Position + ShipMarkerAlign.BlockCenter(ship)
+                                 + ShipMarkerAlign.Shift(ship);
+                        Main.Log("[三件套对齐] 圆圈 锚点(" + anchor.XCoordinateInGrid + "," + anchor.ZCoordinateInGrid + ")"
+                               + " 原始格(" + cur.XCoordinateInGrid + "," + cur.ZCoordinateInGrid + ")"
+                               + "\n    我算的方块中心 = 格(" + (calc.x / c).ToString("F2") + "," + (calc.z / c).ToString("F2") + ")"
+                               + "\n    真实 marker 位置 = " + (mk.HasValue
+                                    ? "格(" + (mk.Value.x / c).ToString("F2") + "," + (mk.Value.z / c).ToString("F2") + ")"
+                                    : "★没找到该锚点的 marker★（说明高亮块和圆圈根本不在同一个锚点上）"));
+                        Main.FlushLog(true);
+                    }
                 }
             }
             catch (Exception e)
@@ -574,5 +648,146 @@ namespace DynastyRetinue
                 if (!_warned) { _warned = true; Main.LogError("[三件套对齐] 圆圈落点修正失败: " + e.Message); }
             }
         }
+
+        /// <summary>
+        /// 罗盘（四箭头 path-end 标记）被父节点缩放放大了局部偏移，把它补回来。
+        ///
+        /// ================== 证据链 ==================
+        /// 1.4.13 的日志证明 decal **根节点**位置完全正确：
+        ///     锚点(262,258) 我算的方块中心 = 格(13.00,8.00)　真实 marker 位置 = 格(13.00,8.00)
+        ///     锚点(264,256) 我算的方块中心 = 格(15.00,6.00)　真实 marker 位置 = 格(15.00,6.00)
+        /// 逐格一致。可玩家看到的罗盘仍在方块边上 ⇒ 位移只可能来自 prefab 内部。
+        ///
+        /// `PointerCellDecal.m_PathEnd` 是子物体，而 SetDecalPosition 会写根节点缩放：
+        ///     localScale.x = 1.35f * m_DecalScale;      // 护卫舰 1.35，巡洋 2.7，大巡 4.05
+        /// 子物体的局部偏移被同比放大 ⇒ W 越大偏得越远。
+        /// 护卫舰 W=1 时 scale 就是设计值，所以原版从来没暴露过。
+        ///
+        /// ★修法★ localPosition = 原始值 / m_DecalScale，
+        ///   让它渲染出来的世界偏移与护卫舰上一致 —— 保留美术意图，只去掉放大。
+        ///
+        /// ★必须先存原始值★ 每帧都会跑，不存的话第二帧就拿被改过的值再除一次，
+        ///   罗盘会一路缩向中心。用 instanceID 作键，decal 被重建时自动重新采样。
+        /// </summary>
+        private static void Postfix(object __instance, Transform decalTransform)
+        {
+            try
+            {
+                var cfg = Main.Settings;
+                if (cfg == null || !cfg.ShipGridBySize) return;
+                if (__instance == null || decalTransform == null) return;
+                if (_fDecal == null) return;
+
+                var pointer = _fDecal.GetValue(__instance) as Component;
+                if (pointer == null || !ReferenceEquals(pointer.transform, decalTransform)) return;
+
+                if (!_peProbed)
+                {
+                    _peProbed = true;
+                    _fPathEnd = AccessTools.Field(pointer.GetType(), "m_PathEnd");
+                    _fScale = AccessTools.Field(__instance.GetType(), "m_DecalScale");
+                }
+                if (_fPathEnd == null || _fScale == null) return;
+
+                int scale = (int)_fScale.GetValue(__instance);
+                if (scale <= 1) return;                       // 护卫舰：原版就是设计值，不碰
+
+                var pe = _fPathEnd.GetValue(pointer) as GameObject;
+                if (pe == null) return;
+                var t = pe.transform;
+
+                int id = t.GetInstanceID();
+                Vector3 baseLocal;
+                if (!_peBase.TryGetValue(id, out baseLocal))
+                {
+                    baseLocal = t.localPosition;              // ★只在第一次见到时采样★
+                    _peBase[id] = baseLocal;
+                    if (cfg.WatchMomentum)
+                    {
+                        Main.Log("[三件套对齐] 罗盘补正　根缩放=" + (1.35f * scale).ToString("F2")
+                               + "（m_DecalScale=" + scale + "）"
+                               + "　m_PathEnd 原始局部偏移=" + baseLocal.ToString("F3")
+                               + "\n    该偏移会被根缩放同比放大，W 越大偏得越远；现按 /" + scale + " 补回。"
+                               + "\n    若原始偏移本来就是 (0,0,0)，说明罗盘不是偏移放大导致的，需另查。");
+                        Main.FlushLog(true);
+                    }
+                }
+                if (baseLocal == Vector3.zero) return;        // 本来就没偏移，不用管
+
+                var want = baseLocal / scale;
+                if ((t.localPosition - want).sqrMagnitude > 1e-8f) t.localPosition = want;
+            }
+            catch (Exception e)
+            {
+                if (!_warned) { _warned = true; Main.LogError("[三件套对齐] 罗盘补正失败: " + e.Message); }
+            }
+        }
+
+        /// <summary>
+        /// 量 decal **实际渲染在哪** —— 用它自己的四个角。
+        ///
+        /// ★为什么必须量这个★
+        ///   前几版我一直拿「我算的坐标」和「我算的坐标」互证：
+        ///     decal 根节点 == marker.transform.position     ✔ 日志逐格一致
+        ///     CalculateArea(压方 rect) == {(0,0),(0,1),(1,0),(1,1)}  ✔
+        ///     GetSizePositionOffset == 半格                  ✔
+        ///   全都对得上，可玩家看到的就是偏。说明**渲染出来的东西**和这套坐标不是一回事，
+        ///   而我从没量过渲染本身。这正是本项目栽过两次的恒等式陷阱的第三种形态。
+        ///
+        ///   `PointerCellDecal.CornersPositions` 是 public 属性，返回 m_Corners 四个
+        ///   Transform 的**世界坐标** —— 这是引擎自己给出的、decal 真实占据的范围，
+        ///   不经过我的任何换算。
+        ///
+        /// 判据：这四个角应当恰好是「锚点方块」的四角。对不上，差多少一目了然。
+        /// </summary>
+        private static void LogCorners(Component pointer, CustomGridNodeBase anchor, StarshipEntity ship)
+        {
+            try
+            {
+                if (_cornersLogged) return;
+                var cfg = Main.Settings;
+                if (cfg == null || !cfg.WatchMomentum) return;
+                if (_pCorners == null)
+                {
+                    _pCorners = AccessTools.Property(pointer.GetType(), "CornersPositions");
+                    if (_pCorners == null) { _cornersLogged = true; Main.Log("[三件套对齐] 没有 CornersPositions 属性，跳过角点测量"); return; }
+                }
+                var raw = _pCorners.GetValue(pointer) as System.Collections.IEnumerable;
+                if (raw == null) return;
+
+                float c = Kingmaker.Pathfinding.GraphParamsMechanicsCache.GridCellSize;
+                if (c <= 0.001f) return;
+
+                var sb = new System.Text.StringBuilder();
+                int n = 0;
+                foreach (var o in raw)
+                {
+                    var v = (Vector3)o; n++;
+                    sb.Append("(").Append((v.x / c).ToString("F2")).Append(",")
+                      .Append((v.z / c).ToString("F2")).Append(") ");
+                }
+                if (n == 0) return;
+                _cornersLogged = true;
+
+                var centre = (Vector3)anchor.Vector3Position + BlockCenterOf(ship) + ShipMarkerAlign.Shift(ship);
+                float half = ship.SizeRect.Width * 0.5f;      // 方块半边长，单位：格
+                Main.Log("[三件套对齐] ★decal 实际渲染范围★ 角点(" + n + " 个)：" + sb.ToString().TrimEnd()
+                       + "\n    期望方块中心 = 格(" + (centre.x / c).ToString("F2") + "," + (centre.z / c).ToString("F2") + ")"
+                       + "　半边长 = " + half.ToString("F2") + " 格"
+                       + "\n    即期望角点应落在中心 ±" + half.ToString("F2") + " 格处。对不上就说明 decal 的网格/轴心不居中。");
+                Main.FlushLog(true);
+            }
+            catch { _cornersLogged = true; }
+        }
+
+        private static Vector3 BlockCenterOf(StarshipEntity ship) { return ShipMarkerAlign.BlockCenter(ship); }
+
+        private static System.Reflection.PropertyInfo _pCorners;
+        private static bool _cornersLogged;
+
+        private static FieldInfo _fPathEnd, _fScale;
+        private static bool _peProbed;
+        private static readonly System.Collections.Generic.Dictionary<int, Vector3> _peBase =
+            new System.Collections.Generic.Dictionary<int, Vector3>();
     }
 }
