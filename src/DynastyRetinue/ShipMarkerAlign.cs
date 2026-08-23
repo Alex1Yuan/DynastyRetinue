@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Reflection;
 using HarmonyLib;
 using Kingmaker.EntitySystem.Entities;
@@ -102,11 +102,22 @@ namespace DynastyRetinue
                 float cell = Kingmaker.Pathfinding.GraphParamsMechanicsCache.GridCellSize;
                 if (cell <= 0.001f) return Vector3.zero;
 
-                UnityEngine.Vector2Int org;
-                if (!ShipGridPatch.TryGetBlockOrigin(ship, out org)) return Vector3.zero;
-                if (org.x == 0 && org.y == 0) return Vector3.zero;
+                // ★每帧命中，必须便宜★ 位移只取决于 (舷宽, 朝向档)，两者都不常变。
+                //   不缓存的话每帧都要走 TryGetBlockOrigin 里的字符串拼接 + 字典查找。
+                //   1.4.15 海战变卡，这是其中一处。
+                var fwd = ship.Forward;
+                int bucket = UnityEngine.Mathf.RoundToInt(
+                    UnityEngine.Mathf.Atan2(fwd.x, fwd.z) * UnityEngine.Mathf.Rad2Deg / 45f) & 7;
+                int w = ship.SizeRect.Width;
+                if (_sBucket == bucket && _sWidth == w && _sCell == cell) return _sVal;
 
-                return new Vector3(org.x * cell, 0f, org.y * cell);
+                UnityEngine.Vector2Int org;
+                Vector3 v = Vector3.zero;
+                if (ShipGridPatch.TryGetBlockOrigin(ship, out org) && (org.x != 0 || org.y != 0))
+                    v = new Vector3(org.x * cell, 0f, org.y * cell);
+
+                _sBucket = bucket; _sWidth = w; _sCell = cell; _sVal = v;
+                return v;
             }
             catch (Exception e)
             {
@@ -114,6 +125,10 @@ namespace DynastyRetinue
                 return Vector3.zero;
             }
         }
+
+        private static int _sBucket = -999, _sWidth = -1;
+        private static float _sCell = -1f;
+        private static Vector3 _sVal;
 
         /// <summary>
         /// 吸附到 metagrid 锚点 —— 公式逐字抄自
@@ -147,17 +162,26 @@ namespace DynastyRetinue
                 var graph = current.Graph as CustomGridGraph;
                 if (graph == null) return current;
 
-                var active = AstarPath.active;
-                if (active == null) return current;
-                var start = active.GetNearest(ship.Position).node as CustomGridNodeBase;
-                if (start == null) return current;
+                // ★每帧命中★ 相位只取决于座舰起点，而船不动时它不变。
+                //   不缓存的话每帧都要做一次 AstarPath.GetNearest 空间查询。
+                //   世代号由 SetPathMarkers 递增 —— 船一动路径就重建，缓存自动失效。
+                int gen = ShipPathContext.Generation;
+                int nx, nz;
+                if (_snapGen == gen && _snapW == w) { nx = _snapNx; nz = _snapNz; }
+                else
+                {
+                    var active = AstarPath.active;
+                    if (active == null) return current;
+                    var start = active.GetNearest(ship.Position).node as CustomGridNodeBase;
+                    if (start == null) return current;
+                    var s2 = graph.GetNode(start.XCoordinateInGrid + rect.xmin,
+                                           start.ZCoordinateInGrid + rect.ymin);
+                    if (s2 == null) return current;
+                    nx = -s2.XCoordinateInGrid % w;
+                    nz = -s2.ZCoordinateInGrid % w;
+                    _snapGen = gen; _snapW = w; _snapNx = nx; _snapNz = nz;
+                }
 
-                var s2 = graph.GetNode(start.XCoordinateInGrid + rect.xmin,
-                                       start.ZCoordinateInGrid + rect.ymin);
-                if (s2 == null) return current;
-
-                int nx = -s2.XCoordinateInGrid % w;
-                int nz = -s2.ZCoordinateInGrid % w;
                 var snapped = graph.GetNode(
                     (current.XCoordinateInGrid + nx) / w * w - nx - rect.xmin,
                     (current.ZCoordinateInGrid + nz) / w * w - nz - rect.ymin);
@@ -165,6 +189,8 @@ namespace DynastyRetinue
             }
             catch { return current; }
         }
+
+        private static int _snapGen = -1, _snapW = -1, _snapNx, _snapNz;
 
         /// <summary>
         /// 锚点 → 该锚点 W×W 方块中心的偏移。与原版 marker 用的
@@ -512,8 +538,8 @@ namespace DynastyRetinue
         private static FieldInfo _fDecal;
         private static bool _probed, _warned, _logged;
 
-        private static readonly System.Collections.Generic.HashSet<string> _seen =
-            new System.Collections.Generic.HashSet<string>(StringComparer.Ordinal);
+        private static int _logX = int.MinValue, _logZ = int.MinValue;
+        private static bool _logHit;
         private static FieldInfo _fMarkers, _fMkGo, _fMkX, _fMkZ;
         private static bool _mkProbed;
 
@@ -535,6 +561,32 @@ namespace DynastyRetinue
             try
             {
                 if (anchor == null) return null;
+                int ax = anchor.XCoordinateInGrid, az = anchor.ZCoordinateInGrid;
+
+                // ★这是 1.4.15 海战变卡的主凶★
+                //   原实现每帧反射遍历整个 m_PathNodeMarkers（几百个节点，
+                //   每个还要装箱结构体 + 2~3 次 FieldInfo.GetValue）＝ 每帧上千次反射。
+                //   实际上结果只取决于 (世代号, 锚点)，而锚点只在光标换格时才变。
+                //   一格缓存就够。
+                int gen = ShipPathContext.Generation;
+                if (_mkGen == gen && _mkX == ax && _mkZ == az) return _mkHit ? (Vector3?)_mkVal : null;
+
+                var r = Lookup(ax, az);
+                _mkGen = gen; _mkX = ax; _mkZ = az;
+                _mkHit = r.HasValue; _mkVal = r ?? Vector3.zero;
+                return r;
+            }
+            catch { return null; }
+        }
+
+        private static int _mkGen = -1, _mkX = int.MinValue, _mkZ = int.MinValue;
+        private static bool _mkHit;
+        private static Vector3 _mkVal;
+
+        private static Vector3? Lookup(int ax, int az)
+        {
+            try
+            {
                 var t = AccessTools.TypeByName("Kingmaker.UI.PathRenderer.ShipPathManager");
                 if (t == null) return null;
                 var p = AccessTools.Property(t, "Instance");
@@ -546,7 +598,6 @@ namespace DynastyRetinue
                 var list = _fMarkers.GetValue(inst) as System.Collections.IEnumerable;
                 if (list == null) return null;
 
-                int ax = anchor.XCoordinateInGrid, az = anchor.ZCoordinateInGrid;
                 foreach (var e in list)
                 {
                     if (e == null) continue;
@@ -623,11 +674,11 @@ namespace DynastyRetinue
                 if (overridePosition.HasValue) pos.y = overridePosition.Value.y;
                 overridePosition = pos;
 
-                if (cfg.WatchMomentum)
+                // ★别在每帧路径上拼字符串★ 只在锚点真的换了的时候才建串。
+                if (cfg.WatchMomentum &&
+                    (_logX != anchor.XCoordinateInGrid || _logZ != anchor.ZCoordinateInGrid || _logHit != mk.HasValue))
                 {
-                    string key = anchor.XCoordinateInGrid + "," + anchor.ZCoordinateInGrid
-                               + "|" + (mk.HasValue ? "marker" : "calc");
-                    if (_seen.Add(key))
+                    _logX = anchor.XCoordinateInGrid; _logZ = anchor.ZCoordinateInGrid; _logHit = mk.HasValue;
                     {
                         float c = Kingmaker.Pathfinding.GraphParamsMechanicsCache.GridCellSize;
                         if (c <= 0.001f) c = 1f;

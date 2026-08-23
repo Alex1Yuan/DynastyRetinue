@@ -24,9 +24,17 @@ namespace DynastyRetinue
     {
         internal static StarshipEntity Current;
 
+        /// <summary>
+        /// marker 世代号。SetPathMarkers 每次都会销毁并重建全部 marker，
+        /// 所以这个数一变，任何缓存的 marker 位置都作废。
+        /// 用它做缓存失效，免得每帧反射遍历几百个节点（1.4.15 海战变卡就是这么来的）。
+        /// </summary>
+        internal static int Generation;
+
         private static void Prefix(StarshipEntity starship)
         {
             Current = starship;
+            Generation++;
         }
     }
 
