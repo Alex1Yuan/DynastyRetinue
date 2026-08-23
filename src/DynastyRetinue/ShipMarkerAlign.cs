@@ -346,23 +346,91 @@ namespace DynastyRetinue
             return _count;
         }
 
-        /// <summary>找包含光标格 (rx,rz) 的那一块；块 = [X, X+w-1] × [Z, Z+w-1]。至多命中一个。</summary>
-        internal static bool TryPick(int rx, int rz, int w, out Entry hit)
+        /// <summary>
+        /// 找包含光标的那一块 —— **纯世界坐标**，不碰任何格子编号约定。
+        ///
+        /// ★为什么必须用世界坐标★（1.5.0 第一版就栽在这儿）
+        ///   我曾假设 marker (X,Z) 代表的块是 [X, X+W-1]。错了。游戏是这么画的：
+        ///       off = GetSizePositionOffset(压方 rect) = (xmin + (W−1)/2)·c
+        ///       obj.position = key.position + off;   obj.localScale *= W
+        ///   推边界：左边缘 = key.pos + (xmin − 0.5)·c ⇒ 块其实是 [X+xmin, X+xmin+W−1]。
+        ///   xmin 一旦不为零，整块就错开 —— 玩家实测「高亮跨在网格线上、落到移动格外面」。
+        ///   直接拿 transform.position 判定，xmin / ymin / S / 缩放全都自动含在里面，
+        ///   一个约定都不用假设。这才是「量渲染」而不是「算模型」。
+        ///
+        /// ★迟滞★ 日志实测：光标世界坐标本身会在块边界两侧来回
+        ///   （z = 10.04 → 9.99 → 10.00，而两侧的 marker 都存在）。
+        ///   0.05 个单位 ≈ 4% 格宽 ≈ 几个像素，就是手抖；可块宽 2 格，
+        ///   跨一次边界画面就跳 2.7 个单位 —— 几像素的抖动被放大成整块跳跃。
+        ///   所以这不是算错，是缺迟滞：先看上一次那块（判据放宽 hys），
+        ///   只有真的走出去一段距离才换块。护卫舰块宽 1 格、放大倍数只有一半，
+        ///   所以原版这个抖动一直只是「正常量化」的观感。
+        ///
+        /// ★两条链共用同一份状态★ 高亮和圆圈都调这里，拿到的必然是同一块。
+        /// </summary>
+        internal static bool TryPick(Vector3 world, float half, out Entry hit)
         {
             hit = default(Entry);
-            if (w <= 0) return false;
+            if (half <= 0f) return false;
             int n = Snapshot();
-            for (int i = 0; i < n; i++)
+            if (n == 0) { _hasLast = false; return false; }
+
+            float hys = half * 0.12f;      // ≈0.12 块宽；实测抖动约 0.04 格，留 3 倍余量
+            if (_hasLast && _lastGen == _gen
+                && Math.Abs(world.x - _last.Pos.x) < half + hys
+                && Math.Abs(world.z - _last.Pos.z) < half + hys)
             {
-                if (rx < _buf[i].X || rx > _buf[i].X + w - 1) continue;
-                if (rz < _buf[i].Z || rz > _buf[i].Z + w - 1) continue;
-                hit = _buf[i];
+                hit = _last;
                 return true;
             }
+
+            for (int i = 0; i < n; i++)
+            {
+                if (Math.Abs(world.x - _buf[i].Pos.x) >= half) continue;
+                if (Math.Abs(world.z - _buf[i].Pos.z) >= half) continue;
+                _last = _buf[i]; _hasLast = true; _lastGen = _gen;
+                hit = _last;
+                return true;
+            }
+            _hasLast = false;
             return false;
         }
 
+        private static Entry _last;
+        private static bool _hasLast;
+        private static int _lastGen = -1;
+
         internal static int Count { get { return Snapshot(); } }
+        internal static int Gen { get { Snapshot(); return _gen; } }
+    }
+
+    /// <summary>
+    /// marker 重建时让快照作废。
+    ///
+    /// ShipPathContext 只挂在 `SetPathMarkers(StarshipEntity, Path)` 这一个重载上，
+    /// 另一个重载和 ClearPathMarkers 都不会递增世代 —— 快照可能拿着**已销毁**的
+    /// GameObject 坐标继续用。ClearPathMarkersInternal 是所有重建路径的必经之处
+    /// （两个 SetPathMarkers 开头都调它，ClearPathMarkers 也调），挂这儿一次全覆盖。
+    /// </summary>
+    [HarmonyPatch]
+    internal static class ShipMarkerGenBump
+    {
+        private static MethodBase TargetMethod()
+        {
+            var t = AccessTools.TypeByName("Kingmaker.UI.PathRenderer.ShipPathManager");
+            return t == null ? null : AccessTools.Method(t, "ClearPathMarkersInternal");
+        }
+
+        private static bool Prepare()
+        {
+            var m = TargetMethod();
+            Main.Log("[三件套对齐] marker 世代挂载 " + (m != null
+                ? "成功 → ShipPathManager.ClearPathMarkersInternal()"
+                : "失败：找不到 ClearPathMarkersInternal —— 快照可能拿到已销毁的 marker"));
+            return m != null;
+        }
+
+        private static void Postfix() { ShipPathContext.Generation++; }
     }
 
     /// <summary>
@@ -494,8 +562,20 @@ namespace DynastyRetinue
                 // ★选中技能时 m_DecalScale==1、偏移恒为零★ 那是 1×1 的目标格拾取器，不能挪。
                 if ((int)_fScale.GetValue(__instance) == 1) return;
 
-                var s = ShipMarkerAlign.Shift(_pSelected.GetValue(__instance) as MechanicEntity);
-                if (s == Vector3.zero) return;
+                // ★门禁问「是不是大船」，不是问「S 是不是零」★（1.5.0 修）
+                //   此前写的是 `if (s == Vector3.zero) return;`。而 0°/180° 两档的 S 本来就是零，
+                //   于是那两档直接 return，m_DecalOffset 保留原版的 m_SizeOffset ——
+                //   也就是 GetCellOffsetForUnit 给的 ±半格象限向量。那玩意儿是个
+                //   **读上一帧 CurrentNode** 的反馈环（UnitPathManager.cs:303），稳态解是：
+                //       frac(u) ∈ [0.5,1) → 落到 floor(u)　　frac(u) ∈ [0,0.5) → 落到 floor(u)+1
+                //   光标单调增时格号序列是 k+1, k+1, k, k, k+2, k+2, k+1 …
+                //   **单调输入、锯齿输出**，而且是稳态不是瞬态。
+                //   它只在 Size.Cruiser_2x4 这一支活着：大巡奇数宽两个条件都不满足返回零，
+                //   护卫舰 m_DecalScale==1 时被清零 —— 这正是玩家实测「1×1 从不跳」的原因。
+                //   所以 S 是零也必须写回去，把这个环彻底掐掉。
+                var sel = _pSelected.GetValue(__instance) as StarshipEntity;
+                if (sel == null || sel.SizeRect.Width <= 1) return;
+                var s = ShipMarkerAlign.Shift(sel);
 
                 var cur = (Vector3)_fDecal.GetValue(__instance);
                 // ★不是 cur + s，是直接**替换**成 s★
@@ -577,6 +657,7 @@ namespace DynastyRetinue
         private static FieldInfo _fNode, _fChanged;
         private static bool _probed, _warned;
         private static object _prev;
+        private static int _wroteGen = -1;
         private static int _lx = int.MinValue, _lz = int.MinValue;   // 光标格去重，避免每帧建串
 
         private static void Probe(Type t)
@@ -633,14 +714,16 @@ namespace DynastyRetinue
                 int w = ship.SizeRect.Width;
                 if (w <= 1) return;                       // 护卫舰：原版本来就一致
 
-                var raw = Kingmaker.Pathfinding.GridAreaHelper.GetNearestNodeXZ(click.WorldPosition - s);
-                if (raw == null) return;
+                float cc = Kingmaker.Pathfinding.GraphParamsMechanicsCache.GridCellSize;
+                if (cc <= 0.001f) return;
 
-                // ★找，不是算★ 见 ShipMarkerTable 头注：
-                //   marker 集合是有洞的子集，纯算术推出来的锚点可能落在洞上，
-                //   于是 UpdatePathNodeMarkers 匹配不上 → 全灭 → 下一格又亮在别处。
+                // ★用未平移的光标世界坐标直接查渲染出来的块★
+                //   marker 的 transform.position 已经含了 S，所以这里**不能**再减 S。
                 ShipMarkerTable.Entry hit;
-                bool got = ShipMarkerTable.TryPick(raw.XCoordinateInGrid, raw.ZCoordinateInGrid, w, out hit);
+                bool got = ShipMarkerTable.TryPick(click.WorldPosition, w * cc * 0.5f, out hit);
+
+                var raw = Kingmaker.Pathfinding.GridAreaHelper.GetNearestNodeXZ(click.WorldPosition);
+                if (raw == null) return;
 
                 CustomGridNodeBase node = raw;
                 if (got)
@@ -653,50 +736,40 @@ namespace DynastyRetinue
                 // 而那正是「光标不在绿格上」的正确表现，不是 bug。
 
                 _fNode.SetValue(__instance, node);
-                _fChanged.SetValue(__instance, !ReferenceEquals(node, _prev));
+                // ★换代必须强制 changed★ SetPathMarkers 会销毁重建全部 marker，
+                //   新 marker 一律 SetActive(false)。此时若坐标恰好没变、changed 为 false，
+                //   UpdatePathNodeMarkers 就不会被调用，高亮会一直不亮。
+                bool genChanged = _wroteGen != ShipMarkerTable.Gen;
+                _wroteGen = ShipMarkerTable.Gen;
+                _fChanged.SetValue(__instance, genChanged || !ReferenceEquals(node, _prev));
 
                 if (cfg.WatchMomentum)
                 {
-                    int cx = raw.XCoordinateInGrid, cz = raw.ZCoordinateInGrid;
-                    if (cx != _lx || cz != _lz)
+                    // ★按「命中块」去重，不是按光标格★ 玩家看到的事件就是块变了。
+                    int hx = got ? hit.X : int.MinValue, hz = got ? hit.Z : int.MinValue;
+                    if (hx != _lx || hz != _lz)
                     {
-                        _lx = cx; _lz = cz;
-                        float cc = Kingmaker.Pathfinding.GraphParamsMechanicsCache.GridCellSize;
-                        if (cc <= 0.001f) cc = 1f;
-                        if (!got)
-                        {
-                            Main.Log("[高亮块] 光标格(" + cx + "," + cz + ")　★没有任何 marker 的块包含它★"
-                                   + "　marker 总数=" + ShipMarkerTable.Count + "　W=" + w
-                                   + "\n    → 光标不在绿格上，本来就不该亮（与原版一致）。"
-                                   + "若光标明明在绿格上却打出这条，说明绿格铺格与 marker 列表不同源，那才是 bug。");
-                        }
-                        else
-                        {
-                            // ★非恒等式判据★ 两条来源互不共用中间量：
-                            //   ① hit.Pos ＝ 引擎渲染出来的 marker.transform.position（已含 S、含 localScale）
-                            //   ② 我算的  ＝ node.Vector3Position + BlockCenter + S
-                            //   ③ 光标是否落在**渲染出来**的块内（半边长 = W/2 格）
-                            // 此前的判据由构造直接推出、不可能失败；这三条都可以失败。
-                            var mine = (Vector3)node.Vector3Position + ShipMarkerAlign.BlockCenter(ship) + s;
-                            float mx = (hit.Pos.x - mine.x) / cc, mz = (hit.Pos.z - mine.z) / cc;
-                            float ox = (click.WorldPosition.x - hit.Pos.x) / cc;
-                            float oz = (click.WorldPosition.z - hit.Pos.z) / cc;
-                            float half = w * 0.5f;
-                            bool inRendered = ox > -half && ox < half && oz > -half && oz < half;
-                            Main.Log("[高亮块] 光标格(" + cx + "," + cz + ")"
-                                   + "　命中块(" + hit.X + "," + hit.Z + ")"
-                                   + "　块范围 x:" + hit.X + "~" + (hit.X + w - 1) + " z:" + hit.Z + "~" + (hit.Z + w - 1)
-                                   + "　changed=" + (!ReferenceEquals(node, _prev))
-                                   + "\n    渲染中心=(" + (hit.Pos.x / cc).ToString("F2") + "," + (hit.Pos.z / cc).ToString("F2") + ")"
-                                   + "  我算的中心=(" + (mine.x / cc).ToString("F2") + "," + (mine.z / cc).ToString("F2") + ")"
-                                   + "  两者差=(" + mx.ToString("F2") + "," + mz.ToString("F2") + ")"
-                                   + (Math.Abs(mx) < 0.01f && Math.Abs(mz) < 0.01f ? "　模型与渲染一致" : "　★模型与渲染不一致★")
-                                   + "\n    光标相对渲染中心=(" + ox.ToString("F2") + "," + oz.ToString("F2") + ")"
-                                   + "  半边长=" + half.ToString("F2")
-                                   + (inRendered ? "　OK 光标在渲染块内" : "　★BAD 光标在渲染块外★")
-                                   + "　S=(" + Mathf.RoundToInt(s.x / cc) + "," + Mathf.RoundToInt(s.z / cc) + ")"
-                                   + "　marker 总数=" + ShipMarkerTable.Count);
-                        }
+                        _lx = hx; _lz = hz;
+                        // ★一次定案的两个数★
+                        //   屏幕鼠标单调 + 世界坐标往返 ⇒ 世界坐标被污染（射线命中了被点亮的
+                        //     marker 碰撞体，斜视角下把 XZ 朝相机方向拉），是自激环，加迟滞没用。
+                        //   屏幕鼠标本身往返           ⇒ 手抖，迟滞就是正解。
+                        //   此前只记世界坐标，这两种情况在日志里长得一模一样，所以判不了。
+                        var mp = UnityEngine.Input.mousePosition;
+                        var wp = click.WorldPosition;
+                        Main.Log("[高亮块] 屏幕鼠标=(" + mp.x.ToString("F0") + "," + mp.y.ToString("F0") + ")"
+                               + "　世界=(" + (wp.x / cc).ToString("F3") + "," + (wp.z / cc).ToString("F3") + ")"
+                               + "　光标格(" + raw.XCoordinateInGrid + "," + raw.ZCoordinateInGrid + ")"
+                               + (got ? "　命中块(" + hit.X + "," + hit.Z + ")" : "　★无块包含★")
+                               + "　marker 数=" + ShipMarkerTable.Count
+                               + (got ? "\n    渲染中心=(" + (hit.Pos.x / cc).ToString("F3") + "," + (hit.Pos.z / cc).ToString("F3") + ")"
+                                      + "  相对偏移=(" + ((wp.x - hit.Pos.x) / cc).ToString("F3")
+                                      + "," + ((wp.z - hit.Pos.z) / cc).ToString("F3") + ")"
+                                      + "  半边长=" + (w * 0.5f).ToString("F2")
+                                      + (Math.Abs(wp.x - hit.Pos.x) < w * cc * 0.5f
+                                         && Math.Abs(wp.z - hit.Pos.z) < w * cc * 0.5f
+                                         ? "　OK 在块内" : "　迟滞保持中（光标已出块）")
+                                 : ""));
                         Main.FlushLog(true);
                     }
                 }
@@ -806,13 +879,18 @@ namespace DynastyRetinue
                 var cur = node as CustomGridNodeBase;
                 if (cur == null) return;
 
-                // ★与高亮块吃同一个输入、查同一张表★
-                //   cur = UnitPathManager.CurrentNode = nearest(P − m_DecalOffset)，
-                //   而 ShipPointerAlignPatch 已把 m_DecalOffset 替换成 S ⇒ cur ≡ 高亮块那条链的 raw。
-                //   两条链各自独立算出同一个结果，不依赖谁先谁后 —— 没有帧序耦合。
+                // ★与高亮块吃同一个输入、查同一张表、共用同一份迟滞状态★
+                //   两边都拿未平移的光标世界坐标去查，所以必然是同一块，
+                //   不依赖谁先谁后 —— 没有帧序耦合。
+                var g2 = Kingmaker.Game.Instance;
+                var click2 = g2 != null ? g2.ClickEventsController : null;
+                if (click2 == null) return;
+                float cell2 = Kingmaker.Pathfinding.GraphParamsMechanicsCache.GridCellSize;
+                if (cell2 <= 0.001f) return;
+
                 ShipMarkerTable.Entry hit;
-                if (!ShipMarkerTable.TryPick(cur.XCoordinateInGrid, cur.ZCoordinateInGrid,
-                                             ship.SizeRect.Width, out hit)) return;  // 没块包含光标：不介入
+                if (!ShipMarkerTable.TryPick(click2.WorldPosition,
+                                             ship.SizeRect.Width * cell2 * 0.5f, out hit)) return;
                 var pos = hit.Pos;      // ★引擎渲染出来的块中心，不是我算的★
                 LogCorners(pointer, hit.Pos, ship);
 
