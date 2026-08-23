@@ -365,7 +365,24 @@ namespace DynastyRetinue
                 if (s == Vector3.zero) return;
 
                 var cur = (Vector3)_fDecal.GetValue(__instance);
-                _fDecal.SetValue(__instance, cur + s);
+                // ★不是 cur + s，是直接**替换**成 s★
+                //
+                //   玩家的关键对比：选中轴炮时 1×1 光标**从不跳变**，只有移动会跳。
+                //   差别就在 base：
+                //       选技能   m_DecalScale==1 → m_DecalOffset = 0    → nearest(P)      = 光标底下那格
+                //       移动     巡洋            → m_DecalOffset = base → nearest(P−base) = 常常不是那格
+                //   base 是 GetCellOffsetForUnit 给的 (±c/2,±c/2) 象限向量，它选的是
+                //   「离光标最近的**顶点**」所对应的块 —— 那是一套**浮动**的格子；
+                //   而 marker 只存在于相位固定的 metagrid 锚点上。两套格子对不齐，
+                //   于是有时候压根找不到对应的 marker，画面就停在别处。
+                //
+                //   把 base 去掉、只留 S，采样点就是 P−S，即「光标底下那一格」的逻辑坐标
+                //   （绿格整体被挪了 S，所以要减回去）。这与 ShipMarkerPickPatch 的取格
+                //   逐字相同 —— 高亮块和实际落点从此必然同一个节点。
+                //
+                //   1.4.5 单独把它归零曾导致「点击和绿格分家」，那是因为当时圆圈位置还
+                //   依赖它；现在圆圈由 ShipDecalCenterPatch 显式定位，不再受影响。
+                _fDecal.SetValue(__instance, s);
             }
             catch (Exception e)
             {
@@ -427,6 +444,7 @@ namespace DynastyRetinue
         private static FieldInfo _fNode, _fChanged;
         private static bool _probed, _warned;
         private static object _prev;
+        private static int _lx = int.MinValue, _lz = int.MinValue;   // 光标格去重，避免每帧建串
 
         private static void Probe(Type t)
         {
@@ -469,11 +487,18 @@ namespace DynastyRetinue
 
                 var ship = ShipPathContext.Current;
                 var s = ShipMarkerAlign.Shift(ship);
-                if (s == Vector3.zero) return;
 
                 var game = Kingmaker.Game.Instance;
                 var click = game != null ? game.ClickEventsController : null;
                 if (click == null) return;
+
+                // ★S 为零时也要走完诊断★
+                //   0°/180° 档的 S = (0,0)，此前在这里直接 return，于是那些朝向
+                //   一行日志都没有 —— 而玩家恰恰是在那些朝向看到跳变的。
+                //   S=0 意味着本补丁完全不介入，那里的跳变是**原版自己的**：
+                //   原版 marker 只存在于间距 W 的锚点上，却用 nearest(P)（间距 1）取格，
+                //   W=2 时四格里有三格匹配不上。
+                bool engaged = (s != Vector3.zero);
 
                 var raw = Kingmaker.Pathfinding.GridAreaHelper.GetNearestNodeXZ(click.WorldPosition - s);
                 // ★吸附到 metagrid★ marker 只存在于间距 W 的锚点上（ShipPath.Result 的键
@@ -481,8 +506,43 @@ namespace DynastyRetinue
                 //   不吸附的话 nearest(...) 落在非锚点格上，UpdatePathNodeMarkers 找不到匹配、
                 //   什么都不亮 —— W=2 时四格里有三格会这样。
                 var node = ShipMarkerAlign.SnapToMetagrid(ship, raw);
-                _fNode.SetValue(__instance, node);
-                _fChanged.SetValue(__instance, !ReferenceEquals(node, _prev));
+                if (engaged)
+                {
+                    _fNode.SetValue(__instance, node);
+                    _fChanged.SetValue(__instance, !ReferenceEquals(node, _prev));
+                }
+
+                // ★判据：光标那一格必须落在高亮块内★
+                //   块 = [锚点+S, 锚点+S+W-1]。在里面 = 2×2 粒度（改不掉）；
+                //   在外面 = 我算错了。玩家实测是在外面，所以这里要把四个数一起打出来：
+                //   光标格 / 减 S 后 / 吸附后 / 块范围 / changed 标志。
+                //   changed 若为 false 而节点确实变了，UpdatePathNodeMarkers 就不会被调用，
+                //   画面会停在上一格 —— 那是另一种病因，日志能区分。
+                if (cfg.WatchMomentum && node != null)
+                {
+                    var cn = Kingmaker.Pathfinding.GridAreaHelper.GetNearestNodeXZ(click.WorldPosition);
+                    int cx = cn != null ? cn.XCoordinateInGrid : -1;
+                    int cz = cn != null ? cn.ZCoordinateInGrid : -1;
+                    if (cx != _lx || cz != _lz)
+                    {
+                        _lx = cx; _lz = cz;
+                        float cc = Kingmaker.Pathfinding.GraphParamsMechanicsCache.GridCellSize;
+                        if (cc <= 0.001f) cc = 1f;
+                        int sx = UnityEngine.Mathf.RoundToInt(s.x / cc);
+                        int sz = UnityEngine.Mathf.RoundToInt(s.z / cc);
+                        int w = ship.SizeRect.Width;
+                        int bx = node.XCoordinateInGrid + sx, bz = node.ZCoordinateInGrid + sz;
+                        bool inside = cx >= bx && cx <= bx + w - 1 && cz >= bz && cz <= bz + w - 1;
+                        Main.Log("[高亮块] 光标格(" + cx + "," + cz + ")"
+                               + "　减S后(" + (raw != null ? raw.XCoordinateInGrid : -1) + "," + (raw != null ? raw.ZCoordinateInGrid : -1) + ")"
+                               + "　吸附后(" + node.XCoordinateInGrid + "," + node.ZCoordinateInGrid + ")"
+                               + "　S=(" + sx + "," + sz + ")"
+                               + "　块 x:" + bx + "~" + (bx + w - 1) + " z:" + bz + "~" + (bz + w - 1)
+                               + (inside ? "　OK 在块内" : "　BAD 在块外")
+                               + "　changed=" + (!ReferenceEquals(node, _prev))+ (engaged ? "" : "　[S=0 本补丁未介入，此处为原版行为]"));
+                        Main.FlushLog(true);
+                    }
+                }
             }
             catch (Exception e)
             {
