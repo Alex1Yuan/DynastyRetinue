@@ -771,6 +771,7 @@ namespace DynastyRetinue
                     _probed = true;
                     _fDecal = AccessTools.Field(__instance.GetType(), "m_CreatedPointerCellDecal");
                     _fScaleP = AccessTools.Field(__instance.GetType(), "m_DecalScale");
+                    _pSelUnit = AccessTools.Property(__instance.GetType(), "SelectedUnit");
                 }
                 if (_fDecal == null)
                 {
@@ -789,12 +790,17 @@ namespace DynastyRetinue
                 var pointer = _fDecal.GetValue(__instance) as Component;
                 if (pointer == null || !ReferenceEquals(pointer.transform, decalTransform)) return;
 
-                var ship = ShipPathContext.Current;
-                if (ship == null)
-                {
-                    var g = Kingmaker.Game.Instance;
-                    ship = g != null && g.Player != null ? g.Player.PlayerShip : null;
-                }
+                // ★必须是「当前选中的就是这条船」才介入★
+                //   此前拿不到 ShipPathContext.Current 时会回退到 Player.PlayerShip，
+                //   而 PlayerShip 在**地面战里也一直存在**、宽度是 2/3。
+                //   地面战选中大型单位（2×2）时 m_DecalScale 同样是 2，上面那道闸门拦不住，
+                //   于是地面单位的光标圆圈会被按**舰船**的落点表去吸附。
+                //   改成直接问 SelectedUnit 是不是 StarshipEntity —— 不是就一行不碰。
+                //   （marker 表按 Generation 缓存，离开海战后若不换代仍可能残留旧坐标，
+                //     所以不能只靠「表里查不到」来兜底。）
+                var ship = _pSelUnit != null
+                         ? _pSelUnit.GetValue(__instance) as StarshipEntity
+                         : ShipPathContext.Current;
                 if (ship == null || ship.SizeRect.Width <= 1) return;
 
                 var cur = node as CustomGridNodeBase;
@@ -1040,6 +1046,7 @@ namespace DynastyRetinue
 
         private static FieldInfo _fPathEnd, _fScale;
         private static FieldInfo _fScaleP;   // Prefix 侧的 m_DecalScale（与 Postfix 各自探测，互不依赖顺序）
+        private static System.Reflection.PropertyInfo _pSelUnit;   // 当前选中单位，用来确认「是船才介入」
         private static bool _peProbed;
         private static readonly System.Collections.Generic.Dictionary<int, Vector3> _peBase =
             new System.Collections.Generic.Dictionary<int, Vector3>();
