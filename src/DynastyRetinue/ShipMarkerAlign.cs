@@ -678,6 +678,15 @@ namespace DynastyRetinue
                 if (mk.HasValue) pos = mk.Value;
                 LogCorners(pointer, anchor, ship);
 
+                // ★用引擎自己给的角点自标定 pivot★
+                //   实测（1.4.16 日志）：decal 的四个角围出的区域中心
+                //   与它的 transform.position **差半格** —— 轴心不在自己的中心上。
+                //   所以前面几版把根节点放到方块中心，画出来仍然偏半个方块。
+                //   这里不去猜偏移量，直接量：视觉中心 − 根节点 = pivot 偏移，减掉即可。
+                //   与 pivot 在哪、缩放多少都无关，自动成立。
+                pos -= PivotDelta(pointer, decalTransform,
+                                  _fScaleP != null ? (int)_fScaleP.GetValue(__instance) : 1);
+
                 // y 保持原样：原版随后会 CheckHeight 贴地，别把高度按死
                 if (overridePosition.HasValue) pos.y = overridePosition.Value.y;
                 overridePosition = pos;
@@ -843,6 +852,62 @@ namespace DynastyRetinue
 
         private static System.Reflection.PropertyInfo _pCorners;
         private static bool _cornersLogged;
+
+        /// <summary>
+        /// pivot 偏移 = decal 的**视觉中心** − 它的 transform.position。
+        ///
+        /// 实测样本（1.4.16 日志，m_DecalScale=1）：
+        ///     角点 (-0.98,0.00) (-0.98,-1.00) (-0.02,-1.00) (-0.02,0.00)  → 视觉中心 (-0.50,-0.50)
+        ///     而根节点被放在 (-1.00,-1.00)  → 偏移 = (+0.50,+0.50) 格
+        /// 也就是 decal 的轴心在自己的角上，不在中心。前面几版一直把根节点当视觉中心用，
+        /// 所以无论锚点算得多准，画出来都偏半个方块。
+        ///
+        /// ★不猜、自标定★ CornersPositions 是引擎自己给的四角世界坐标，
+        ///   取平均就是视觉中心，减去根节点就是偏移。pivot 在哪、缩放多少都自动成立。
+        ///
+        /// ★按缩放缓存★ CornersPositions 内部是 `m_Corners.Select(...).ToList()`，
+        ///   每次调用都分配一个 List。这是每帧路径，不能每帧分配（1.4.15 已经因为
+        ///   每帧反射把海战搞卡过一次）。偏移只随缩放变，按 scale 缓存即可。
+        /// </summary>
+        private static Vector3 PivotDelta(Component pointer, Transform root, int scale)
+        {
+            try
+            {
+                if (_pivotScale == scale) return _pivotVal;
+                if (_pCorners == null)
+                {
+                    _pCorners = AccessTools.Property(pointer.GetType(), "CornersPositions");
+                    if (_pCorners == null) { _pivotScale = scale; _pivotVal = Vector3.zero; return Vector3.zero; }
+                }
+                var raw = _pCorners.GetValue(pointer) as System.Collections.IEnumerable;
+                if (raw == null) return _pivotVal;
+
+                Vector3 sum = Vector3.zero; int n = 0;
+                foreach (var o in raw) { sum += (Vector3)o; n++; }
+                if (n == 0) return _pivotVal;
+
+                var d = sum / n - root.position;
+                d.y = 0f;                                   // 高度交给引擎的 CheckHeight
+                _pivotScale = scale; _pivotVal = d;
+
+                var cfg = Main.Settings;
+                if (cfg != null && cfg.WatchMomentum)
+                {
+                    float c = Kingmaker.Pathfinding.GraphParamsMechanicsCache.GridCellSize;
+                    if (c <= 0.001f) c = 1f;
+                    Main.Log("[三件套对齐] pivot 自标定　m_DecalScale=" + scale
+                           + "　偏移 = 格(" + (d.x / c).ToString("F2") + "," + (d.z / c).ToString("F2") + ")"
+                           + "\n    = decal 视觉中心 − 根节点。已从目标位置里减掉。"
+                           + "\n    打出 (0.00,0.00) 说明轴心本来就居中，圆圈偏移另有来源。");
+                    Main.FlushLog(true);
+                }
+                return d;
+            }
+            catch { return _pivotVal; }
+        }
+
+        private static int _pivotScale = int.MinValue;
+        private static Vector3 _pivotVal;
 
         private static FieldInfo _fPathEnd, _fScale;
         private static FieldInfo _fScaleP;   // Prefix 侧的 m_DecalScale（与 Postfix 各自探测，互不依赖顺序）
