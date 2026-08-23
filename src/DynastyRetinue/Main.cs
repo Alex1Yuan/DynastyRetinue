@@ -22,6 +22,7 @@ namespace DynastyRetinue
         public static bool Load(UnityModManager.ModEntry modEntry)
         {
             ModEntry = modEntry;
+            RotateLog();
             Settings = UnityModManager.ModSettings.Load<Settings>(modEntry);
 
             // ★迁移：清掉已废弃的手动字体覆盖★
@@ -1671,6 +1672,40 @@ namespace DynastyRetinue
         // 这里同时写一份到 mod 目录，便于事后排查。
         private static string LogPath =>
             System.IO.Path.Combine(ModEntry?.Path ?? ".", "dynasty_log.txt");
+
+        /// <summary>
+        /// 启动时轮转日志。
+        ///
+        /// ★为什么需要★
+        ///   FlushLog 走的是 `File.AppendAllText` —— **只追加，没有任何上限**。
+        ///   详细日志默认关着时一次启动才几 KB，无所谓；但玩家为了报 bug 打开
+        ///   「详细日志」之后忘了关，文件会一直涨 —— 开发期实测两天就到 11 MB。
+        ///   而且它躺在 mod 目录里，玩家不会主动去看，更不会去删。
+        ///
+        /// ★为什么保留上一份而不是直接清空★
+        ///   报 bug 时要的经常是「上一局」的记录，而那会儿游戏多半已经重启过了。
+        ///   只留一份 .prev，总占用有上界（2 × 阈值）。
+        ///
+        /// ★为什么按大小而不是每次启动都轮转★
+        ///   默认状态下日志很小，天天轮转只会把有用的历史冲掉。
+        /// </summary>
+        private const long LogRotateBytes = 4L * 1024 * 1024;
+
+        private static void RotateLog()
+        {
+            try
+            {
+                string path = LogPath;
+                if (!System.IO.File.Exists(path)) return;
+                if (new System.IO.FileInfo(path).Length < LogRotateBytes) return;
+
+                string prev = System.IO.Path.Combine(
+                    ModEntry?.Path ?? ".", "dynasty_log.prev.txt");
+                try { if (System.IO.File.Exists(prev)) System.IO.File.Delete(prev); } catch { }
+                System.IO.File.Move(path, prev);
+            }
+            catch { /* 轮转失败不能影响加载 */ }
+        }
 
         /// <summary>
         /// ★日志必须攒着写，不能一行一次 File.AppendAllText★
