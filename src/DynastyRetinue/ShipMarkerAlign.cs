@@ -632,12 +632,20 @@ namespace DynastyRetinue
                 {
                     _probed = true;
                     _fDecal = AccessTools.Field(__instance.GetType(), "m_CreatedPointerCellDecal");
+                    _fScaleP = AccessTools.Field(__instance.GetType(), "m_DecalScale");
                 }
                 if (_fDecal == null)
                 {
                     if (!_warned) { _warned = true; Main.LogError("[三件套对齐] 找不到 m_CreatedPointerCellDecal —— 圆圈保持原样"); }
                     return;
                 }
+
+                // ★选中技能时一律不介入★
+                //   GetCellScaleByUnit（UnitPathManager.cs:282）在选中技能时返回 1，
+                //   光标退化成 1×1 的目标格拾取器。此时把它吸附到 2×2 的 metagrid 锚点上，
+                //   鼠标每移动两格才跳一次 —— 玩家实测「点击炮攻击时选单位的格子跳变」就是这么来的。
+                //   舰炮瞄准必须保持逐格，射界也是按船的真实位置生成的，不能挪。
+                if (_fScaleP != null && (int)_fScaleP.GetValue(__instance) == 1) return;
 
                 // ★只接管光标圆圈★ 别的 decal 原样放行
                 var pointer = _fDecal.GetValue(__instance) as Component;
@@ -837,6 +845,7 @@ namespace DynastyRetinue
         private static bool _cornersLogged;
 
         private static FieldInfo _fPathEnd, _fScale;
+        private static FieldInfo _fScaleP;   // Prefix 侧的 m_DecalScale（与 Postfix 各自探测，互不依赖顺序）
         private static bool _peProbed;
         private static readonly System.Collections.Generic.Dictionary<int, Vector3> _peBase =
             new System.Collections.Generic.Dictionary<int, Vector3>();
