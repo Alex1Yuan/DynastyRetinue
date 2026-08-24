@@ -113,8 +113,36 @@ namespace DynastyRetinue
             }
             _wasInCombat = now;
 
-            if (now) TrackTurn();
+            if (now) { SampleFrame(); TrackTurn(); }
             AutoEndTurn();
+        }
+
+        /// <summary>
+        /// 采当前回合内的**最长单帧**。
+        ///
+        /// ★为什么必须量这个★（1.5.5 加）
+        ///   1.5.3/1.5.4 量的是「从轮到它到发出第一条指令」的**流逝时间**，
+        ///   五个卫兵测出来 380~465 毫秒、均匀得很。可玩家的观感是
+        ///   「第一个卫兵动的时候卡一下，后面几个还好」——**和数据矛盾**。
+        ///
+        ///   矛盾说明量错了东西。同样是 400 毫秒，有两种完全不同的情况：
+        ///       主线程被同步计算卡死 400 毫秒  → 画面冻住，这才叫卡
+        ///       平滑等待 400 毫秒              → 动画照跑、镜头在移，只是它在想
+        ///   流逝时间分不清这两者，**单帧时长可以**：
+        ///       最长单帧 ≈ 决策耗时   ⇒ 卡死
+        ///       最长单帧 ≈ 16~33 ms   ⇒ 平滑等待，观感不卡
+        ///
+        /// 每帧一次浮点比较，可以忽略。
+        /// </summary>
+        private static void SampleFrame()
+        {
+            if (_thinkKey == null) return;
+            try
+            {
+                float dt = UnityEngine.Time.deltaTime;
+                if (dt > _frameMax) _frameMax = dt;
+            }
+            catch { }
         }
 
         /// <summary>
@@ -142,12 +170,15 @@ namespace DynastyRetinue
         /// </summary>
         private static int _oursN, _themN;
         private static float _oursSum, _oursMax, _themSum, _themMax;
+        /// <summary>同上，但统计的是每个回合内的**最长单帧**——用来分辨「卡死」和「平滑等待」。</summary>
+        private static float _frameMax, _oursFrSum, _oursFrMax, _themFrSum, _themFrMax;
 
         private static void ResetThinkStats()
         {
-            _thinkKey = null; _thinkName = null; _thinkOurs = false;
+            _thinkKey = null; _thinkName = null; _thinkOurs = false; _frameMax = 0f;
             _oursN = _themN = 0;
             _oursSum = _oursMax = _themSum = _themMax = 0f;
+            _oursFrSum = _oursFrMax = _themFrSum = _themFrMax = 0f;
         }
 
         /// <summary>战斗总账里的那一行对比。没采到样本就不打。</summary>
@@ -155,22 +186,34 @@ namespace DynastyRetinue
         {
             if (_oursN == 0 && _themN == 0) return null;
             string a = _oursN > 0
-                ? $"卫兵 {_oursN} 次　平均 {_oursSum / _oursN:F0} ms　最大 {_oursMax:F0} ms"
+                ? $"卫兵 {_oursN} 次　决策均 {_oursSum / _oursN:F0}/峰 {_oursMax:F0} ms　最长单帧均 {_oursFrSum / _oursN:F0}/峰 {_oursFrMax:F0} ms"
                 : "卫兵 无样本";
             string b = _themN > 0
-                ? $"其它单位 {_themN} 次　平均 {_themSum / _themN:F0} ms　最大 {_themMax:F0} ms"
+                ? $"其它单位 {_themN} 次　决策均 {_themSum / _themN:F0}/峰 {_themMax:F0} ms　最长单帧均 {_themFrSum / _themN:F0}/峰 {_themFrMax:F0} ms"
                 : "其它单位 无样本";
+
+            // ★先判「是不是真卡」，再判「是不是我们的锅」★
+            //   玩家观感是「第一个卫兵卡一下，后面还好」，而决策耗时五个都是 400 ms 上下 ——
+            //   矛盾只能由单帧时长解释：同样 400 ms，卡死和平滑等待手感天差地别。
             string verdict;
-            if (_oursN == 0 || _themN == 0) verdict = "（样本不全，这一场判不了）";
+            if (_oursN == 0) verdict = "（没采到卫兵样本，这一场判不了）";
             else
             {
-                float ro = _oursSum / _oursN, rt = _themSum / _themN;
-                verdict = ro <= rt * 1.5f
-                    ? "两边同量级 ⇒ 这是原版 AI 的固有代价，卫兵并不特殊；"
-                      + "之所以能感觉到，是因为几个卫兵**连着**行动，等待被攒到了一起。"
-                    : $"卫兵约为其它单位的 {ro / rt:F1} 倍 ⇒ 是我们把单位配得太重（技能/天赋越多，打分越久）。";
+                float fr = _oursFrSum / _oursN;
+                verdict = _oursFrMax >= 200f
+                    ? $"★主线程真的被卡住过（峰值单帧 {_oursFrMax:F0} ms）★ —— 这才是玩家感觉到的那一下。"
+                    : $"最长单帧只有均 {fr:F0} / 峰 {_oursFrMax:F0} ms ⇒ 画面没有冻住，那 400 ms 是**平滑等待**，"
+                      + "观感上的「卡」另有来源（镜头切换 / 动画 / 首次加载）。";
+                if (_themN > 0)
+                {
+                    float ro = _oursSum / _oursN, rt = _themSum / _themN;
+                    verdict += ro <= rt * 1.5f
+                        ? $"\n      决策耗时两边同量级（卫兵 {ro:F0} vs 其它 {rt:F0} ms）⇒ 原版 AI 的固有代价，卫兵并不特殊；"
+                          + "能感觉到是因为几个卫兵**连着**行动，等待被攒到了一起。"
+                        : $"\n      卫兵决策约为其它单位的 {ro / rt:F1} 倍（{ro:F0} vs {rt:F0} ms）⇒ 是我们把单位配得太重。";
+                }
             }
-            return "  AI 决策耗时　" + a + "　｜　" + b + "\n      " + verdict;
+            return "  AI 决策耗时　" + a + "\n              " + b + "\n      " + verdict;
         }
         private static void TrackTurn()
         {
@@ -207,6 +250,7 @@ namespace DynastyRetinue
                 _thinkAt = UnityEngine.Time.realtimeSinceStartup;
                 _thinkOurs = IsOurs(cur);
                 _thinkName = _thinkOurs ? RowFor(cur).Name : null;
+                _frameMax = 0f;                                    // 新回合，重新采最长单帧
 
                 if (!_thinkOurs) return;                           // 别人的回合，只更新游标
                 RowFor(cur).Turns++;
@@ -263,12 +307,18 @@ namespace DynastyRetinue
                     {
                         _thinkKey = null;
                         float ms = (UnityEngine.Time.realtimeSinceStartup - _thinkAt) * 1000f;
-                        if (_thinkOurs) { _oursN++; _oursSum += ms; if (ms > _oursMax) _oursMax = ms; }
-                        else            { _themN++; _themSum += ms; if (ms > _themMax) _themMax = ms; }
+                        float fr = _frameMax * 1000f;
+                        if (_thinkOurs) { _oursN++; _oursSum += ms; if (ms > _oursMax) _oursMax = ms;
+                                          _oursFrSum += fr; if (fr > _oursFrMax) _oursFrMax = fr; }
+                        else            { _themN++; _themSum += ms; if (ms > _themMax) _themMax = ms;
+                                          _themFrSum += fr; if (fr > _themFrMax) _themFrMax = fr; }
 
                         // 逐条只记自己人的离群值；基线在战斗结束时汇总打印，免得敌人刷屏。
+                        // ★两个数一起看才有意义★ 见 SampleFrame 头注：
+                        //   最长单帧 ≈ 决策耗时 ⇒ 主线程卡死；≈16~33 ms ⇒ 平滑等待。
                         if (_thinkOurs && ms >= ThinkWarnMs)
-                            Main.Log($"[卡顿] {_thinkName} 的回合：从轮到它到发出第一条指令用了 {ms:F0} 毫秒。");
+                            Main.Log($"[卡顿] {_thinkName} 的回合：决策 {ms:F0} ms，其中最长单帧 {fr:F0} ms"
+                                   + (fr >= ms * 0.5f ? "　★主线程卡死★" : "　（平滑等待，观感不卡）"));
                     }
                 }
 
