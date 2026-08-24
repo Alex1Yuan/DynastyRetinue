@@ -103,7 +103,7 @@ namespace DynastyRetinue
             try { now = Game.Instance != null && Game.Instance.Player != null && Game.Instance.Player.IsInCombat; }
             catch { return; }
 
-            if (now && !_wasInCombat) { _rows.Clear(); _lastTurnKey = null; }      // 开打：清空上一场
+            if (now && !_wasInCombat) { _rows.Clear(); _lastTurnKey = null; ResetThinkStats(); }      // 开打：清空上一场
             else if (!now && _wasInCombat)
             {
                 Dump("战斗结束");
@@ -129,10 +129,49 @@ namespace DynastyRetinue
         /// </summary>
         private static string _lastTurnKey;
 
-        /// <summary>AI 决策耗时探针的状态；超过这个毫秒数才记一行。</summary>
+        /// <summary>AI 决策耗时探针的状态；超过这个毫秒数才逐条记一行。</summary>
         private const float ThinkWarnMs = 250f;
         private static string _thinkKey, _thinkName;
         private static float _thinkAt;
+        private static bool _thinkOurs;
+
+        /// <summary>
+        /// 决策耗时的两侧统计 —— 卫兵 vs 其它单位（敌人/中立）。
+        /// ★没有基线就下不了结论★ 单看「卫兵想了 400 毫秒」说明不了任何事，
+        /// 必须知道同一场战斗里敌人想多久。战斗结束时一并打印。
+        /// </summary>
+        private static int _oursN, _themN;
+        private static float _oursSum, _oursMax, _themSum, _themMax;
+
+        private static void ResetThinkStats()
+        {
+            _thinkKey = null; _thinkName = null; _thinkOurs = false;
+            _oursN = _themN = 0;
+            _oursSum = _oursMax = _themSum = _themMax = 0f;
+        }
+
+        /// <summary>战斗总账里的那一行对比。没采到样本就不打。</summary>
+        private static string ThinkSummary()
+        {
+            if (_oursN == 0 && _themN == 0) return null;
+            string a = _oursN > 0
+                ? $"卫兵 {_oursN} 次　平均 {_oursSum / _oursN:F0} ms　最大 {_oursMax:F0} ms"
+                : "卫兵 无样本";
+            string b = _themN > 0
+                ? $"其它单位 {_themN} 次　平均 {_themSum / _themN:F0} ms　最大 {_themMax:F0} ms"
+                : "其它单位 无样本";
+            string verdict;
+            if (_oursN == 0 || _themN == 0) verdict = "（样本不全，这一场判不了）";
+            else
+            {
+                float ro = _oursSum / _oursN, rt = _themSum / _themN;
+                verdict = ro <= rt * 1.5f
+                    ? "两边同量级 ⇒ 这是原版 AI 的固有代价，卫兵并不特殊；"
+                      + "之所以能感觉到，是因为几个卫兵**连着**行动，等待被攒到了一起。"
+                    : $"卫兵约为其它单位的 {ro / rt:F1} 倍 ⇒ 是我们把单位配得太重（技能/天赋越多，打分越久）。";
+            }
+            return "  AI 决策耗时　" + a + "　｜　" + b + "\n      " + verdict;
+        }
         private static void TrackTurn()
         {
             try
@@ -147,28 +186,30 @@ namespace DynastyRetinue
                 if (key == null || key == _lastTurnKey) return;   // 还是同一个人的回合
                 _lastTurnKey = key;
 
-                if (!IsOurs(cur)) return;                          // 别人的回合，只更新游标
-                RowFor(cur).Turns++;
-
                 // ★AI 想了多久 —— 常驻探针★
                 //   玩家反馈「快速战斗时每次轮到卫队都卡一下」。把我们订阅的全部
                 //   游戏事件和 Harmony 目标过了一遍，**没有一个挂在回合开始上**
                 //   （见 HandleUnitCommandDidStart 的 IsOurs 注释：那条路径是 O(1)）。
-                //   所以嫌疑落在「AI 给每个可用技能对每个目标打分」上 ——
-                //   队友是玩家操控的不需要决策，卫兵是 AI，而我们的 T3 精英是 55 级、
-                //   天赋和灵能一大堆。
-                //
+                //   所以嫌疑落在「AI 给每个可用技能对每个目标打分」上。
                 //   与其继续猜，不如量：从「轮到它」到「它发出第一条指令」的时间差
                 //   就是决策耗时。
                 //
-                //   ★为什么这条不挂在详细日志下★ 它只在真的卡了（超过阈值）才记一行，
-                //   一个回合最多一行，不会刷屏；而这种偶发问题恰恰是玩家不会
-                //   专门开日志去复现的。默认能抓到才有意义。
+                //   ★必须连敌人一起量★ 1.5.2 只量了自己人，测出 380~465 毫秒，
+                //   可**没有基线就下不了结论** —— 敌人也是 AI 控制的。
+                //   若敌人同样要想 400 毫秒，那这就是原版 AI 的固有代价，
+                //   我们的卫兵并不特殊，玩家感觉到只是因为五个卫兵**连着**行动
+                //   （2.1 秒连续等待），而敌人的回合是穿插的、本来就预期它要想。
+                //   两者差得远才说明是我们把单位配得太重。
+                //
                 //   ★realtimeSinceStartup 只能用来记日志★ 真实时间不是同步量，
                 //   任何进判定的地方都不许用它（StuckWatch 头注有同一条教训）。
                 _thinkKey = key;
                 _thinkAt = UnityEngine.Time.realtimeSinceStartup;
-                _thinkName = RowFor(cur).Name;
+                _thinkOurs = IsOurs(cur);
+                _thinkName = _thinkOurs ? RowFor(cur).Name : null;
+
+                if (!_thinkOurs) return;                           // 别人的回合，只更新游标
+                RowFor(cur).Turns++;
             }
             catch { }
         }
@@ -209,10 +250,11 @@ namespace DynastyRetinue
             {
                 if (command == null) return;
                 var u = command.Executor as BaseUnitEntity;
-                if (u == null || !IsOurs(u)) return;
+                if (u == null) return;
 
                 // ★结算 AI 决策耗时★ 见 TrackTurn 里那段说明。
-                //   只认这个回合的第一条指令；超过阈值才记，一回合最多一行。
+                //   ★这一段必须在 IsOurs 门禁之前★ 敌人的耗时正是我们要的基线。
+                //   代价仍是 O(1)：一次字符串比较，不遍历任何东西。
                 if (_thinkKey != null)
                 {
                     string uid = null;
@@ -221,14 +263,16 @@ namespace DynastyRetinue
                     {
                         _thinkKey = null;
                         float ms = (UnityEngine.Time.realtimeSinceStartup - _thinkAt) * 1000f;
-                        if (ms >= ThinkWarnMs)
-                            Main.Log($"[卡顿] {_thinkName} 的回合：从轮到它到发出第一条指令用了 "
-                                   + $"{ms:F0} 毫秒。这段时间几乎全是 AI 在给技能打分——"
-                                   + $"本 mod 在回合开始时不执行任何代码。数值随可用技能数增长，"
-                                   + $"所以 T3 精英会比 T1 卫兵明显。");
+                        if (_thinkOurs) { _oursN++; _oursSum += ms; if (ms > _oursMax) _oursMax = ms; }
+                        else            { _themN++; _themSum += ms; if (ms > _themMax) _themMax = ms; }
+
+                        // 逐条只记自己人的离群值；基线在战斗结束时汇总打印，免得敌人刷屏。
+                        if (_thinkOurs && ms >= ThinkWarnMs)
+                            Main.Log($"[卡顿] {_thinkName} 的回合：从轮到它到发出第一条指令用了 {ms:F0} 毫秒。");
                     }
                 }
 
+                if (!IsOurs(u)) return;
                 var row = RowFor(u);
                 var ua = command as UnitUseAbility;
                 if (ua == null)
@@ -357,6 +401,8 @@ namespace DynastyRetinue
 
                 var sb = new StringBuilder();
                 sb.AppendLine("======== 战斗行为总账（" + why + "）========");
+                var think = ThinkSummary();
+                if (think != null) sb.AppendLine(think);
                 sb.AppendLine("  ★「武器」只统计挂着武器实体的攻击；很多单位的射击是**技能式武器攻击**"
                             + "（如 Sororitas_HBolter_RapidFire_Ability），它们计入「攻击技」。"
                             + "判断有没有在打人要看 **攻击合计 = 武器 + 攻击技**。★");
