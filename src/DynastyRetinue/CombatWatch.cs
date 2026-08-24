@@ -168,6 +168,17 @@ namespace DynastyRetinue
         /// ★没有基线就下不了结论★ 单看「卫兵想了 400 毫秒」说明不了任何事，
         /// 必须知道同一场战斗里敌人想多久。战斗结束时一并打印。
         /// </summary>
+        /// <summary>
+        /// 单帧时长的观感分档。**按绝对值**，60 fps 下一帧是 16.7 ms。
+        /// 不要再用「占决策的比例」——那把「决策久」和「掉帧」混成了一件事。
+        /// </summary>
+        private static string FrameVerdict(float fr)
+        {
+            if (fr < 50f)  return "　（平滑，观感不卡）";
+            if (fr < 120f) return $"　（轻微掉帧，约 {fr / 16.7f:F0} 帧）";
+            return $"　★明显卡顿：连掉约 {fr / 16.7f:F0} 帧★";
+        }
+
         private static int _oursN, _themN;
         private static float _oursSum, _oursMax, _themSum, _themMax;
         /// <summary>同上，但统计的是每个回合内的**最长单帧**——用来分辨「卡死」和「平滑等待」。</summary>
@@ -200,17 +211,21 @@ namespace DynastyRetinue
             else
             {
                 float fr = _oursFrSum / _oursN;
-                verdict = _oursFrMax >= 200f
-                    ? $"★主线程真的被卡住过（峰值单帧 {_oursFrMax:F0} ms）★ —— 这才是玩家感觉到的那一下。"
-                    : $"最长单帧只有均 {fr:F0} / 峰 {_oursFrMax:F0} ms ⇒ 画面没有冻住，那 400 ms 是**平滑等待**，"
-                      + "观感上的「卡」另有来源（镜头切换 / 动画 / 首次加载）。";
+                // ★两件事分开判★ 决策久 ≠ 掉帧，见 FrameVerdict。
+                verdict = fr >= 120f
+                    ? $"★掉帧：卫兵回合最长单帧均 {fr:F0} ms（约 {fr / 16.7f:F0} 帧）、峰 {_oursFrMax:F0} ms —— 这才是玩家感觉到的那一下。"
+                    : $"掉帧不明显：最长单帧均 {fr:F0} ms / 峰 {_oursFrMax:F0} ms。";
                 if (_themN > 0)
                 {
                     float ro = _oursSum / _oursN, rt = _themSum / _themN;
+                    float ft = _themFrSum / _themN;
                     verdict += ro <= rt * 1.5f
-                        ? $"\n      决策耗时两边同量级（卫兵 {ro:F0} vs 其它 {rt:F0} ms）⇒ 原版 AI 的固有代价，卫兵并不特殊；"
-                          + "能感觉到是因为几个卫兵**连着**行动，等待被攒到了一起。"
+                        ? $"\n      决策耗时两边同量级（卫兵 {ro:F0} vs 其它 {rt:F0} ms）⇒ 原版 AI 的固有代价，不是本 mod 造成的。"
                         : $"\n      卫兵决策约为其它单位的 {ro / rt:F1} 倍（{ro:F0} vs {rt:F0} ms）⇒ 是我们把单位配得太重。";
+                    verdict += ft > 0.01f
+                        ? $"\n      掉帧两边对比：卫兵均 {fr:F0} / 其它均 {ft:F0} ms"
+                          + (fr <= ft * 1.5f ? "　同量级，也是原版的。" : $"　卫兵约 {fr / ft:F1} 倍。")
+                        : "";
                 }
             }
             return "  AI 决策耗时　" + a + "\n              " + b + "\n      " + verdict;
@@ -314,11 +329,14 @@ namespace DynastyRetinue
                                           _themFrSum += fr; if (fr > _themFrMax) _themFrMax = fr; }
 
                         // 逐条只记自己人的离群值；基线在战斗结束时汇总打印，免得敌人刷屏。
-                        // ★两个数一起看才有意义★ 见 SampleFrame 头注：
-                        //   最长单帧 ≈ 决策耗时 ⇒ 主线程卡死；≈16~33 ms ⇒ 平滑等待。
+                        // ★掉帧感看绝对值，不看比例★（1.5.6 更正）
+                        //   1.5.5 用的判据是「单帧 ≥ 决策的一半」，于是
+                        //   「决策 835 ms / 单帧 167 ms」被标成「平滑等待，观感不卡」——
+                        //   可 60 fps 下一帧该是 16 ms，167 ms 是连掉 10 帧，那绝对看得见。
+                        //   比例判据把「决策久」和「掉帧」混成了一件事，实际是两件。
                         if (_thinkOurs && ms >= ThinkWarnMs)
                             Main.Log($"[卡顿] {_thinkName} 的回合：决策 {ms:F0} ms，其中最长单帧 {fr:F0} ms"
-                                   + (fr >= ms * 0.5f ? "　★主线程卡死★" : "　（平滑等待，观感不卡）"));
+                                   + FrameVerdict(fr));
                     }
                 }
 
