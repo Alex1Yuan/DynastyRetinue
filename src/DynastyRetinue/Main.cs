@@ -25,6 +25,20 @@ namespace DynastyRetinue
             RotateLog();
             Settings = UnityModManager.ModSettings.Load<Settings>(modEntry);
 
+            // ★启动横幅★ 每次加载一行，无条件写。
+            //   缺了它排查会非常别扭：2026-08-23 那次「AI 耗时探针没数据」，
+            //   我是靠「补丁挂载那几行不在日志里」反推出「游戏没重启、新 DLL 根本没加载」的。
+            //   替换 DLL 对已在运行的进程无效，而日志会若无其事地继续追加，
+            //   看起来就像新版本跑过了却什么都没记。
+            //   玩家报 bug 时同理 —— 拿到一份日志却不知道是哪个版本产生的。
+            try
+            {
+                Log("[启动] Dynasty Retinue & Refit v" + modEntry.Info.Version
+                  + "　—— 看到这一行才说明这个版本真的被加载了。"
+                  + "若日志里没有它，说明游戏没重启、内存里还是旧程序集。");
+            }
+            catch { }
+
             // ★迁移：清掉已废弃的手动字体覆盖★
             //   1.0.33–1.0.35 提供过「换一个字体」，有玩家会停在 HintFont
             //   （含 fallback 覆盖只有 14/55，真会缺字）。开关已移除，
