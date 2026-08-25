@@ -1536,6 +1536,9 @@ namespace DynastyRetinue
             // brain 已并进 GearTool 的每组日志。留一个入口，少一次误点、少一半时间。
             if (Btn("探测 brain", 110f)) BrainTool.Probe();
             if (Btn("探测候选单位", 120f)) Probe.ProbeUnits();
+            // 血量不是蓝图字段（由组件+属性推导），离线抽不出来，只能生成实体才读得到。
+            // 而候选单位分散在不同任务场景，UnitInspect 又只列当前区域 —— 所以单独开一个。
+            if (Btn("测传奇候选血量", 150f)) LegendProbe.Run();
             // 开发区的按钮不进本地化表 —— 这里的文案只给作者看
             if (Btn("字体覆盖检查", 120f)) FontCheck.Run();
             // 职业链探测是真把单位一级级推上去 —— 55 级存档上全量跑会卡几分钟。
