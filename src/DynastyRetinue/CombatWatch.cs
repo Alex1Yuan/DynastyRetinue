@@ -103,7 +103,7 @@ namespace DynastyRetinue
             try { now = Game.Instance != null && Game.Instance.Player != null && Game.Instance.Player.IsInCombat; }
             catch { return; }
 
-            if (now && !_wasInCombat) { _rows.Clear(); _lastTurnKey = null; }      // 开打：清空上一场
+            if (now && !_wasInCombat) { _rows.Clear(); _lastTurnKey = null; ResetThinkStats(); }      // 开打：清空上一场
             else if (!now && _wasInCombat)
             {
                 Dump("战斗结束");
@@ -113,8 +113,36 @@ namespace DynastyRetinue
             }
             _wasInCombat = now;
 
-            if (now) TrackTurn();
+            if (now) { SampleFrame(); TrackTurn(); }
             AutoEndTurn();
+        }
+
+        /// <summary>
+        /// 采当前回合内的**最长单帧**。
+        ///
+        /// ★为什么必须量这个★（1.5.5 加）
+        ///   1.5.3/1.5.4 量的是「从轮到它到发出第一条指令」的**流逝时间**，
+        ///   五个卫兵测出来 380~465 毫秒、均匀得很。可玩家的观感是
+        ///   「第一个卫兵动的时候卡一下，后面几个还好」——**和数据矛盾**。
+        ///
+        ///   矛盾说明量错了东西。同样是 400 毫秒，有两种完全不同的情况：
+        ///       主线程被同步计算卡死 400 毫秒  → 画面冻住，这才叫卡
+        ///       平滑等待 400 毫秒              → 动画照跑、镜头在移，只是它在想
+        ///   流逝时间分不清这两者，**单帧时长可以**：
+        ///       最长单帧 ≈ 决策耗时   ⇒ 卡死
+        ///       最长单帧 ≈ 16~33 ms   ⇒ 平滑等待，观感不卡
+        ///
+        /// 每帧一次浮点比较，可以忽略。
+        /// </summary>
+        private static void SampleFrame()
+        {
+            if (_thinkKey == null) return;
+            try
+            {
+                float dt = UnityEngine.Time.deltaTime;
+                if (dt > _frameMax) _frameMax = dt;
+            }
+            catch { }
         }
 
         /// <summary>
@@ -129,10 +157,79 @@ namespace DynastyRetinue
         /// </summary>
         private static string _lastTurnKey;
 
-        /// <summary>AI 决策耗时探针的状态；超过这个毫秒数才记一行。</summary>
+        /// <summary>AI 决策耗时探针的状态；超过这个毫秒数才逐条记一行。</summary>
         private const float ThinkWarnMs = 250f;
         private static string _thinkKey, _thinkName;
         private static float _thinkAt;
+        private static bool _thinkOurs;
+
+        /// <summary>
+        /// 决策耗时的两侧统计 —— 卫兵 vs 其它单位（敌人/中立）。
+        /// ★没有基线就下不了结论★ 单看「卫兵想了 400 毫秒」说明不了任何事，
+        /// 必须知道同一场战斗里敌人想多久。战斗结束时一并打印。
+        /// </summary>
+        /// <summary>
+        /// 单帧时长的观感分档。**按绝对值**，60 fps 下一帧是 16.7 ms。
+        /// 不要再用「占决策的比例」——那把「决策久」和「掉帧」混成了一件事。
+        /// </summary>
+        private static string FrameVerdict(float fr)
+        {
+            if (fr < 50f)  return "　（平滑，观感不卡）";
+            if (fr < 120f) return $"　（轻微掉帧，约 {fr / 16.7f:F0} 帧）";
+            return $"　★明显卡顿：连掉约 {fr / 16.7f:F0} 帧★";
+        }
+
+        private static int _oursN, _themN;
+        private static float _oursSum, _oursMax, _themSum, _themMax;
+        /// <summary>同上，但统计的是每个回合内的**最长单帧**——用来分辨「卡死」和「平滑等待」。</summary>
+        private static float _frameMax, _oursFrSum, _oursFrMax, _themFrSum, _themFrMax;
+
+        private static void ResetThinkStats()
+        {
+            _thinkKey = null; _thinkName = null; _thinkOurs = false; _frameMax = 0f;
+            _oursN = _themN = 0;
+            _oursSum = _oursMax = _themSum = _themMax = 0f;
+            _oursFrSum = _oursFrMax = _themFrSum = _themFrMax = 0f;
+        }
+
+        /// <summary>战斗总账里的那一行对比。没采到样本就不打。</summary>
+        private static string ThinkSummary()
+        {
+            if (_oursN == 0 && _themN == 0) return null;
+            string a = _oursN > 0
+                ? $"卫兵 {_oursN} 次　决策均 {_oursSum / _oursN:F0}/峰 {_oursMax:F0} ms　最长单帧均 {_oursFrSum / _oursN:F0}/峰 {_oursFrMax:F0} ms"
+                : "卫兵 无样本";
+            string b = _themN > 0
+                ? $"其它单位 {_themN} 次　决策均 {_themSum / _themN:F0}/峰 {_themMax:F0} ms　最长单帧均 {_themFrSum / _themN:F0}/峰 {_themFrMax:F0} ms"
+                : "其它单位 无样本";
+
+            // ★先判「是不是真卡」，再判「是不是我们的锅」★
+            //   玩家观感是「第一个卫兵卡一下，后面还好」，而决策耗时五个都是 400 ms 上下 ——
+            //   矛盾只能由单帧时长解释：同样 400 ms，卡死和平滑等待手感天差地别。
+            string verdict;
+            if (_oursN == 0) verdict = "（没采到卫兵样本，这一场判不了）";
+            else
+            {
+                float fr = _oursFrSum / _oursN;
+                // ★两件事分开判★ 决策久 ≠ 掉帧，见 FrameVerdict。
+                verdict = fr >= 120f
+                    ? $"★掉帧：卫兵回合最长单帧均 {fr:F0} ms（约 {fr / 16.7f:F0} 帧）、峰 {_oursFrMax:F0} ms —— 这才是玩家感觉到的那一下。"
+                    : $"掉帧不明显：最长单帧均 {fr:F0} ms / 峰 {_oursFrMax:F0} ms。";
+                if (_themN > 0)
+                {
+                    float ro = _oursSum / _oursN, rt = _themSum / _themN;
+                    float ft = _themFrSum / _themN;
+                    verdict += ro <= rt * 1.5f
+                        ? $"\n      决策耗时两边同量级（卫兵 {ro:F0} vs 其它 {rt:F0} ms）⇒ 原版 AI 的固有代价，不是本 mod 造成的。"
+                        : $"\n      卫兵决策约为其它单位的 {ro / rt:F1} 倍（{ro:F0} vs {rt:F0} ms）⇒ 是我们把单位配得太重。";
+                    verdict += ft > 0.01f
+                        ? $"\n      掉帧两边对比：卫兵均 {fr:F0} / 其它均 {ft:F0} ms"
+                          + (fr <= ft * 1.5f ? "　同量级，也是原版的。" : $"　卫兵约 {fr / ft:F1} 倍。")
+                        : "";
+                }
+            }
+            return "  AI 决策耗时　" + a + "\n              " + b + "\n      " + verdict;
+        }
         private static void TrackTurn()
         {
             try
@@ -147,28 +244,31 @@ namespace DynastyRetinue
                 if (key == null || key == _lastTurnKey) return;   // 还是同一个人的回合
                 _lastTurnKey = key;
 
-                if (!IsOurs(cur)) return;                          // 别人的回合，只更新游标
-                RowFor(cur).Turns++;
-
                 // ★AI 想了多久 —— 常驻探针★
                 //   玩家反馈「快速战斗时每次轮到卫队都卡一下」。把我们订阅的全部
                 //   游戏事件和 Harmony 目标过了一遍，**没有一个挂在回合开始上**
                 //   （见 HandleUnitCommandDidStart 的 IsOurs 注释：那条路径是 O(1)）。
-                //   所以嫌疑落在「AI 给每个可用技能对每个目标打分」上 ——
-                //   队友是玩家操控的不需要决策，卫兵是 AI，而我们的 T3 精英是 55 级、
-                //   天赋和灵能一大堆。
-                //
+                //   所以嫌疑落在「AI 给每个可用技能对每个目标打分」上。
                 //   与其继续猜，不如量：从「轮到它」到「它发出第一条指令」的时间差
                 //   就是决策耗时。
                 //
-                //   ★为什么这条不挂在详细日志下★ 它只在真的卡了（超过阈值）才记一行，
-                //   一个回合最多一行，不会刷屏；而这种偶发问题恰恰是玩家不会
-                //   专门开日志去复现的。默认能抓到才有意义。
+                //   ★必须连敌人一起量★ 1.5.2 只量了自己人，测出 380~465 毫秒，
+                //   可**没有基线就下不了结论** —— 敌人也是 AI 控制的。
+                //   若敌人同样要想 400 毫秒，那这就是原版 AI 的固有代价，
+                //   我们的卫兵并不特殊，玩家感觉到只是因为五个卫兵**连着**行动
+                //   （2.1 秒连续等待），而敌人的回合是穿插的、本来就预期它要想。
+                //   两者差得远才说明是我们把单位配得太重。
+                //
                 //   ★realtimeSinceStartup 只能用来记日志★ 真实时间不是同步量，
                 //   任何进判定的地方都不许用它（StuckWatch 头注有同一条教训）。
                 _thinkKey = key;
                 _thinkAt = UnityEngine.Time.realtimeSinceStartup;
-                _thinkName = RowFor(cur).Name;
+                _thinkOurs = IsOurs(cur);
+                _thinkName = _thinkOurs ? RowFor(cur).Name : null;
+                _frameMax = 0f;                                    // 新回合，重新采最长单帧
+
+                if (!_thinkOurs) return;                           // 别人的回合，只更新游标
+                RowFor(cur).Turns++;
             }
             catch { }
         }
@@ -209,10 +309,11 @@ namespace DynastyRetinue
             {
                 if (command == null) return;
                 var u = command.Executor as BaseUnitEntity;
-                if (u == null || !IsOurs(u)) return;
+                if (u == null) return;
 
                 // ★结算 AI 决策耗时★ 见 TrackTurn 里那段说明。
-                //   只认这个回合的第一条指令；超过阈值才记，一回合最多一行。
+                //   ★这一段必须在 IsOurs 门禁之前★ 敌人的耗时正是我们要的基线。
+                //   代价仍是 O(1)：一次字符串比较，不遍历任何东西。
                 if (_thinkKey != null)
                 {
                     string uid = null;
@@ -221,14 +322,26 @@ namespace DynastyRetinue
                     {
                         _thinkKey = null;
                         float ms = (UnityEngine.Time.realtimeSinceStartup - _thinkAt) * 1000f;
-                        if (ms >= ThinkWarnMs)
-                            Main.Log($"[卡顿] {_thinkName} 的回合：从轮到它到发出第一条指令用了 "
-                                   + $"{ms:F0} 毫秒。这段时间几乎全是 AI 在给技能打分——"
-                                   + $"本 mod 在回合开始时不执行任何代码。数值随可用技能数增长，"
-                                   + $"所以 T3 精英会比 T1 卫兵明显。");
+                        float fr = _frameMax * 1000f;
+                        if (_thinkOurs) { _oursN++; _oursSum += ms; if (ms > _oursMax) _oursMax = ms;
+                                          _oursFrSum += fr; if (fr > _oursFrMax) _oursFrMax = fr; }
+                        else            { _themN++; _themSum += ms; if (ms > _themMax) _themMax = ms;
+                                          _themFrSum += fr; if (fr > _themFrMax) _themFrMax = fr; }
+
+                        // ★调查已结案，这两条收进详细日志★
+                        //   2026-08-24 实测定案：卫兵决策 482 ms vs 敌人 500 ms —— 敌人还慢一点，
+                        //   同量级，是原版 AI 的固有代价，与本 mod 无关（结论已封档）。
+                        //   测量本身很便宜（两个时间戳 + 每帧一次浮点比较），留着以备再有人报卡；
+                        //   但默认日志里不该再出现 —— 每回合一行，纯噪音。
+                        //   要复查就打开「详细日志」。
+                        if (_thinkOurs && ms >= ThinkWarnMs
+                            && Main.Settings != null && Main.Settings.WatchMomentum)
+                            Main.Log($"[卡顿] {_thinkName} 的回合：决策 {ms:F0} ms，其中最长单帧 {fr:F0} ms"
+                                   + FrameVerdict(fr));
                     }
                 }
 
+                if (!IsOurs(u)) return;
                 var row = RowFor(u);
                 var ua = command as UnitUseAbility;
                 if (ua == null)
@@ -357,6 +470,10 @@ namespace DynastyRetinue
 
                 var sb = new StringBuilder();
                 sb.AppendLine("======== 战斗行为总账（" + why + "）========");
+                var think = ThinkSummary();
+                // 同上：结案后收进详细日志，别占默认日志的版面。
+                if (think != null && Main.Settings != null && Main.Settings.WatchMomentum)
+                    sb.AppendLine(think);
                 sb.AppendLine("  ★「武器」只统计挂着武器实体的攻击；很多单位的射击是**技能式武器攻击**"
                             + "（如 Sororitas_HBolter_RapidFire_Ability），它们计入「攻击技」。"
                             + "判断有没有在打人要看 **攻击合计 = 武器 + 攻击技**。★");

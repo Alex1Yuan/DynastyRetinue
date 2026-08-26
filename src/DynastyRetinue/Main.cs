@@ -25,6 +25,20 @@ namespace DynastyRetinue
             RotateLog();
             Settings = UnityModManager.ModSettings.Load<Settings>(modEntry);
 
+            // ★启动横幅★ 每次加载一行，无条件写。
+            //   缺了它排查会非常别扭：2026-08-23 那次「AI 耗时探针没数据」，
+            //   我是靠「补丁挂载那几行不在日志里」反推出「游戏没重启、新 DLL 根本没加载」的。
+            //   替换 DLL 对已在运行的进程无效，而日志会若无其事地继续追加，
+            //   看起来就像新版本跑过了却什么都没记。
+            //   玩家报 bug 时同理 —— 拿到一份日志却不知道是哪个版本产生的。
+            try
+            {
+                Log("[启动] Dynasty Retinue & Refit v" + modEntry.Info.Version
+                  + "　—— 看到这一行才说明这个版本真的被加载了。"
+                  + "若日志里没有它，说明游戏没重启、内存里还是旧程序集。");
+            }
+            catch { }
+
             // ★迁移：清掉已废弃的手动字体覆盖★
             //   1.0.33–1.0.35 提供过「换一个字体」，有玩家会停在 HintFont
             //   （含 fallback 覆盖只有 14/55，真会缺字）。开关已移除，
@@ -1522,6 +1536,9 @@ namespace DynastyRetinue
             // brain 已并进 GearTool 的每组日志。留一个入口，少一次误点、少一半时间。
             if (Btn("探测 brain", 110f)) BrainTool.Probe();
             if (Btn("探测候选单位", 120f)) Probe.ProbeUnits();
+            // 血量不是蓝图字段（由组件+属性推导），离线抽不出来，只能生成实体才读得到。
+            // 而候选单位分散在不同任务场景，UnitInspect 又只列当前区域 —— 所以单独开一个。
+            if (Btn("测传奇候选血量", 150f)) LegendProbe.Run();
             // 开发区的按钮不进本地化表 —— 这里的文案只给作者看
             if (Btn("字体覆盖检查", 120f)) FontCheck.Run();
             // 职业链探测是真把单位一级级推上去 —— 55 级存档上全量跑会卡几分钟。
@@ -1978,6 +1995,17 @@ namespace DynastyRetinue
         /// 没这个的话卫兵会永远留在上一个房间。战斗中一律不触发。
         /// </summary>
         public bool StuckRescue = true;
+
+        /// <summary>
+        /// 非战斗状态下卫兵是否与队友一样自动回满血。
+        ///
+        /// 默认开：玩家反馈「卫队回到飞船上不会自动回血」——那是因为原版这条
+        /// 判据是 `IsInPlayerParty`，而卫兵刻意不挂 UnitPartCompanion
+        /// （挂了会变成玩家可直控，就不是 AI 卫队了），于是一直被挡在外面。
+        /// 见 GuardHealPatch。
+        /// ★这是规则改动★ 会进联机设置指纹，两名玩家必须一致。
+        /// </summary>
+        public bool GuardAutoHeal = true;
 
         /// <summary>
         /// 【已废弃，仅用于迁移】曾经的手动字体覆盖。
