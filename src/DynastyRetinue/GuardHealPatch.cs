@@ -47,7 +47,7 @@ namespace DynastyRetinue
     [HarmonyPatch(typeof(HealthController), "HandleUnitStartTurn")]
     internal static class GuardHealPatch
     {
-        private static bool _logged, _warned;
+        private static bool _logged, _seen, _warned;
 
         private static void Postfix(bool isTurnBased)
         {
@@ -61,6 +61,21 @@ namespace DynastyRetinue
                 var me = EventInvokerExtensions.MechanicEntity;
                 var u = me as BaseUnitEntity;
                 if (u == null || !RetinueRegistry.IsGuard(u)) return;
+
+                // ★两条日志必须分开★
+                //   只记「真的回了血」的话，日志空白有两种可能，而它们要做的事完全不同：
+                //     ① 事件压根没给卫兵触发（实体级订阅，卫兵不是 companion，有可能收不到）
+                //        ⇒ 这个挂载点无效，得换做法
+                //     ② 事件来了，但卫兵没受伤所以无事可做
+                //        ⇒ 补丁是好的，只是没机会表现
+                //   新招的卫兵恒为满血，所以②是最常见的情况 —— 分不清就会误判成①。
+                if (!_seen)
+                {
+                    _seen = true;
+                    Main.Log("[卫兵回血] 挂载点有效：HandleUnitStartTurn 确实会为卫兵触发。"
+                           + "（这一行只说明钩子通了，不代表回了血 —— 满血时本来就无事可做）");
+                    Main.FlushLog(true);
+                }
 
                 // ★除了阵营判据，其余条件与原版逐条一致★
                 if (Game.Instance != null && Game.Instance.IsSpaceCombat) return;

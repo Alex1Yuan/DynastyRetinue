@@ -328,13 +328,14 @@ namespace DynastyRetinue
                         else            { _themN++; _themSum += ms; if (ms > _themMax) _themMax = ms;
                                           _themFrSum += fr; if (fr > _themFrMax) _themFrMax = fr; }
 
-                        // 逐条只记自己人的离群值；基线在战斗结束时汇总打印，免得敌人刷屏。
-                        // ★掉帧感看绝对值，不看比例★（1.5.6 更正）
-                        //   1.5.5 用的判据是「单帧 ≥ 决策的一半」，于是
-                        //   「决策 835 ms / 单帧 167 ms」被标成「平滑等待，观感不卡」——
-                        //   可 60 fps 下一帧该是 16 ms，167 ms 是连掉 10 帧，那绝对看得见。
-                        //   比例判据把「决策久」和「掉帧」混成了一件事，实际是两件。
-                        if (_thinkOurs && ms >= ThinkWarnMs)
+                        // ★调查已结案，这两条收进详细日志★
+                        //   2026-08-24 实测定案：卫兵决策 482 ms vs 敌人 500 ms —— 敌人还慢一点，
+                        //   同量级，是原版 AI 的固有代价，与本 mod 无关（结论已封档）。
+                        //   测量本身很便宜（两个时间戳 + 每帧一次浮点比较），留着以备再有人报卡；
+                        //   但默认日志里不该再出现 —— 每回合一行，纯噪音。
+                        //   要复查就打开「详细日志」。
+                        if (_thinkOurs && ms >= ThinkWarnMs
+                            && Main.Settings != null && Main.Settings.WatchMomentum)
                             Main.Log($"[卡顿] {_thinkName} 的回合：决策 {ms:F0} ms，其中最长单帧 {fr:F0} ms"
                                    + FrameVerdict(fr));
                     }
@@ -470,7 +471,9 @@ namespace DynastyRetinue
                 var sb = new StringBuilder();
                 sb.AppendLine("======== 战斗行为总账（" + why + "）========");
                 var think = ThinkSummary();
-                if (think != null) sb.AppendLine(think);
+                // 同上：结案后收进详细日志，别占默认日志的版面。
+                if (think != null && Main.Settings != null && Main.Settings.WatchMomentum)
+                    sb.AppendLine(think);
                 sb.AppendLine("  ★「武器」只统计挂着武器实体的攻击；很多单位的射击是**技能式武器攻击**"
                             + "（如 Sororitas_HBolter_RapidFire_Ability），它们计入「攻击技」。"
                             + "判断有没有在打人要看 **攻击合计 = 武器 + 攻击技**。★");
