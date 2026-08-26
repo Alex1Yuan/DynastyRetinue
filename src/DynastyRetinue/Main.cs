@@ -1550,6 +1550,9 @@ namespace DynastyRetinue
             if (Btn("测机械教候选", 130f)) LegendProbe.RunMech();
             // 看模型用：生成后**留在原地**。区域实体会进存档，所以旁边就是清理按钮。
             if (Btn("摆出机械教候选（看模型）", 190f)) LegendProbe.Show();
+            // 本体备选：首轮实测发现本体那两个只有 51/54 血，而 DLC3 对应单位是 152~423，
+            // 差 3~8 倍。兜底链不能这么配，所以另挑 16 个覆盖三个角色的再测一轮。
+            if (Btn("摆出本体备选（兜底用）", 180f)) LegendProbe.ShowBase();
             if (Btn("清理候选", 100f)) LegendProbe.ClearShown();
             // 开发区的按钮不进本地化表 —— 这里的文案只给作者看
             if (Btn("字体覆盖检查", 120f)) FontCheck.Run();

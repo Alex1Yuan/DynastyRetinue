@@ -82,8 +82,42 @@ namespace DynastyRetinue
             { "ef3a6e0349f140828e15c524b85706b8", "本体·电僧（远古反应堆）","Medium" },
         };
 
+        /// <summary>
+        /// 本体（非 DLC3）机械教备选 —— 专为兜底链挑的。
+        ///
+        /// ★为什么要单独一组★ 首轮实测发现本体备选血量崩了：
+        ///     DLC3   技工 152 / 护教军游骑兵 297 / 高阶助祭 423
+        ///     本体   可疑的技术神甫 51 / 远古反应堆电僧 54
+        /// 差 3~8 倍。没启用 DLC3 的玩家会招到明显弱一大截的卫兵，
+        /// 而现有五条线的注释都承诺「功能不受影响，只是外观和自带能力会跟精英同款」——
+        /// 血量差 8 倍显然不叫「功能不受影响」。
+        ///
+        /// 所以从全库 111 个「本体 + 机械教主题 + 带 brain」里挑了 16 个覆盖三个角色的，
+        /// 优先 Mobs 阵营（真会打的），一次测出血量再定兜底链。
+        /// </summary>
+        private static readonly string[,] BaseGame =
+        {
+            { "4eeb0a3e89fd47e59bae8759c530329d", "技工·塔尔祖斯",       "Medium" },
+            { "0a7e17bde9c943a6a4db4362da861ee1", "技工·狂乱",           "Medium" },
+            { "f5de71120c8a46b48b38e47dec7073de", "技工·腐化电弧",       "Medium" },
+            { "0a51a4a887db48a1bc66aa8b4d03e008", "技工·附身",           "Medium" },
+            { "3b59e14549cf4cdeb75a20fad85a748c", "游骑兵·塔尔祖斯近战", "Medium" },
+            { "d6c51b2891764ae1b177d65623066f37", "游骑兵·塔尔祖斯远程", "Medium" },
+            { "14c191894a4245149eebe8ac911d555c", "游骑兵·不朽近战",     "Medium" },
+            { "84a354589be241598c28289bfcbd7c13", "游骑兵·不朽远程",     "Medium" },
+            { "ac64204409e7448e9204f74b4913f318", "游骑兵·腐化动力",     "Medium" },
+            { "93420269f45f4b45a8cb376ed01c298b", "教士·狂乱逻辑",       "Medium" },
+            { "3c5c7c0e9c87489dafba65a45961a4db", "教士·废船疯Magos",    "Medium" },
+            { "1b2ad836f8cd437790f32a6c269110ed", "教士·疯狂",           "Medium" },
+            { "2711d4883bb24692afaf1e8a3ab4335f", "教士·黑暗Magos",      "Medium" },
+            { "906197899b9d40d8b1f0189a57fbd7b2", "教士·异端匠人",       "Medium" },
+            { "d8e940ea190a47d6b2d4e3ce9203f058", "教士·奎兹阿尔",       "Medium" },
+            { "9c409b4c473f454b91085d56264acb76", "锈行者·混沌近战",     "Medium" },
+        };
+
         public static void Run() { Run(Candidates, false); }
         public static void RunMech() { Run(Mechanicus, false); }
+        public static void ShowBase() { Run(BaseGame, true); }
 
         /// <summary>
         /// 把候选生成出来**留在原地**供肉眼看模型。
