@@ -306,19 +306,21 @@ namespace DynastyRetinue
         ///   但「嫌疑最大」不等于「就是它」——这一轮我已经因为拿像的假设当结论栽过两次。
         ///   所以记一行真实规模：几十个说明代价可以忽略、要另找；几百上千就说明找对了。
         ///
-        /// 只记一次，且只在规模真的大的时候记 —— 免得变成新的噪音。
+        /// 只记一次。
+        /// ★阈值曾经设成 300，结果一行都没打出来 —— 那既可能是「规模很小、我猜错了」，
+        ///   也可能是「压根没调到」。1.5.13 起无条件记，先把真实数字拿到手再说。
         /// </summary>
         private static bool _scanLogged;
 
         private static void LogScanSizeOnce(int scanned, int guards)
         {
-            if (_scanLogged || scanned < 300) return;
+            if (_scanLogged) return;
             _scanLogged = true;
             try
             {
                 Main.Log("[名册] 一次全量扫描要过 " + scanned + " 个实体，其中卫兵 " + guards + " 名。"
                        + "\n    这个数越大，把 All() 放在每帧/每秒路径上的代价越高。"
-                       + "\n    StuckWatch 已改为 10 秒刷新一次名单（1.5.12），过图和遣散会立刻失效重建。");
+                       + "\n    几百上千 ⇒「走路掉帧」的诊断成立；只有几十 ⇒ 我找错方向，得回头重查。");
                 Main.FlushLog(true);
             }
             catch { }
