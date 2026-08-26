@@ -59,28 +59,6 @@ namespace DynastyRetinue
             { "bd3f39c5ab5649c8a27e49517ed6d5c0", "灵能·DLC3 审判官 死灵线",       "Medium" },
         };
 
-        /// <summary>
-        /// 机械教候选。DLC3 Opticon 那一整套（两派各自成组）+ 几个本体备选。
-        /// 本体备选是给没启用 DLC3 的玩家兜底用的，必须一并看模型 ——
-        /// 现有五条线的注释都写着「没启用 DLC3 时依次退到…」，不配兜底那批玩家会招到默认甲板卫兵。
-        /// </summary>
-        private static readonly string[,] Mechanicus =
-        {
-            { "a92cdde1068c4609b437cd5a22f8b3b0", "教条·机仆",          "Medium" },
-            { "d74728f897ef4b0a85978e25f43ea155", "教条·战斗机仆",      "Medium" },
-            { "737fc140e70f4ac08b642a67deef64a4", "教条·电子修士",      "Medium" },
-            { "4c77d8f0acc2473cadd14ae869aac708", "教条·技工",          "Medium" },
-            { "bd8e6264794945cbab40c5201b5fb6f3", "教条·机械教士",      "Medium" },
-            { "aa02b505be774674ae924f19dc17e6f6", "教条·锈行者",        "Medium" },
-            { "23f85cedf62344ff9a077e6106c9e98a", "异端·技工",          "Medium" },
-            { "b8ec45b228034db48d1658e35d59193a", "异端·电子修士",      "Medium" },
-            { "6ab30fcb20954e10be43344314511ca6", "异端·机械教士",      "Medium" },
-            { "ab131771270542b69fb7a687062b39c0", "异端·电僧",          "Medium" },
-            // —— 以下本体（非 DLC3），给兜底链备选 ——
-            { "454847134b48402792be9798bf92b0ca", "本体·殖民地战斗机仆", "Medium" },
-            { "5d7b454772704f8dbbff8c83fe1dcd32", "本体·海盗技术神甫",   "Medium" },
-            { "ef3a6e0349f140828e15c524b85706b8", "本体·电僧（远古反应堆）","Medium" },
-        };
 
         /// <summary>
         /// 本体（非 DLC3）机械教备选 —— 专为兜底链挑的。
@@ -116,20 +94,8 @@ namespace DynastyRetinue
         };
 
         public static void Run() { Run(Candidates, false); }
-        public static void RunMech() { Run(Mechanicus, false); }
         public static void ShowBase() { Run(BaseGame, true); }
 
-        /// <summary>
-        /// 把候选生成出来**留在原地**供肉眼看模型。
-        ///
-        /// ★这个模式会在区域里留下实体，必须清干净★
-        ///   区域状态里的实体是**会进存档**的。所以：
-        ///     · 生成的实体全部记在 _shown 里，「清理候选」按钮一键销毁；
-        ///     · 过图时自动清（RetinueLifecycle 会调 ClearShown）；
-        ///     · 战斗中拒绝生成，免得把它们卷进回合序。
-        ///   即便如此，**看完请立刻点清理，别存档**。日志里也会喊这一句。
-        /// </summary>
-        public static void Show() { Run(Mechanicus, true); }
 
         private static readonly List<BaseUnitEntity> _shown = new List<BaseUnitEntity>();
 
