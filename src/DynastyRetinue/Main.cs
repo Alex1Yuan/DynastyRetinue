@@ -1997,6 +1997,17 @@ namespace DynastyRetinue
         public bool StuckRescue = true;
 
         /// <summary>
+        /// 非战斗状态下卫兵是否与队友一样自动回满血。
+        ///
+        /// 默认开：玩家反馈「卫队回到飞船上不会自动回血」——那是因为原版这条
+        /// 判据是 `IsInPlayerParty`，而卫兵刻意不挂 UnitPartCompanion
+        /// （挂了会变成玩家可直控，就不是 AI 卫队了），于是一直被挡在外面。
+        /// 见 GuardHealPatch。
+        /// ★这是规则改动★ 会进联机设置指纹，两名玩家必须一致。
+        /// </summary>
+        public bool GuardAutoHeal = true;
+
+        /// <summary>
         /// 【已废弃，仅用于迁移】曾经的手动字体覆盖。
         ///
         /// 字段保留是为了**清掉**它：1.0.35 及更早版本的玩家可能选中了
