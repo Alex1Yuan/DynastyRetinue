@@ -337,6 +337,10 @@ namespace DynastyRetinue
         private static void OnUpdate(UnityModManager.ModEntry modEntry, float dt)
         {
             if (!Enabled) return;
+            // ★帧时间监视放最前面★ 每帧一次浮点比较，只在有尖峰的窗口记一行。
+            //   玩家反馈「走路每隔几步顿一下」，而遣散全部卫兵后的 A/B 结果是
+            //   「还有点点、说不清」—— 到这个量级主观感受已经不能当判据，只能量。
+            FrameWatch.Tick();
             // 舰船帧级采样：只在「详细日志」开着时工作，且一次会话最多记 60 条。
             // 放在最前面是因为它自己就有节流，不需要等后面那些判定。
             ShipFrameProbe.Tick();
