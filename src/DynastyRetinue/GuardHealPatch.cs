@@ -49,8 +49,12 @@ namespace DynastyRetinue
     {
         private static bool _logged, _seen, _warned;
 
+        /// <summary>调用计数 —— 只为量频率，由 FrameWatch 按窗口读走并清零。一次自增，可忽略。</summary>
+        internal static int Calls;
+
         private static void Postfix(bool isTurnBased)
         {
+            Calls++;
             try
             {
                 var cfg = Main.Settings;

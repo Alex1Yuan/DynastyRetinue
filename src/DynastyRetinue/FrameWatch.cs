@@ -58,7 +58,11 @@ namespace DynastyRetinue
                 if (now - _winStart < WindowSec) return;
 
                 bool report = _spikes > 0 || !_firstDone;
-                if (report) Report(now - _winStart);
+                // 计数一律取走并清零 —— 哪怕这一窗不报，也不能让它跨窗累积
+                int a = AppearancePatch.Calls; AppearancePatch.Calls = 0;
+                int m = MomentumGroupPatch.Calls; MomentumGroupPatch.Calls = 0;
+                int h = GuardHealPatch.Calls; GuardHealPatch.Calls = 0;
+                if (report) Report(now - _winStart, a, m, h);
 
                 _firstDone = true;
                 _winStart = now; _frames = 0; _spikes = 0; _worst = 0f;
@@ -67,7 +71,7 @@ namespace DynastyRetinue
             catch { }
         }
 
-        private static void Report(float span)
+        private static void Report(float span, int a, int m, int h)
         {
             try
             {
@@ -84,9 +88,16 @@ namespace DynastyRetinue
                     span, _frames, SpikeMs, _spikes, _worst,
                     _buckets[0], _buckets[1], _buckets[2], _buckets[3], _buckets[4], _buckets[5],
                     guards, combat ? "战斗中" : "非战斗")
+                    // ★按卫兵计次的补丁调用频率★
+                    //   上一轮那个「0 卫兵」对照组排除不掉它们 —— 没有卫兵时它们本来就不跑。
+                    //   要知道「多 5 个卫兵的 7 fps」里有多少是我们自己的代码，只能数调用次数。
+                    //   除以窗口秒数就是每秒调用量：几十次可忽略，上万次就是真开销。
+                    + string.Format("\n    本窗补丁调用：外观取 prefab {0} 次（{1:F0}/秒）　"
+                                  + "士气分组 {2} 次（{3:F0}/秒）　回血钩子 {4} 次（{5:F0}/秒）",
+                        a, a / Math.Max(0.001f, span), m, m / Math.Max(0.001f, span),
+                        h, h / Math.Max(0.001f, span))
                     + (_firstDone ? "" : "\n    ★这是第一窗，无条件记录，只为证明监视在跑★"
-                                       + "\n    往后只有出现尖峰的窗口才会记。要判断是不是本 mod 造成的，"
-                                       + "\n    请对比三种状态的尖峰次数：5 名卫兵 / 0 名卫兵 / mod 关掉。"));
+                                       + "\n    往后只有出现尖峰的窗口才会记。"));
                 Main.FlushLog(true);
             }
             catch { }

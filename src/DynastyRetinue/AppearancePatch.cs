@@ -57,8 +57,12 @@ namespace DynastyRetinue
         /// <summary>配表重载后调用，让下次访问重新扫描。</summary>
         public static void Invalidate() { _scanned = false; _cache.Clear(); }
 
+        /// <summary>调用计数 —— 只为量频率，由 FrameWatch 按窗口读走并清零。一次自增，可忽略。</summary>
+        internal static int Calls;
+
         private static void Postfix(PartUnitViewSettings __instance, ref string __result)
         {
+            Calls++;
             // 原版返回 null = 该走 doll 渲染，别碰
             if (string.IsNullOrEmpty(__result)) return;
             try
