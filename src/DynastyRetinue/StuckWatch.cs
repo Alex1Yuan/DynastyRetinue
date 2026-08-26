@@ -162,8 +162,7 @@ namespace DynastyRetinue
                 var leader = game.Player.MainCharacterEntity;
                 if (leader == null) return;
 
-                List<BaseUnitEntity> list;
-                try { list = RetinueRegistry.All(false); } catch { return; }
+                List<BaseUnitEntity> list = Guards(now);
                 if (list == null || list.Count == 0) { if (_rows.Count > 0) _rows.Clear(); return; }
 
                 foreach (var g in list)
@@ -244,6 +243,38 @@ namespace DynastyRetinue
         }
 
         /// <summary>遣散/读档后清账，免得旧 id 一直留在表里。</summary>
-        public static void Reset() { _rows.Clear(); _lastScanTick = 0; _frameSkip = 0; }
+        public static void Reset() { _rows.Clear(); _lastScanTick = 0; _frameSkip = 0; _guards = null; _guardsAt = int.MinValue; }
+
+        /// <summary>
+        /// 卫兵名单，带缓存。
+        ///
+        /// ★为什么必须缓存 —— 玩家实测的掉帧就是这儿来的★
+        ///   RetinueRegistry.All() 每次都要把 CrossSceneState 和当前区域的
+        ///   **全部实体**各拷一份（AllEntityData.ToList()）—— 那不只是单位，
+        ///   还有道具、交互物、灯光，大区域上千个。
+        ///
+        ///   而原来的写法是**每秒**调一次，且调用点在「有没有卫兵」的判断**之前** ——
+        ///   于是一个还没招募过任何卫兵的玩家，在非战斗状态下也一直在每秒拷两份大表。
+        ///   Main.cs 那行「无卫兵时几乎零开销」的注释是错的。
+        ///   周期性大块分配 ⇒ 周期性 GC 尖峰 ⇒ 玩家报的「走几步整个画面顿一下」。
+        ///   而且它只在非战斗时跑，正好对上「在地图上走路时」。
+        ///
+        /// ★为什么 10 秒够★ 卡住检测本身的阈值是 6 秒静止，名单晚十秒更新
+        ///   最多让一名刚招募的卫兵晚一轮被看护，代价可以忽略；
+        ///   而过图和遣散都会走 Reset()，那两个才是名单真正会变的时刻。
+        /// </summary>
+        private const int GuardsRefreshTicks = 10 * TicksPerSecond;
+        private static List<BaseUnitEntity> _guards;
+        private static int _guardsAt = int.MinValue;
+
+        private static List<BaseUnitEntity> Guards(int now)
+        {
+            if (_guards != null && now - _guardsAt >= 0 && now - _guardsAt < GuardsRefreshTicks)
+                return _guards;
+            try { _guards = RetinueRegistry.All(false); }
+            catch { _guards = null; }
+            _guardsAt = now;
+            return _guards;
+        }
     }
 }

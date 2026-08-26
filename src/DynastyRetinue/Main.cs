@@ -374,7 +374,11 @@ namespace DynastyRetinue
                 RetinueLifecycle.TickPending();
                 CombatWatch.Tick();          // 一帧一个 bool 比较，战斗结束那一帧才干活
                 if (Settings.WatchMomentum) MomentumWatch.Tick();
-                StuckWatch.Tick(dt);         // 卡住检测：战斗中直接跳过，无卫兵时几乎零开销
+                StuckWatch.Tick(dt);         // 卡住检测：战斗中直接跳过；名单按 10 秒缓存
+                                             // ★注释曾经写「无卫兵时几乎零开销」，那是错的★
+                                             //   All() 在「有没有卫兵」的判断之前就跑了，
+                                             //   没招过卫兵的玩家也在每秒拷两份完整实体表。
+                                             //   玩家实测「走路每隔几步顿一下」多半就是它，1.5.12 已改。
 
                 // 日志攒在内存里，靠这里定期落盘。没有这一下，安静时段最后那几行
                 // 会一直卡在缓冲区里，玩家去翻日志看不到最新的内容。
