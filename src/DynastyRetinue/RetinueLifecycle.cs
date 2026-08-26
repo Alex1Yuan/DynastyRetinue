@@ -142,6 +142,11 @@ namespace DynastyRetinue
             try { StuckWatch.Reset(); }
             catch (Exception e) { Main.LogError("[卡住] 区域清账异常: " + e.Message); }
 
+            // ★探针留在原地的展示用候选必须清掉★ 区域实体会进存档，
+            //   而作者很可能看完模型就直接过图走人了。这里兜一道。
+            try { LegendProbe.ClearShown(); }
+            catch (Exception e) { Main.LogError("[传奇探针] 过图清理异常: " + e.Message); }
+
             // 招募入口是运行时交互、不进存档，所以每次进区域都要重挂一遍。
             // 放在这里而不是 TickPending 里：它不依赖导航图，也不限于队伍区域
             //（船上那些 NPC 所在的区域不一定被 InPartyArea 认作队伍区域）。

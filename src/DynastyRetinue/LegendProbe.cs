@@ -59,7 +59,60 @@ namespace DynastyRetinue
             { "bd3f39c5ab5649c8a27e49517ed6d5c0", "灵能·DLC3 审判官 死灵线",       "Medium" },
         };
 
-        public static void Run()
+        /// <summary>
+        /// 机械教候选。DLC3 Opticon 那一整套（两派各自成组）+ 几个本体备选。
+        /// 本体备选是给没启用 DLC3 的玩家兜底用的，必须一并看模型 ——
+        /// 现有五条线的注释都写着「没启用 DLC3 时依次退到…」，不配兜底那批玩家会招到默认甲板卫兵。
+        /// </summary>
+        private static readonly string[,] Mechanicus =
+        {
+            { "a92cdde1068c4609b437cd5a22f8b3b0", "教条·机仆",          "Medium" },
+            { "d74728f897ef4b0a85978e25f43ea155", "教条·战斗机仆",      "Medium" },
+            { "737fc140e70f4ac08b642a67deef64a4", "教条·电子修士",      "Medium" },
+            { "4c77d8f0acc2473cadd14ae869aac708", "教条·技工",          "Medium" },
+            { "bd8e6264794945cbab40c5201b5fb6f3", "教条·机械教士",      "Medium" },
+            { "aa02b505be774674ae924f19dc17e6f6", "教条·锈行者",        "Medium" },
+            { "23f85cedf62344ff9a077e6106c9e98a", "异端·技工",          "Medium" },
+            { "b8ec45b228034db48d1658e35d59193a", "异端·电子修士",      "Medium" },
+            { "6ab30fcb20954e10be43344314511ca6", "异端·机械教士",      "Medium" },
+            { "ab131771270542b69fb7a687062b39c0", "异端·电僧",          "Medium" },
+            // —— 以下本体（非 DLC3），给兜底链备选 ——
+            { "454847134b48402792be9798bf92b0ca", "本体·殖民地战斗机仆", "Medium" },
+            { "5d7b454772704f8dbbff8c83fe1dcd32", "本体·海盗技术神甫",   "Medium" },
+            { "ef3a6e0349f140828e15c524b85706b8", "本体·电僧（远古反应堆）","Medium" },
+        };
+
+        public static void Run() { Run(Candidates, false); }
+        public static void RunMech() { Run(Mechanicus, false); }
+
+        /// <summary>
+        /// 把候选生成出来**留在原地**供肉眼看模型。
+        ///
+        /// ★这个模式会在区域里留下实体，必须清干净★
+        ///   区域状态里的实体是**会进存档**的。所以：
+        ///     · 生成的实体全部记在 _shown 里，「清理候选」按钮一键销毁；
+        ///     · 过图时自动清（RetinueLifecycle 会调 ClearShown）；
+        ///     · 战斗中拒绝生成，免得把它们卷进回合序。
+        ///   即便如此，**看完请立刻点清理，别存档**。日志里也会喊这一句。
+        /// </summary>
+        public static void Show() { Run(Mechanicus, true); }
+
+        private static readonly List<BaseUnitEntity> _shown = new List<BaseUnitEntity>();
+
+        /// <summary>销毁「留在原地」模式生成的全部候选。过图时也会被调。</summary>
+        public static void ClearShown()
+        {
+            int n = 0;
+            foreach (var u in _shown)
+            {
+                try { if (u != null) { Game.Instance.EntityDestroyer.Destroy(u); n++; } }
+                catch (Exception e) { Main.LogError("[传奇探针] 清理失败: " + e.Message); }
+            }
+            _shown.Clear();
+            if (n > 0) { Main.Log("[传奇探针] 已清理 " + n + " 个展示用候选。"); Main.FlushLog(true); }
+        }
+
+        private static void Run(string[,] set, bool keep)
         {
             try
             {
@@ -84,28 +137,47 @@ namespace DynastyRetinue
                 if (state == null) { Main.LogError("[传奇探针] 取不到区域状态。"); return; }
 
                 var spawned = new List<KeyValuePair<string, BaseUnitEntity>>();
-                int n = Candidates.GetLength(0);
+                int n = set.GetLength(0);
                 for (int i = 0; i < n; i++)
                 {
-                    string guid = Candidates[i, 0], label = Candidates[i, 1];
+                    string guid = set[i, 0], label = set[i, 1];
                     try
                     {
                         var bp = ResourcesLibrary.TryGetBlueprint<BlueprintUnit>(guid);
                         if (bp == null) { Main.Log("[传奇探针] " + label + "：蓝图解析不到（DLC 没装？） guid=" + guid); continue; }
-                        var u = game.EntitySpawner.SpawnUnit(bp, leader.Position, Quaternion.identity, state);
+                        // ★排开摆放★ 十几个叠在一起没法看模型，横向排开一米一个
+                        var pos = leader.Position + new Vector3((i - n * 0.5f) * 1.6f, 0f, keep ? 3f : 0f);
+                        var u = game.EntitySpawner.SpawnUnit(bp, pos, Quaternion.identity, state);
                         if (u == null) { Main.Log("[传奇探针] " + label + "：SpawnUnit 返回 null。"); continue; }
-                        spawned.Add(new KeyValuePair<string, BaseUnitEntity>(label + "\t" + Candidates[i, 2], u));
+                        spawned.Add(new KeyValuePair<string, BaseUnitEntity>(label + "\t" + set[i, 2], u));
                     }
                     catch (Exception e) { Main.LogError("[传奇探针] " + label + " 生成失败: " + e.Message); }
                 }
 
                 if (spawned.Count == 0) { Main.Log("[传奇探针] 一个都没生成出来。"); return; }
-                Main.Log("[传奇探针] 已生成 " + spawned.Count + " 个，等两帧后读数并立刻销毁……");
 
-                // ★等两帧★ SpawnUnit 延迟入册，当场读会拿到空。
+                if (keep)
+                {
+                    foreach (var kv in spawned) _shown.Add(kv.Value);
+                    Main.Log("[传奇探针] 已生成 " + spawned.Count + " 个候选**留在原地**供查看模型。"
+                           + "\n    ★看完请立刻点「清理候选」★ 区域里的实体是会进存档的，"
+                           + "别带着它们存档。过图也会自动清。"
+                           + "\n    顺序（从左到右）：" + Labels(set));
+                    Main.FlushLog(true);
+                    return;
+                }
+
+                Main.Log("[传奇探针] 已生成 " + spawned.Count + " 个，等两帧后读数并立刻销毁……");
                 Deferred.NextFrames(2, () => ReadAndDestroy(spawned));
             }
             catch (Exception e) { Main.LogError("[传奇探针] 失败: " + e.Message); }
+        }
+
+        private static string Labels(string[,] set)
+        {
+            var sb = new StringBuilder();
+            for (int i = 0; i < set.GetLength(0); i++) { if (i > 0) sb.Append(" | "); sb.Append(set[i, 1]); }
+            return sb.ToString();
         }
 
         private static void ReadAndDestroy(List<KeyValuePair<string, BaseUnitEntity>> spawned)
