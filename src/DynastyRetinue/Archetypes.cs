@@ -911,7 +911,11 @@ namespace DynastyRetinue
         /// 这里照抄 LevelUpManager.AddPathRank 的内部实现（那三行都是 public API）：
         ///   AddPathRank + 把该 rank 的 Features 加上并登记来源。
         /// </summary>
-        private static bool ForceAdvanceRank(BaseUnitEntity guard, BlueprintCareerPath p)
+        /// ★internal 而不是 private★ LegendProbe 要用它测「某个单位能不能上职业路线」——
+        ///   恶魔引擎那类 boss 蓝图未必有 Progression 部件，而这件事离线查不出来
+        ///   （连玩家角色的蓝图都引用 0 个职业路线，说明路线是运行时挂的）。
+        ///   探针复用这里的实现，而不是另抄一份 —— 两份实现早晚会漂。
+        internal static bool ForceAdvanceRank(BaseUnitEntity guard, BlueprintCareerPath p)
         {
             try
             {

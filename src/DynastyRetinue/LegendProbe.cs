@@ -7,6 +7,7 @@ using Kingmaker.EntitySystem;                 // GetHealthOptional 的扩展方�
 using Kingmaker.EntitySystem.Entities;
 using Kingmaker.EntitySystem.Entities.Base;
 using Kingmaker.UnitLogic.Parts;              // PartHealth
+using Kingmaker.UnitLogic.Progression.Paths;  // BlueprintCareerPath
 using UnityEngine;
 
 namespace DynastyRetinue
@@ -110,9 +111,17 @@ namespace DynastyRetinue
         private static void ReadAndDestroy(List<KeyValuePair<string, BaseUnitEntity>> spawned)
         {
             var sb = new StringBuilder();
-            sb.AppendLine("======== 传奇档候选：血量实测 ========");
+            sb.AppendLine("======== 传奇档候选：血量 / 升级能力 实测 ========");
             sb.AppendLine("  ★体型一栏是 tools/units_full.tsv 离线抽的值，与运行时并排列出用于互证★");
-            sb.AppendLine("  候选                                 表里体型     实测体型     最大血量");
+            sb.AppendLine("  ★升级那三列是本轮新增：职业路线能不能上，离线查不出来（连玩家角色的蓝图");
+            sb.AppendLine("    都引用 0 个职业路线，说明路线是运行时挂的），只能生成出来试。★");
+            sb.AppendLine("  候选                                 表里体型     实测体型     基础血  推级后等级  推级后血量");
+
+            // 用近战分型 chain 的第一条（T1）来试推 —— 那是配表里实际在用、已验证的路线
+            BlueprintCareerPath path = null;
+            try { path = ResourcesLibrary.TryGetBlueprint<BlueprintCareerPath>("974496d72fbe4329b438ee15cf004bd2"); }
+            catch { }
+            if (path == null) sb.AppendLine("  ★取不到测试用职业路线，升级那几列会是 -★");
 
             foreach (var kv in spawned)
             {
@@ -120,30 +129,60 @@ namespace DynastyRetinue
                 int t = label.IndexOf('\t');
                 if (t >= 0) { sizeExpect = label.Substring(t + 1); label = label.Substring(0, t); }
 
-                string hp = "?", sizeReal = "?";
+                string hp0 = "?", sizeReal = "?", lv1 = "-", hp1 = "-";
                 var u = kv.Value;
                 try
                 {
                     if (u != null)
                     {
                         var h = u.GetHealthOptional();
-                        if (h != null) hp = h.MaxHitPoints.ToString();
+                        if (h != null) hp0 = h.MaxHitPoints.ToString();
                         try { sizeReal = u.Blueprint != null ? u.Blueprint.Size.ToString() : "?"; } catch { }
+
+                        // ★试着推职业等级★ 能推动 = 这个蓝图支持职业路线。
+                        //   推满 T1（15 级）就够判断，不用推到 55 —— 只是要个能/不能的答案
+                        //   和一个「升级到底给不给血」的量级。
+                        if (path != null)
+                        {
+                            int moved = 0;
+                            for (int i = 0; i < 15; i++)
+                            {
+                                bool ok;
+                                try { ok = Archetypes.ForceAdvanceRank(u, path); } catch { ok = false; }
+                                if (!ok) break;
+                                moved++;
+                            }
+                            try
+                            {
+                                int lv = u.Progression != null ? u.Progression.CharacterLevel : -1;
+                                lv1 = moved > 0 ? (lv + "（推了 " + moved + " 级）") : "★推不动★";
+                            }
+                            catch { lv1 = moved > 0 ? ("?（推了 " + moved + " 级）") : "★推不动★"; }
+                            try
+                            {
+                                var h2 = u.GetHealthOptional();
+                                if (h2 != null) hp1 = h2.MaxHitPoints.ToString();
+                            }
+                            catch { }
+                        }
                     }
                 }
                 catch { }
 
                 bool match = sizeReal == sizeExpect;
-                sb.AppendLine(string.Format("  {0,-36} {1,-11} {2,-11} {3}{4}",
-                    label, sizeExpect, sizeReal, hp, match ? "" : "   ★体型对不上，离线抽取有问题★"));
+                sb.AppendLine(string.Format("  {0,-36} {1,-11} {2,-11} {3,-7} {4,-13} {5}{6}",
+                    label, sizeExpect, sizeReal, hp0, lv1, hp1, match ? "" : "   ★体型对不上★"));
 
                 try { if (u != null) Game.Instance.EntityDestroyer.Destroy(u); }
                 catch (Exception e) { Main.LogError("[传奇探针] 销毁 " + label + " 失败: " + e.Message); }
             }
 
             sb.AppendLine("  —— 全部已销毁。不入名册、不占名额、不进存档。");
-            sb.AppendLine("  ★选型判据★ 同一组里两个单位的血量不要差到 2 倍以上 ——");
-            sb.AppendLine("    配表里狙击线曾经出现 96 vs 256（2.7 倍）的断层，是专门修过的问题。");
+            sb.AppendLine("  ★怎么读★");
+            sb.AppendLine("    · 「推不动」= 该蓝图不支持职业路线，基础血就是它的终值；");
+            sb.AppendLine("      我们的加点流水线对它无效，血量补正只能靠特性或修正值。");
+            sb.AppendLine("    · 能推动的，看「推级后血量 ÷ 基础血」—— 那是升级带来的倍率，");
+            sb.AppendLine("      T1 才 15 级，推到 55 级还会再涨。拿基础血直接比较是不公平的。");
             Main.Log(sb.ToString());
             Main.FlushLog(true);
         }
