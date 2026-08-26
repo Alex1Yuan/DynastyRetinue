@@ -270,12 +270,14 @@ namespace DynastyRetinue
         {
             var result = new List<BaseUnitEntity>();
             var seen = new HashSet<string>(StringComparer.Ordinal);
+            int scanned = 0;
             foreach (var st in States())
             {
                 List<Entity> snapshot;
                 try { snapshot = st.AllEntityData != null ? st.AllEntityData.ToList() : null; }
                 catch { continue; }
                 if (snapshot == null) continue;
+                scanned += snapshot.Count;
 
                 foreach (var e in snapshot)
                 {
@@ -287,7 +289,39 @@ namespace DynastyRetinue
                     if (uid != null && seen.Add(uid)) result.Add(b);
                 }
             }
+            LogScanSizeOnce(scanned, result.Count);
             return result;
+        }
+
+        /// <summary>
+        /// 报一次「这一趟扫了多少实体」。
+        ///
+        /// ★为什么值得记★
+        ///   玩家反馈「装了 mod 之后在地图上走路每隔几步整个画面顿一下，卸载就好了」。
+        ///   最大嫌疑是本方法：它把 CrossSceneState 和当前区域的**全部实体**各拷一份
+        ///   （AllEntityData 不只是单位，还有道具/交互物/灯光），而 StuckWatch
+        ///   原来**每秒**调一次，且调用点在「有没有卫兵」的判断之前 ——
+        ///   连一个卫兵都没招过的玩家也照付。周期性大块分配 ⇒ 周期性 GC 尖峰。
+        ///
+        ///   但「嫌疑最大」不等于「就是它」——这一轮我已经因为拿像的假设当结论栽过两次。
+        ///   所以记一行真实规模：几十个说明代价可以忽略、要另找；几百上千就说明找对了。
+        ///
+        /// 只记一次，且只在规模真的大的时候记 —— 免得变成新的噪音。
+        /// </summary>
+        private static bool _scanLogged;
+
+        private static void LogScanSizeOnce(int scanned, int guards)
+        {
+            if (_scanLogged || scanned < 300) return;
+            _scanLogged = true;
+            try
+            {
+                Main.Log("[名册] 一次全量扫描要过 " + scanned + " 个实体，其中卫兵 " + guards + " 名。"
+                       + "\n    这个数越大，把 All() 放在每帧/每秒路径上的代价越高。"
+                       + "\n    StuckWatch 已改为 10 秒刷新一次名单（1.5.12），过图和遣散会立刻失效重建。");
+                Main.FlushLog(true);
+            }
+            catch { }
         }
 
         /// <summary>已摘牌、等待销毁（或销毁失败）的卫兵。</summary>
