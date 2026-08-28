@@ -35,6 +35,8 @@ namespace DynastyRetinue
         private const float WindowSec = 10f;
 
         private static float _winStart = -1f;
+        /// <summary>上一帧的 realtimeSinceStartup，用来算**未被钳制**的真实帧时间。</summary>
+        private static float _lastNow;
         private static int _frames, _spikes;
         private static float _worst;
         private static bool _firstDone;
@@ -47,9 +49,15 @@ namespace DynastyRetinue
             try
             {
                 float now = Time.realtimeSinceStartup;
-                if (_winStart < 0f) { _winStart = now; return; }
+                if (_winStart < 0f) { _winStart = now; _lastNow = now; return; }
 
-                float ms = Time.deltaTime * 1000f;
+                // ★不能用 Time.deltaTime★
+                //   它被 Time.maximumDeltaTime 钳住（默认 0.3333 秒），所以任何
+                //   ≥333ms 的停顿都读成 333ms —— 实测三个窗口的"最长"都是一模一样的
+                //   333，那是饱和读数不是测量值，真卡 3 秒和真卡 334ms 分不出来。
+                //   realtimeSinceStartup 的差值不受钳制，长停顿才有真实数字。
+                float ms = (now - _lastNow) * 1000f;
+                _lastNow = now;
                 _frames++;
                 if (ms > _worst) _worst = ms;
                 if (ms >= SpikeMs) _spikes++;

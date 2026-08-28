@@ -40,12 +40,68 @@ namespace DynastyRetinue
         ///
         /// 只授予原版 BlueprintFeature，AssetId 本来就存在，不碰存档红线。
         /// </summary>
-        public static int GrantFeatures(BaseUnitEntity g, ChainProbe.Archetype arch)
+        /// <summary>
+        /// 授予分型的先天能力。tier &gt;= 1 时额外处理**按阶位替换**的那一组。
+        ///
+        /// ★为什么不用记账★
+        ///   每次区域加载都会重算，判据全部来自配表 + 卫兵当前身上有什么，
+        ///   不依赖"上次发了哪些"这种需要持久化的状态。好处有三：
+        ///     · 不进存档，也就不可能和存档不一致
+        ///     · 玩家中途改配表（或我们发新版改了配表），下次进区域自动收敛
+        ///     · 读旧档导致阶位回退时，同样自动收敛回低阶那套
+        ///
+        /// ★为什么先撤后发★
+        ///   同一个 guid 可能同时出现在 T1 和 T2 里（作者想让它跨阶保留）。
+        ///   先算出 keep 再算 drop = drop 里天然不含 keep，那种 guid 不会被
+        ///   "撤掉又发回来"地空转一遍，也就不会有一帧的能力闪断。
+        /// </summary>
+        public static int GrantFeatures(BaseUnitEntity g, ChainProbe.Archetype arch, int tier = 0)
         {
-            if (g == null || arch == null || arch.GrantFeatures == null) return 0;
+            if (g == null || arch == null) return 0;
+
+            // ---- 本次应当拥有的 = 常驻 ∪ 本阶位 ----
+            var keep = new List<string>();
+            if (arch.GrantFeatures != null) keep.AddRange(arch.GrantFeatures);
+
+            string[][] tiers = arch.GrantFeaturesTier;
+            if (tier >= 1 && tiers != null)
+            {
+                int idx = tier - 1;
+                if (idx >= 0 && idx < tiers.Length && tiers[idx] != null) keep.AddRange(tiers[idx]);
+
+                // ---- 该撤掉的 = 别的阶位声明过的 − keep ----
+                for (int t = 0; t < tiers.Length; t++)
+                {
+                    if (t == idx || tiers[t] == null) continue;
+                    foreach (var guid in tiers[t])
+                    {
+                        if (string.IsNullOrEmpty(guid)) continue;
+                        string gid = guid.Trim();
+                        if (keep.Contains(gid)) continue;      // 跨阶保留的，别动
+                        try
+                        {
+                            var bp = ResourcesLibrary.TryGetBlueprint<BlueprintFeature>(gid);
+                            if (bp == null) continue;
+                            if (!g.Facts.Contains(bp)) continue;   // 本来就没有，不用撤
+                            g.Progression.Features.Remove(bp);
+                            // ★别直接用 bp.Name★ 有些特性在原版数据里**根本没有显示名** ——
+                            //   比如 Augment_2Metallicization_BlueprintFeature（金属化2）：
+                            //   蓝图只有 431 字节、一个本地化 key 都没有，因为它只是内部管线
+                            //   （挂 Augments_Metallicization_Buff），玩家看到的名字在植入物和 buff 上。
+                            //   直接打 bp.Name 会输出空白，日志上看起来像"解析失败"，
+                            //   但 guid 是好的、功能也正常 —— 白查过一次。退到内部名至少能认出是谁。
+                            Main.Log("  撤销上一阶位能力: "
+                                     + (string.IsNullOrEmpty(bp.Name) ? bp.name : bp.Name));
+                        }
+                        catch (Exception e) { Main.LogError("  撤销天赋失败 " + gid + ": " + e.Message); }
+                    }
+                }
+            }
+
+            // ---- 发 keep 里还没有的 ----
             int n = 0;
             var added = new List<string>();
-            foreach (var guid in arch.GrantFeatures)
+            foreach (var guid in keep)
             {
                 if (string.IsNullOrEmpty(guid)) continue;
                 try
@@ -54,7 +110,7 @@ namespace DynastyRetinue
                     if (bp == null) continue;          // 未启用的 DLC，静默跳过
                     if (g.Facts.Contains(bp)) continue; // 幂等：已有就别再加，否则每次过图叠一层
                     g.Progression.Features.Add(bp);
-                    n++; added.Add(bp.Name);
+                    n++; added.Add(string.IsNullOrEmpty(bp.Name) ? bp.name : bp.Name);   // 同上：没显示名的退到内部名
                 }
                 catch (Exception e) { Main.LogError("  授予天赋失败 " + guid + ": " + e.Message); }
             }
@@ -306,8 +362,24 @@ namespace DynastyRetinue
 
                     if (!slotOk)
                     {
+                        // ★把 CanInsertItem 拆开报★ 它内部是两道检查合并的，
+                        //   只报「槽位不收」分不清是「这个槽现在不让插」还是「这个槽不认这类物品」，
+                        //   而这两者的修法完全不同（前者找锁、后者换物品/开槽位）。
+                        //   实机卡在这里：贤者精英的等离子步枪两个手部套组都不收，
+                        //   而同样的步枪在 T3 普通卫兵身上装得上 —— 差别必须精确到这一层。
+                        string sub = "";
+                        if (unitOk)
+                        {
+                            bool canInsert = false, supported = false;
+                            try { canInsert = slot.IsPossibleInsertItems(); } catch { }
+                            try { supported = slot.IsItemSupported(probe); } catch { }
+                            sub = canInsert
+                                ? (supported ? "槽位不收（两道都过却仍拒，原因未知）"
+                                             : "槽位不收：IsItemSupported=false（这个槽不认这类物品）")
+                                : "槽位不收：IsPossibleInsertItems=false（这个槽当前不让插）";
+                        }
                         why.Add("[" + SlotName(body, slot) + "]"
-                                + (unitOk ? "槽位不收" : "单位不够格 —— " + WhyNotEquippable(bp, g)));
+                                + (unitOk ? sub : "单位不够格 —— " + WhyNotEquippable(bp, g)));
                         continue;
                     }
                     if (bp is BlueprintItemEquipment && !unitOk)
@@ -415,10 +487,22 @@ namespace DynastyRetinue
                             continue;
                         }
 
-                        // 双手武器只能进主手 —— 塞副手要么被拒、要么把主手顶掉
-                        bool twoH = IsTwoHanded(bp);
+                        // ★不再预判「双手武器只能进主手」★
+                        //
+                        //   原来这里写死 `if (!twoH && !MainIsTwoHanded(set))` 才给副手，
+                        //   注释理由是「塞副手要么被拒、要么把主手顶掉」。那是我们的推断，
+                        //   不是游戏规则 —— **弹道机械触须的作用正是让副手能拿双手远程武器**。
+                        //   机械教贤者就卡在这儿：主手拿雷锤（双手），副手因此从未进入候选，
+                        //   日志里只看得到「[套组1主手]/[套组2主手] 槽位不收」，
+                        //   而真正该用的套组1副手一次都没被试过。
+                        //
+                        //   现在两个手位都列为候选，由引擎的 CanInsertItem / IsItemSupported
+                        //   决定收不收 —— 它才是权威，而且它认识触须开出来的例外。
+                        //   顺序仍是「先主手后副手」，所以先发的武器照样占主手，
+                        //   后发的才落副手，落位语义不变。
+                        //   被拒时 1.5.60 那套诊断会说清是哪道检查挡的，不会静默失败。
                         Add(list, set.PrimaryHand, used);
-                        if (!twoH && !MainIsTwoHanded(set)) Add(list, set.SecondaryHand, used);
+                        Add(list, set.SecondaryHand, used);
                     }
                 }
                 return list;

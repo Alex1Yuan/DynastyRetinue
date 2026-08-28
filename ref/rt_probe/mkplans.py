@@ -22,8 +22,8 @@ import json, os, sys, zipfile, collections
 SAVE = r'C:\Users\kyua805\AppData\LocalLow\Owlcat Games\Warhammer 40000 Rogue Trader\Saved Games\Manual_24___________15_38_27.zks'
 AUTOB = r'C:\Users\kyua805\AppData\LocalLow\Owlcat Games\Warhammer 40000 Rogue Trader\UnityModManager\RTAutoBuilder\AutoBuilderSettings.json'
 CATALOG = r'D:\RT_RetinueMod\ref\bbp\catalog.tsv'
-OUT = [r'D:\RT_RetinueMod\src\KgdRetinue\plans.json',
-       r'C:\Users\kyua805\AppData\LocalLow\Owlcat Games\Warhammer 40000 Rogue Trader\UnityModManager\KgdRetinue\plans.json']
+OUT = [r'D:\RT_RetinueMod\src\DynastyRetinue\plans.json',
+       r'C:\Users\kyua805\AppData\LocalLow\Owlcat Games\Warhammer 40000 Rogue Trader\UnityModManager\DynastyRetinue\plans.json']
 
 HOME_SEL = '10fefb03369d430e88b65aabaf68deac'   # HomeworldSelection
 OCC_SEL  = 'ff001e095e7240ac99b40ceb2bdadf0a'   # OccupationSelection
@@ -41,7 +41,13 @@ FROM_SAVE = {
     'UlfarCompanion':         ('ulfar_soldier_veteran',    '乌尔法 · 士兵首席战士'),
     'PascalCompanion':        ('pascal_adept_assassin',    '帕斯卡 · 专家刺客'),
     'IdiraCompanion':         ('idira_adept_assassin',     '伊迪拉 · 专家刺客'),
-    'KibellahCompanion':      ('kibellah_reaper_tactician', '基贝拉 · 收割者战术家'),
+    # ★基贝拉不从存档抽★ 作者存档里她的飞升只点到 rank15（另外五个都到 19），
+    #   于是收割者/战术家/飞升三条路里，飞升 16-19 整段缺失 = 8 个选择点。
+    #   两个近战精英（锈行者/电僧）用的正是这份方案，实测 84 个点里 8 个走回退，
+    #   回退到第③档「无偏好」就是取第一个能选的 —— 点出了链锯武器专家（它们拿的是
+    #   Primitive 族武器，根本吃不到）这种废点。
+    #   RTAutoBuilder 里作者手搭的「战术DLC3」是完整的（飞升到 19），所以改从那边取，
+    #   见下面的 FROM_AUTOB。
     'BoardedShip_Arbites_Clayton_Pregen':
                               ('arbites_soldier_hunter',   '法务官 · 士兵猎首（24级·不完整）'),
     'BoardedShip_Arbites_Bryce_Pregen':
@@ -55,6 +61,9 @@ FROM_AUTOB = [
     ('政委军官（辅助）',   'rt_commissar_officer',   '政委军官（辅助）'),
     ('火杖战士行刑者',     'rt_fire_executioner',    '火杖战士 · 行刑者'),
     ('先锋阿贝拉德',       'rt_abelard_vanguard',    '阿贝拉德 · 先锋'),
+    # id 与显示名跟原来从存档抽的那份保持一致 —— archetypes.json 里两个近战精英
+    # 写的就是 kibellah_reaper_tactician，改了 id 会让它们静默掉回"无方案"。
+    ('战术DLC3',           'kibellah_reaper_tactician', '基贝拉 · 收割者战术家'),
 ]
 
 
@@ -224,7 +233,7 @@ def main():
         print('  %-26s %-3s 条%-4d  %s' % (p['id'], p['level'] or '-', n, segs))
 
     doc = {
-        '_说明': 'KgdRetinue 自带的加点方案。开发期由 ref/rt_probe/mkplans.py 从作者的 55 级存档和 '
+        '_说明': 'DynastyRetinue 自带的加点方案。开发期由 ref/rt_probe/mkplans.py 从作者的 55 级存档和 '
                  'RTAutoBuilder 方案离线抽取而来；运行时 mod 只读这个文件，不读存档、不依赖 RTAutoBuilder，'
                  '开新档即可用。sel = 职业链GUID -> rank -> [特性GUID]。全是原版蓝图，不新增 AssetId。',
         'plans': plans,

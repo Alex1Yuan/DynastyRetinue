@@ -77,6 +77,7 @@ namespace DynastyRetinue
 
         private static void Postfix(object __instance)
         {
+                if (!Main.Enabled) return;   // 关掉 mod 就交还原版（OnToggle 不撤 Harmony 补丁）
             try
             {
                 // ★★ 已停用 —— 单独归零是错的 ★★

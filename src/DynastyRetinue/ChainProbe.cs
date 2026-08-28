@@ -203,6 +203,26 @@ namespace DynastyRetinue
             /// 在发装备**之前**授予 —— 没有对应熟练度的话装备会被 CanBeEquippedBy 拒掉。
             /// 只能填原版 BlueprintFeature 的 GUID，不产生新 AssetId。</summary>
             public string[] GrantFeatures;
+            /// <summary>
+            /// 可选：**按阶位替换**的先天能力。[0]=T1 [1]=T2 [2]=T3，
+            /// 对应配表字段 grantFeaturesT1 / grantFeaturesT2 / grantFeaturesT3。
+            /// 三个字段都不写的分型，行为与扩展前完全一致。
+            ///
+            /// ★与 GrantFeatures 的分工★
+            ///   GrantFeatures      常驻，授予后永不撤销
+            ///   GrantFeaturesTier  阶位专属，升阶时**撤掉别的阶位的、发本阶位的**
+            ///
+            /// 这个分工不是风格问题，是安全问题：**熟练度类的绝不能进阶位表**。
+            /// 升级流水线是拿着"当前已有的天赋"去选后续天赋的（v0.8.1 实测：致命精准
+            /// 的前置就是异形武器熟练度，所以熟练度必须在 ApplyChain 之前发），
+            /// 装备的 CanBeEquippedBy 也查熟练度。把熟练度放进阶位表、升阶时撤掉，
+            /// 结果是"已选天赋的前置悬空 + 手里的武器可能装不回去"，
+            /// 而且这两样都不会报错，只会表现成卫兵莫名其妙变弱。
+            ///
+            /// 阶位表适合放：自带主动技能、被动增益、光环 —— 自成一体、没有别的东西
+            /// 依赖它们的那些。熟练度、种族/关键词类前置一律留在 GrantFeatures。
+            /// </summary>
+            public string[][] GrantFeaturesTier;
             /// <summary>可选：分型级的升级前置（同 EliteDef.PreGrant）。普通卫兵走这条 ——
             /// 它们没有 EliteDef，不给的话分型方案里的学派天赋照样一条都进不来。
             /// 精英自己声明了 preGrant 就用自己的，没声明才回落到这里。</summary>

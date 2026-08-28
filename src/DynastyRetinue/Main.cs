@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Kingmaker.EntitySystem.Entities;   // BaseUnitEntity（逐个改名那段用）
 using Kingmaker.UnitLogic.Parts;         // PartUnitDescription
@@ -337,9 +337,25 @@ namespace DynastyRetinue
         private static void OnUpdate(UnityModManager.ModEntry modEntry, float dt)
         {
             if (!Enabled) return;
-            // ★帧时间监视放最前面★ 每帧一次浮点比较，只在有尖峰的窗口记一行。
-            //   玩家反馈「走路每隔几步顿一下」，而遣散全部卫兵后的 A/B 结果是
-            //   「还有点点、说不清」—— 到这个量级主观感受已经不能当判据，只能量。
+            // ═══════════════════════════════════════════════════════════════
+            // ★★ 往这里加东西之前先读这段 ★★
+            //
+            // 这是每帧路径。1.5.20 之前 StarMapShipModel.Tick 挂在这里，
+            // 它自带 1 秒节流、看起来很规矩 —— 但节流之后干的是
+            // 「遍历场景全部 GameObject × 每个物体全部组件 × 每个组件反射取类型名」，
+            // 而且默认开启、**没有区域闸门**。星图那条船在步行地图上根本不存在，
+            // 于是它每秒把整张图扫到底、找不到、下一秒再来。
+            // 三位玩家报「一个随从都没招也一卡一卡」「关掉 mod 高 5~10 帧」就是它。
+            //
+            // 教训不是「别加节流」—— 它有节流。是**节流只限制频率，不限制单次代价**。
+            // 所以新增的 Tick 必须同时满足：
+            //   1) 最外层有一个 O(1) 的早退闸（设置项 / 区域类型 / 战斗状态），
+            //      让"这个功能现在用不上"的玩家一分钱都不花；
+            //   2) 单次工作量有上界，且**结果要缓存**，稳定态不能重复做同样的事；
+            //   3) 失败要退避，"一直找不到"不能退化成每周期全量重试。
+            // 只满足节流是不够的。
+            // ═══════════════════════════════════════════════════════════════
+            // 帧时间监视：每帧一次浮点比较，只在有尖峰的窗口记一行。
             FrameWatch.Tick();
             // 舰船帧级采样：只在「详细日志」开着时工作，且一次会话最多记 60 条。
             // 放在最前面是因为它自己就有节流，不需要等后面那些判定。
@@ -1021,6 +1037,15 @@ namespace DynastyRetinue
             GUILayout.Label(L.T("<color=#aaaaaa>星图那条船由另一套视图管，模型写死在场景里（还是那个通用低模），"
                               + "跟换船模用的设置完全无关 —— 所以换了大船，星图上仍是原来那条。"
                               + "打开后按当前船模换掉，并按包围盒比例重算缩放（不然大小会突变）。**纯视觉**。</color>"));
+            if (Settings.StarMapShipModel)
+            {
+                Settings.StarMapShipModelSectorMat = GUILayout.Toggle(Settings.StarMapShipModelSectorMat,
+                    L.T("　　└ <b>导航页也换</b>　扇区图上的船影同样跟随船模（画风会变）"));
+                GUILayout.Label(L.T("<color=#aaaaaa>　　导航页那条船用的是给专用低模烘焙的线框特效，塞进普通船模会画成一坨缺角的实心块。"
+                                  + "打开后连材质一起换成星系图那个通用船影，模型就正常了，"
+                                  + "代价是画风从「线框描边」变成「实心全息」，和地图上别人的船不同款。"
+                                  + "关掉则导航页保持原版轮廓。两种都不算坏，看个人喜好。</color>"));
+            }
 
             // ---------- 船的渲染位置 ----------
             GUILayout.Space(8);
@@ -1547,9 +1572,27 @@ namespace DynastyRetinue
             // 血量不是蓝图字段（由组件+属性推导），离线抽不出来，只能生成实体才读得到。
             // 而候选单位分散在不同任务场景，UnitInspect 又只列当前区域 —— 所以单独开一个。
             if (Btn("测传奇候选血量", 150f)) LegendProbe.Run();
-            // 本体备选：首轮实测发现本体那两个只有 51/54 血，而 DLC3 对应单位是 152~423，
-            // 差 3~8 倍。兜底链不能这么配，所以另挑 16 个覆盖三个角色的再测一轮。
-            if (Btn("摆出本体备选（兜底用）", 180f)) LegendProbe.ShowBase();
+            // 机械教线的先天能力：要做成按阶位替换（grantFeaturesT1/T2/T3），
+            // 但蓝图 AddFacts 挂了什么离线抽不出来（要解析组件表），只能生成出来读实体。
+            if (Btn("测机械教先天能力", 160f)) LegendProbe.DumpMechFacts();
+            // 一次导全：DLC3 机械教 13 + 本体候选 16 + 现有五线对照 5，写 mech_candidates.txt。
+            // 之前每加几个候选就要重启进游戏点一次，且每轮只拿到一部分信息 —— 一次导完不用再来回跑。
+            if (Btn("★导出全部候选（写文件）", 200f)) LegendProbe.ExportAll();
+            // 摆出来看模型：分排摆（一排 6 个），日志里按排列清单，好对号入座。
+            // ★看完必须点「清理候选」★ 区域实体会进存档，别带着它们存盘。
+            if (Btn("摆出全部候选（看模型）", 190f)) LegendProbe.ShowAll();
+            // 一键招齐机械教：2 普通 + 4 精英。阶位是全局的（由队长等级定），
+            // 所以同时只能是同一档 —— 想看三档差别得换存档或开「解除等级上限」。
+            if (Btn("★一键招齐机械教（2普通+4精英）", 230f)) RetinueTest.SpawnMechSet();
+            // 读队伍成员实况装备，写 party_gear.txt。蓝图版的帕斯卡/绮贝菈是序章形态
+            // （70/75 血、新手装），毕业装备只存在于作者自己的存档里。
+            if (Btn("导出队伍装备（抄毕业配装）", 200f)) LegendProbe.ExportPartyGear();
+            // 读当前卫兵手里每把武器的 Family/Category/穿甲/附魔，外加技能清单和 brain。
+            // 一次点击定三件事：要不要写长剑判定补丁、穿甲要补多少、冲锋是"没有"还是"有但不用"。
+            if (Btn("★导出武器实况（族/穿甲/附魔）", 230f)) LegendProbe.ExportWeaponFacts();
+            // 杂兵/精英 的说明文字有歧义（两个都写"加值"），而「去不去掉杂兵」要动所有
+            // 老玩家存档里的卫兵 —— 必须读组件数值，不能拿文案当依据。
+            if (Btn("读特性组件数值", 150f)) LegendProbe.DumpFeatureComponents();
             if (Btn("清理候选", 100f)) LegendProbe.ClearShown();
             // 开发区的按钮不进本地化表 —— 这里的文案只给作者看
             if (Btn("字体覆盖检查", 120f)) FontCheck.Run();
@@ -1928,6 +1971,25 @@ namespace DynastyRetinue
         /// 跟换船模用的 PrefabGuid 完全没关系 —— 所以换了大船，星图上还是原来那条。
         /// </summary>
         public bool StarMapShipModel = true;
+
+        /// <summary>
+        /// 扇区图（导航页）上是否连材质一起换。
+        ///
+        /// ★为什么要单独一个开关★ 两张图的渲染方式不一样，只有这张需要动材质：
+        ///     星系图  材质=StarSystem_Ship_Hologramm  着色器=Owlcat/Unlit
+        ///             —— 普通无光照，喂任何网格都能正常画，只换网格就够了
+        ///     扇区图  材质=GlobalMap_Ship_lines       着色器=Shader Graphs/FX_GlobalmapStarship
+        ///             —— 给预烘焙的 Ship_outlined 量身定做的线框特效，
+        ///                塞普通高模进去会画成一坨缺角的实心块（玩家实测「被截断」）
+        ///
+        /// 开着：扇区图复用星系图那个通用船影材质，模型能正常显示，
+        ///       但画风从「线框描边」变成「实心全息」，和地图上别人的船不同款。
+        /// 关掉：扇区图保持原版轮廓（护卫舰线框），不受换船模影响。
+        ///
+        /// 默认开 —— 换了船模却在导航页看不到，比画风不统一更让人困惑。
+        /// 觉得实心全息难看就关掉，两种都不算坏。
+        /// </summary>
+        public bool StarMapShipModelSectorMat = false;
 
         /// <summary>
         /// 修正海战武器范围的焦点（见 ShipRangeFocusPatch）。

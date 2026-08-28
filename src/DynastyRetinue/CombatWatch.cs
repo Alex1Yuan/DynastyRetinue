@@ -103,7 +103,7 @@ namespace DynastyRetinue
             try { now = Game.Instance != null && Game.Instance.Player != null && Game.Instance.Player.IsInCombat; }
             catch { return; }
 
-            if (now && !_wasInCombat) { _rows.Clear(); _lastTurnKey = null; ResetThinkStats(); }      // 开打：清空上一场
+            if (now && !_wasInCombat) { _rows.Clear(); _lastTurnKey = null; ResetThinkStats(); WeaponGate.ResetHits(); }      // 开打：清空上一场
             else if (!now && _wasInCombat)
             {
                 Dump("战斗结束");
@@ -525,6 +525,7 @@ namespace DynastyRetinue
                     if (noTurn > 0)
                         sb.AppendLine("  （另有 " + noTurn + " 名整场没轮到，先攻序靠后 + 战斗结束得早，不用管）");
                 }
+                WeaponGate.ReportHits(sb);
                 Main.Log(sb.ToString());
             }
             catch (Exception e) { Main.LogError("[战斗记录] 导出失败: " + e); }

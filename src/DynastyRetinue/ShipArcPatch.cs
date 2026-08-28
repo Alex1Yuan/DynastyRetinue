@@ -49,6 +49,7 @@ namespace DynastyRetinue
 
         private static void Prefix(OrientedPatternData pattern, bool buildPrimaryArea)
         {
+                if (!Main.Enabled) return;   // 关掉 mod 就交还原版（OnToggle 不撤 Harmony 补丁）
             try
             {
                 var s = Main.Settings;

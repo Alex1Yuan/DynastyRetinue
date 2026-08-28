@@ -233,6 +233,14 @@ namespace DynastyRetinue
                     a.GuardNames = ReadGuidList(item["guardNames"]);   // 复用同一个字符串数组读法
                     a.GuardNamesEn = ReadGuidList(item["guardNames_en"]);
                     a.GrantFeatures = ReadGuidList(item["grantFeatures"]);
+                    // 按阶位替换的先天能力（见 ChainProbe.Archetype.GrantFeaturesTier 的分工说明）。
+                    // 三个字段都不写时这里是三个 null，GearTool 会走和扩展前一样的分支。
+                    a.GrantFeaturesTier = new string[3][]
+                    {
+                        ReadGuidList(item["grantFeaturesT1"]),
+                        ReadGuidList(item["grantFeaturesT2"]),
+                        ReadGuidList(item["grantFeaturesT3"]),
+                    };
                     a.PreGrant      = ReadGuidList(item["preGrant"]);
 
                     // 多精英：一个分型可以有若干个顶级人物，各有自己的单位/名字/装备/链。

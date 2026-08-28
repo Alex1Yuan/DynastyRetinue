@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Reflection;
 using HarmonyLib;
 using Kingmaker.EntitySystem.Entities;
@@ -462,6 +462,7 @@ namespace DynastyRetinue
 
         private static void Prefix(StarshipEntity starship)
         {
+                if (!Main.Enabled) return;   // 关掉 mod 就交还原版（OnToggle 不撤 Harmony 补丁）
             ShipMarkerAlign.InMarkerScope = true;
             ShipMarkerAlign.MarkerShip = starship;
         }
@@ -533,6 +534,7 @@ namespace DynastyRetinue
 
         private static void Postfix(object __instance)
         {
+                if (!Main.Enabled) return;   // 关掉 mod 就交还原版（OnToggle 不撤 Harmony 补丁）
             try
             {
                 var cfg = Main.Settings;
@@ -670,6 +672,7 @@ namespace DynastyRetinue
 
         private static void Prefix(object __instance)
         {
+                if (!Main.Enabled) return;   // 关掉 mod 就交还原版（OnToggle 不撤 Harmony 补丁）
             try
             {
                 if (__instance == null) return;
@@ -681,6 +684,7 @@ namespace DynastyRetinue
 
         private static void Postfix(object __instance)
         {
+                if (!Main.Enabled) return;   // 关掉 mod 就交还原版（OnToggle 不撤 Harmony 补丁）
             try
             {
                 var cfg = Main.Settings;
@@ -833,6 +837,7 @@ namespace DynastyRetinue
         private static void Prefix(object __instance, Transform decalTransform,
                                    GraphNode node, ref Vector3? overridePosition)
         {
+                if (!Main.Enabled) return;   // 关掉 mod 就交还原版（OnToggle 不撤 Harmony 补丁）
             try
             {
                 var cfg = Main.Settings;
@@ -952,6 +957,7 @@ namespace DynastyRetinue
         /// </summary>
         private static void Postfix(object __instance, Transform decalTransform)
         {
+                if (!Main.Enabled) return;   // 关掉 mod 就交还原版（OnToggle 不撤 Harmony 补丁）
             try
             {
                 var cfg = Main.Settings;

@@ -97,6 +97,7 @@ namespace DynastyRetinue
         private static bool Prefix(int direction, IntRect starshipRect,
                                    ref Vector2Int __result, MethodBase __originalMethod)
         {
+                if (!Main.Enabled) return true;   // 关掉 mod 就交还原版（OnToggle 不撤 Harmony 补丁）
             try
             {
                 // ★★ 已停用 —— 去掉那行压缩是错的 ★★

@@ -2920,538 +2920,6 @@
    }
   },
   {
-   "id": "kibellah_reaper_tactician",
-   "name": "基贝拉 · 收割者战术家",
-   "source": "save:KibellahCompanion",
-   "level": 50,
-   "homeworld": "6efb99601c094cbd94d4e6e29dab0970",
-   "origin": "9b090810169e4a42b22afd5995d3720d",
-   "first": "dd6948ee596346a69733d0bb107c2f42",
-   "second": "604fa184d7d944c8ae5965f9700782b5",
-   "sel": {
-    "dd6948ee596346a69733d0bb107c2f42": {
-     "2": [
-      "1afa19d04a904df4a76248b913421352"
-     ],
-     "4": [
-      "8b435fb7e4bb42d0951171f008bfd98a"
-     ],
-     "5": [
-      "6c9d0a7a901d42de9ec3d8fcd3085426",
-      "2c1696055f6f4e4aa47f43eb3d7497f3"
-     ],
-     "6": [
-      "a29aa37a4db3485fb5a0ee7b7515e0dd",
-      "1afa19d04a904df4a76248b913421352"
-     ],
-     "7": [
-      "2c1696055f6f4e4aa47f43eb3d7497f3",
-      "50c11113fe664263bd013875e599388d"
-     ],
-     "8": [
-      "d97430f7f61848a59871e8f16387cad3",
-      "d31a273a0075463ebfe2c83abf4e9371"
-     ],
-     "9": [
-      "3ac90c78d8304c2dbf82c6d617aff83b"
-     ],
-     "10": [
-      "bc9759f0c41a4a3e84300557bea51dea",
-      "9cfe2afd83f14b1aa3c2f94e053396aa"
-     ],
-     "11": [
-      "fba331366f474215812e3633e016c459",
-      "a5fda03f38b340f59c6b92aba9088b90"
-     ],
-     "12": [
-      "9cfe2afd83f14b1aa3c2f94e053396aa",
-      "d97430f7f61848a59871e8f16387cad3"
-     ],
-     "13": [
-      "6e3833f89ff5455d8c81e4691e932535",
-      "283b52d627134bbeaf6cbc01530d15dd"
-     ],
-     "14": [
-      "db160826d8da4423b3f54ebe3da90741",
-      "8320e014a2344bc3b814f9c1b8334034"
-     ],
-     "15": [
-      "7bbed20878bb48f8bb4f1e8fe0fb1904"
-     ]
-    },
-    "604fa184d7d944c8ae5965f9700782b5": {
-     "2": [
-      "3c33178f69de4c46983635ff3838e4f5"
-     ],
-     "3": [
-      "1ac6dfe1acb34691a0fc194127cc3f56"
-     ],
-     "5": [
-      "2c1696055f6f4e4aa47f43eb3d7497f3"
-     ],
-     "6": [
-      "2c1696055f6f4e4aa47f43eb3d7497f3",
-      "402d4b8938fa491da2058c62a65047b8"
-     ],
-     "7": [
-      "0a66bc958f01474285d2c09bf16409f0"
-     ],
-     "8": [
-      "40ec2b00cf3744f2959004807738617d",
-      "7ebcd4987ba9414bb191e5639a464bf7"
-     ],
-     "9": [
-      "db160826d8da4423b3f54ebe3da90741",
-      "881c2f8de7eb400199a4ad3990bd3fee"
-     ],
-     "10": [
-      "9e99a495dbdb4460baa3c2341aaba66c"
-     ],
-     "11": [
-      "7ebcd4987ba9414bb191e5639a464bf7",
-      "db160826d8da4423b3f54ebe3da90741"
-     ],
-     "12": [
-      "75629627078d41de86aaef6a96269679"
-     ],
-     "13": [
-      "8c01dd89e81a4b0aa08e3cb2a422d298"
-     ],
-     "14": [
-      "7ebcd4987ba9414bb191e5639a464bf7",
-      "db160826d8da4423b3f54ebe3da90741"
-     ],
-     "15": [
-      "13cc8a332ea948ae82c335f619c524cc",
-      "a113bd4f6b4145f7bea35ea1c0a160a1"
-     ],
-     "16": [
-      "1b8df50b028a4f86917ef69ee23a2d81"
-     ],
-     "17": [
-      "9cfe2afd83f14b1aa3c2f94e053396aa",
-      "7ebcd4987ba9414bb191e5639a464bf7"
-     ],
-     "18": [
-      "8382395e2da7471e925222eaaa4f2bf1"
-     ],
-     "19": [
-      "9cfe2afd83f14b1aa3c2f94e053396aa",
-      "00e0c5ffeffa40fbb9089efc6b00d0d3"
-     ],
-     "20": [
-      "f192dcdf09c243c380fe728e53d6f66d"
-     ]
-    },
-    "bcefe9c41c7841c9a99b1dbac1793025": {
-     "1": [
-      "45e774330657494b97380598879a3e39",
-      "ddb7472f001f49368711d68fd21cb7cc"
-     ],
-     "2": [
-      "1afa19d04a904df4a76248b913421352",
-      "d3dbf3af418b4110a79f26d84a17e2be"
-     ],
-     "3": [
-      "db160826d8da4423b3f54ebe3da90741",
-      "45449e93227647d2acc6dc38437ed1f0"
-     ],
-     "4": [
-      "0e1aff9bec3c49e2996001be4f56a3de",
-      "1afa19d04a904df4a76248b913421352"
-     ],
-     "5": [
-      "8d29b109e6c64a59b58cf1830271911e",
-      "6cee04e81a7a42cb8e9be2776075b2f8"
-     ],
-     "6": [
-      "db160826d8da4423b3f54ebe3da90741",
-      "064e1148362e477bac29d7e4cd7b525e"
-     ],
-     "7": [
-      "4f978989a35e4f01b7405c409c8efeb5",
-      "9cfe2afd83f14b1aa3c2f94e053396aa"
-     ],
-     "8": [
-      "13918777460b44568ce625d150251f88",
-      "aaeda42d064d48bf963fea6137fdd062"
-     ],
-     "9": [
-      "1afa19d04a904df4a76248b913421352",
-      "b1981e66383f42f2ac8953dcdb5eeaad"
-     ],
-     "11": [
-      "d6e4a21bf78c494e8e9b3d3b6ecca169",
-      "1afa19d04a904df4a76248b913421352"
-     ],
-     "12": [
-      "a9c5a3fddff74273bbfcb9431260b95f",
-      "283b52d627134bbeaf6cbc01530d15dd"
-     ],
-     "13": [
-      "a50bcaed93504084a36cb12210db52e7",
-      "9cfe2afd83f14b1aa3c2f94e053396aa"
-     ],
-     "14": [
-      "686bfe35a9cc42c39296c0fc79c2cad0",
-      "283b52d627134bbeaf6cbc01530d15dd"
-     ],
-     "15": [
-      "d90e6671c36947bbb8521071f3576a58",
-      "a1fd9cfdb42743d580463d29f4f0198a"
-     ]
-    }
-   },
-   "grp": {
-    "dd6948ee596346a69733d0bb107c2f42": {
-     "2": [
-      ""
-     ],
-     "4": [
-      ""
-     ],
-     "5": [
-      "",
-      ""
-     ],
-     "6": [
-      "",
-      ""
-     ],
-     "7": [
-      "",
-      ""
-     ],
-     "8": [
-      "",
-      ""
-     ],
-     "9": [
-      ""
-     ],
-     "10": [
-      "",
-      ""
-     ],
-     "11": [
-      "",
-      ""
-     ],
-     "12": [
-      "",
-      ""
-     ],
-     "13": [
-      "",
-      ""
-     ],
-     "14": [
-      "",
-      ""
-     ],
-     "15": [
-      ""
-     ]
-    },
-    "604fa184d7d944c8ae5965f9700782b5": {
-     "2": [
-      ""
-     ],
-     "3": [
-      ""
-     ],
-     "5": [
-      ""
-     ],
-     "6": [
-      "",
-      ""
-     ],
-     "7": [
-      ""
-     ],
-     "8": [
-      "",
-      ""
-     ],
-     "9": [
-      "",
-      ""
-     ],
-     "10": [
-      ""
-     ],
-     "11": [
-      "",
-      ""
-     ],
-     "12": [
-      ""
-     ],
-     "13": [
-      ""
-     ],
-     "14": [
-      "",
-      ""
-     ],
-     "15": [
-      "",
-      ""
-     ],
-     "16": [
-      ""
-     ],
-     "17": [
-      "",
-      ""
-     ],
-     "18": [
-      ""
-     ],
-     "19": [
-      "",
-      ""
-     ],
-     "20": [
-      ""
-     ]
-    },
-    "bcefe9c41c7841c9a99b1dbac1793025": {
-     "1": [
-      "",
-      ""
-     ],
-     "2": [
-      "",
-      ""
-     ],
-     "3": [
-      "",
-      ""
-     ],
-     "4": [
-      "",
-      ""
-     ],
-     "5": [
-      "",
-      ""
-     ],
-     "6": [
-      "",
-      ""
-     ],
-     "7": [
-      "",
-      ""
-     ],
-     "8": [
-      "",
-      ""
-     ],
-     "9": [
-      "",
-      ""
-     ],
-     "11": [
-      "",
-      ""
-     ],
-     "12": [
-      "",
-      ""
-     ],
-     "13": [
-      "",
-      ""
-     ],
-     "14": [
-      "",
-      ""
-     ],
-     "15": [
-      "",
-      ""
-     ]
-    }
-   },
-   "selbp": {
-    "dd6948ee596346a69733d0bb107c2f42": {
-     "2": [
-      "385b380a81d941baac49e56cb7123085"
-     ],
-     "4": [
-      "c1f309f9c3e54f019bac7485fa5d2e6d"
-     ],
-     "5": [
-      "2b1f502ae314466097a1541c3d2efe25",
-      "946b4ecd52904a07bb4984bc112c7e76"
-     ],
-     "6": [
-      "957644aa4c324b099cd41d135ab05557",
-      "385b380a81d941baac49e56cb7123085"
-     ],
-     "7": [
-      "946b4ecd52904a07bb4984bc112c7e76",
-      "c1f309f9c3e54f019bac7485fa5d2e6d"
-     ],
-     "8": [
-      "385b380a81d941baac49e56cb7123085",
-      "2b1f502ae314466097a1541c3d2efe25"
-     ],
-     "9": [
-      "a09ebb084bb846898e25f855be0e7e53"
-     ],
-     "10": [
-      "c1f309f9c3e54f019bac7485fa5d2e6d",
-      "946b4ecd52904a07bb4984bc112c7e76"
-     ],
-     "11": [
-      "957644aa4c324b099cd41d135ab05557",
-      "c1f309f9c3e54f019bac7485fa5d2e6d"
-     ],
-     "12": [
-      "946b4ecd52904a07bb4984bc112c7e76",
-      "385b380a81d941baac49e56cb7123085"
-     ],
-     "13": [
-      "2b1f502ae314466097a1541c3d2efe25",
-      "385b380a81d941baac49e56cb7123085"
-     ],
-     "14": [
-      "946b4ecd52904a07bb4984bc112c7e76",
-      "c1f309f9c3e54f019bac7485fa5d2e6d"
-     ],
-     "15": [
-      "a09ebb084bb846898e25f855be0e7e53"
-     ]
-    },
-    "604fa184d7d944c8ae5965f9700782b5": {
-     "2": [
-      "957644aa4c324b099cd41d135ab05557"
-     ],
-     "3": [
-      "c1f309f9c3e54f019bac7485fa5d2e6d"
-     ],
-     "5": [
-      "780fc74432984775944fed69bb8cbe85"
-     ],
-     "6": [
-      "780fc74432984775944fed69bb8cbe85",
-      "c1f309f9c3e54f019bac7485fa5d2e6d"
-     ],
-     "7": [
-      "957644aa4c324b099cd41d135ab05557"
-     ],
-     "8": [
-      "c1f309f9c3e54f019bac7485fa5d2e6d",
-      "0cc826a008224ea4b3429240a81d4d1c"
-     ],
-     "9": [
-      "780fc74432984775944fed69bb8cbe85",
-      "2b1f502ae314466097a1541c3d2efe25"
-     ],
-     "10": [
-      "c1f309f9c3e54f019bac7485fa5d2e6d"
-     ],
-     "11": [
-      "0cc826a008224ea4b3429240a81d4d1c",
-      "780fc74432984775944fed69bb8cbe85"
-     ],
-     "12": [
-      "a09ebb084bb846898e25f855be0e7e53"
-     ],
-     "13": [
-      "c1f309f9c3e54f019bac7485fa5d2e6d"
-     ],
-     "14": [
-      "0cc826a008224ea4b3429240a81d4d1c",
-      "780fc74432984775944fed69bb8cbe85"
-     ],
-     "15": [
-      "2b1f502ae314466097a1541c3d2efe25",
-      "957644aa4c324b099cd41d135ab05557"
-     ],
-     "16": [
-      "c1f309f9c3e54f019bac7485fa5d2e6d"
-     ],
-     "17": [
-      "780fc74432984775944fed69bb8cbe85",
-      "0cc826a008224ea4b3429240a81d4d1c"
-     ],
-     "18": [
-      "c1f309f9c3e54f019bac7485fa5d2e6d"
-     ],
-     "19": [
-      "780fc74432984775944fed69bb8cbe85",
-      "2b1f502ae314466097a1541c3d2efe25"
-     ],
-     "20": [
-      "a09ebb084bb846898e25f855be0e7e53"
-     ]
-    },
-    "bcefe9c41c7841c9a99b1dbac1793025": {
-     "1": [
-      "c93d8a9f25f74332b6450e32fce4846e",
-      "4000f01226cc4b5aac70bc994038abea"
-     ],
-     "2": [
-      "db4bd711708442baaace3d41d6efb7f6",
-      "f5cf904c57c9465d823c7dde20cea004"
-     ],
-     "3": [
-      "2fb7109dc64f49f38354d07b9b37bbf6",
-      "2b1f502ae314466097a1541c3d2efe25"
-     ],
-     "4": [
-      "9c2b0020d33b4476b5aae8e8fc023d1e",
-      "db4bd711708442baaace3d41d6efb7f6"
-     ],
-     "5": [
-      "c93d8a9f25f74332b6450e32fce4846e",
-      "f5cf904c57c9465d823c7dde20cea004"
-     ],
-     "6": [
-      "2fb7109dc64f49f38354d07b9b37bbf6",
-      "4000f01226cc4b5aac70bc994038abea"
-     ],
-     "7": [
-      "b19c8cad2c7245228446078043256b59",
-      "2fb7109dc64f49f38354d07b9b37bbf6"
-     ],
-     "8": [
-      "f5cf904c57c9465d823c7dde20cea004",
-      "2b1f502ae314466097a1541c3d2efe25"
-     ],
-     "9": [
-      "db4bd711708442baaace3d41d6efb7f6",
-      "c93d8a9f25f74332b6450e32fce4846e"
-     ],
-     "11": [
-      "4000f01226cc4b5aac70bc994038abea",
-      "db4bd711708442baaace3d41d6efb7f6"
-     ],
-     "12": [
-      "4000f01226cc4b5aac70bc994038abea",
-      "db4bd711708442baaace3d41d6efb7f6"
-     ],
-     "13": [
-      "f5cf904c57c9465d823c7dde20cea004",
-      "2fb7109dc64f49f38354d07b9b37bbf6"
-     ],
-     "14": [
-      "2fb7109dc64f49f38354d07b9b37bbf6",
-      "db4bd711708442baaace3d41d6efb7f6"
-     ],
-     "15": [
-      "c93d8a9f25f74332b6450e32fce4846e",
-      "4000f01226cc4b5aac70bc994038abea"
-     ]
-    }
-   }
-  },
-  {
    "id": "pascal_adept_assassin",
    "name": "帕斯卡 · 专家刺客",
    "source": "save:PascalCompanion",
@@ -8734,6 +8202,396 @@
       "Talent"
      ],
      "19": [
+      "CommonTalent"
+     ],
+     "20": [
+      "UltimateUpgradeAbility"
+     ]
+    },
+    "bcefe9c41c7841c9a99b1dbac1793025": {
+     "1": [
+      "AscensionTalent",
+      "FirstCareerTalent"
+     ],
+     "2": [
+      "Skill",
+      "SecondCareerTalent"
+     ],
+     "3": [
+      "Attribute",
+      "CommonTalent"
+     ],
+     "4": [
+      "FirstCareerAbility",
+      "Skill"
+     ],
+     "5": [
+      "AscensionTalent",
+      "SecondCareerTalent"
+     ],
+     "6": [
+      "Attribute",
+      "FirstCareerTalent"
+     ],
+     "7": [
+      "SecondCareerAbility",
+      "Attribute"
+     ],
+     "8": [
+      "SecondCareerTalent",
+      "CommonTalent"
+     ],
+     "9": [
+      "Skill",
+      "AscensionTalent"
+     ],
+     "11": [
+      "FirstCareerTalent",
+      "Skill"
+     ],
+     "12": [
+      "FirstCareerTalent",
+      "Skill"
+     ],
+     "13": [
+      "SecondCareerTalent",
+      "Attribute"
+     ],
+     "14": [
+      "Attribute",
+      "Skill"
+     ],
+     "15": [
+      "AscensionTalent",
+      "FirstCareerTalent"
+     ],
+     "16": [
+      "SecondCareerTalent",
+      "Skill"
+     ],
+     "17": [
+      "FirstOrSecondCareerTalent",
+      "CommonTalent"
+     ],
+     "18": [
+      "FirstOrSecondCareerAbility",
+      "Attribute"
+     ],
+     "19": [
+      "AscensionTalent",
+      "FirstOrSecondCareerTalent"
+     ]
+    }
+   }
+  },
+  {
+   "id": "kibellah_reaper_tactician",
+   "name": "基贝拉 · 收割者战术家",
+   "source": "rtautobuilder:战术DLC3",
+   "level": null,
+   "homeworld": "6efb99601c094cbd94d4e6e29dab0970",
+   "origin": "9b090810169e4a42b22afd5995d3720d",
+   "first": "dd6948ee596346a69733d0bb107c2f42",
+   "second": "604fa184d7d944c8ae5965f9700782b5",
+   "sel": {
+    "dd6948ee596346a69733d0bb107c2f42": {
+     "2": [
+      "1afa19d04a904df4a76248b913421352"
+     ],
+     "4": [
+      "8b435fb7e4bb42d0951171f008bfd98a"
+     ],
+     "5": [
+      "6c9d0a7a901d42de9ec3d8fcd3085426",
+      "2c1696055f6f4e4aa47f43eb3d7497f3"
+     ],
+     "6": [
+      "a29aa37a4db3485fb5a0ee7b7515e0dd",
+      "1afa19d04a904df4a76248b913421352"
+     ],
+     "7": [
+      "2c1696055f6f4e4aa47f43eb3d7497f3",
+      "50c11113fe664263bd013875e599388d"
+     ],
+     "8": [
+      "d97430f7f61848a59871e8f16387cad3",
+      "d31a273a0075463ebfe2c83abf4e9371"
+     ],
+     "9": [
+      "3ac90c78d8304c2dbf82c6d617aff83b"
+     ],
+     "10": [
+      "bc9759f0c41a4a3e84300557bea51dea",
+      "9cfe2afd83f14b1aa3c2f94e053396aa"
+     ],
+     "11": [
+      "fba331366f474215812e3633e016c459",
+      "a5fda03f38b340f59c6b92aba9088b90"
+     ],
+     "12": [
+      "9cfe2afd83f14b1aa3c2f94e053396aa",
+      "d97430f7f61848a59871e8f16387cad3"
+     ],
+     "13": [
+      "6e3833f89ff5455d8c81e4691e932535",
+      "283b52d627134bbeaf6cbc01530d15dd"
+     ],
+     "14": [
+      "db160826d8da4423b3f54ebe3da90741",
+      "8320e014a2344bc3b814f9c1b8334034"
+     ],
+     "15": [
+      "7bbed20878bb48f8bb4f1e8fe0fb1904"
+     ]
+    },
+    "604fa184d7d944c8ae5965f9700782b5": {
+     "2": [
+      "3c33178f69de4c46983635ff3838e4f5"
+     ],
+     "3": [
+      "1ac6dfe1acb34691a0fc194127cc3f56"
+     ],
+     "5": [
+      "2c1696055f6f4e4aa47f43eb3d7497f3"
+     ],
+     "6": [
+      "2c1696055f6f4e4aa47f43eb3d7497f3",
+      "402d4b8938fa491da2058c62a65047b8"
+     ],
+     "7": [
+      "0a66bc958f01474285d2c09bf16409f0"
+     ],
+     "8": [
+      "40ec2b00cf3744f2959004807738617d",
+      "7ebcd4987ba9414bb191e5639a464bf7"
+     ],
+     "9": [
+      "db160826d8da4423b3f54ebe3da90741",
+      "881c2f8de7eb400199a4ad3990bd3fee"
+     ],
+     "10": [
+      "9e99a495dbdb4460baa3c2341aaba66c"
+     ],
+     "11": [
+      "7ebcd4987ba9414bb191e5639a464bf7",
+      "db160826d8da4423b3f54ebe3da90741"
+     ],
+     "12": [
+      "75629627078d41de86aaef6a96269679"
+     ],
+     "13": [
+      "8c01dd89e81a4b0aa08e3cb2a422d298"
+     ],
+     "14": [
+      "7ebcd4987ba9414bb191e5639a464bf7",
+      "db160826d8da4423b3f54ebe3da90741"
+     ],
+     "15": [
+      "13cc8a332ea948ae82c335f619c524cc",
+      "a113bd4f6b4145f7bea35ea1c0a160a1"
+     ],
+     "16": [
+      "1b8df50b028a4f86917ef69ee23a2d81"
+     ],
+     "17": [
+      "9cfe2afd83f14b1aa3c2f94e053396aa",
+      "7ebcd4987ba9414bb191e5639a464bf7"
+     ],
+     "18": [
+      "8382395e2da7471e925222eaaa4f2bf1"
+     ],
+     "19": [
+      "9cfe2afd83f14b1aa3c2f94e053396aa",
+      "00e0c5ffeffa40fbb9089efc6b00d0d3"
+     ],
+     "20": [
+      "f192dcdf09c243c380fe728e53d6f66d"
+     ]
+    },
+    "bcefe9c41c7841c9a99b1dbac1793025": {
+     "1": [
+      "45e774330657494b97380598879a3e39",
+      "ddb7472f001f49368711d68fd21cb7cc"
+     ],
+     "2": [
+      "1afa19d04a904df4a76248b913421352",
+      "d3dbf3af418b4110a79f26d84a17e2be"
+     ],
+     "3": [
+      "db160826d8da4423b3f54ebe3da90741",
+      "45449e93227647d2acc6dc38437ed1f0"
+     ],
+     "4": [
+      "0e1aff9bec3c49e2996001be4f56a3de",
+      "1afa19d04a904df4a76248b913421352"
+     ],
+     "5": [
+      "8d29b109e6c64a59b58cf1830271911e",
+      "6cee04e81a7a42cb8e9be2776075b2f8"
+     ],
+     "6": [
+      "db160826d8da4423b3f54ebe3da90741",
+      "064e1148362e477bac29d7e4cd7b525e"
+     ],
+     "7": [
+      "4f978989a35e4f01b7405c409c8efeb5",
+      "9cfe2afd83f14b1aa3c2f94e053396aa"
+     ],
+     "8": [
+      "13918777460b44568ce625d150251f88",
+      "aaeda42d064d48bf963fea6137fdd062"
+     ],
+     "9": [
+      "1afa19d04a904df4a76248b913421352",
+      "b1981e66383f42f2ac8953dcdb5eeaad"
+     ],
+     "11": [
+      "d6e4a21bf78c494e8e9b3d3b6ecca169",
+      "1afa19d04a904df4a76248b913421352"
+     ],
+     "12": [
+      "a9c5a3fddff74273bbfcb9431260b95f",
+      "283b52d627134bbeaf6cbc01530d15dd"
+     ],
+     "13": [
+      "a50bcaed93504084a36cb12210db52e7",
+      "9cfe2afd83f14b1aa3c2f94e053396aa"
+     ],
+     "14": [
+      "686bfe35a9cc42c39296c0fc79c2cad0",
+      "283b52d627134bbeaf6cbc01530d15dd"
+     ],
+     "15": [
+      "d90e6671c36947bbb8521071f3576a58",
+      "a1fd9cfdb42743d580463d29f4f0198a"
+     ],
+     "16": [
+      "4e7364c07456464a8d236f9e915c2933",
+      "283b52d627134bbeaf6cbc01530d15dd"
+     ],
+     "17": [
+      "712c3b5de0504deaa7ca09b7c41a3a93",
+      "b91d5387fe224dd3953ea39a184427a2"
+     ],
+     "18": [
+      "e627e3fb653840dab9661093828432c5",
+      "686bfe35a9cc42c39296c0fc79c2cad0"
+     ],
+     "19": [
+      "df6c348d0bbc490a8d6483ddaf99740b",
+      "d186683b3f7d46f2a4ac401f9a21da13"
+     ]
+    }
+   },
+   "grp": {
+    "dd6948ee596346a69733d0bb107c2f42": {
+     "2": [
+      "Skill"
+     ],
+     "4": [
+      "Talent"
+     ],
+     "5": [
+      "CommonTalent",
+      "Attribute"
+     ],
+     "6": [
+      "ActiveAbility",
+      "Skill"
+     ],
+     "7": [
+      "Attribute",
+      "Talent"
+     ],
+     "8": [
+      "Skill",
+      "CommonTalent"
+     ],
+     "9": [
+      "UltimateUpgradeAbility"
+     ],
+     "10": [
+      "Talent",
+      "Attribute"
+     ],
+     "11": [
+      "ActiveAbility",
+      "Talent"
+     ],
+     "12": [
+      "Attribute",
+      "Skill"
+     ],
+     "13": [
+      "CommonTalent",
+      "Skill"
+     ],
+     "14": [
+      "Attribute",
+      "Talent"
+     ],
+     "15": [
+      "UltimateUpgradeAbility"
+     ]
+    },
+    "604fa184d7d944c8ae5965f9700782b5": {
+     "2": [
+      "ActiveAbility"
+     ],
+     "3": [
+      "Talent"
+     ],
+     "5": [
+      "Attribute"
+     ],
+     "6": [
+      "Attribute",
+      "Talent"
+     ],
+     "7": [
+      "ActiveAbility"
+     ],
+     "8": [
+      "Talent",
+      "Skill"
+     ],
+     "9": [
+      "Attribute",
+      "CommonTalent"
+     ],
+     "10": [
+      "Talent"
+     ],
+     "11": [
+      "Skill",
+      "Attribute"
+     ],
+     "12": [
+      "UltimateUpgradeAbility"
+     ],
+     "13": [
+      "Talent"
+     ],
+     "14": [
+      "Skill",
+      "Attribute"
+     ],
+     "15": [
+      "CommonTalent",
+      "ActiveAbility"
+     ],
+     "16": [
+      "Talent"
+     ],
+     "17": [
+      "Attribute",
+      "Skill"
+     ],
+     "18": [
+      "Talent"
+     ],
+     "19": [
+      "Attribute",
       "CommonTalent"
      ],
      "20": [

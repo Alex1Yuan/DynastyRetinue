@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Reflection;
 using HarmonyLib;
 using UnityEngine;
@@ -98,6 +98,7 @@ namespace DynastyRetinue
 
         private static void Prefix(object __instance, ref Vector3 casterPosition)
         {
+                if (!Main.Enabled) return;   // 关掉 mod 就交还原版（OnToggle 不撤 Harmony 补丁）
             try
             {
                 // ★把 ability 传给下游★ 下游 GetOriented 不带 ability，只能靠这里递一手。

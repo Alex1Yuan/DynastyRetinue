@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -42,6 +42,77 @@ namespace DynastyRetinue
         public static int SpawnedCount { get { return RetinueRegistry.Count; } }
 
         public static void SpawnOne() { SpawnOne(-1, null, false); }
+
+        /// <summary>
+        /// 开发按钮：一键招齐机械教全套 —— T1/T2/T3 各一名普通卫兵 + 4 个精英。
+        ///
+        /// ★怎么做到三个档位同时存在★
+        ///   阶位本身是**全局**的：Archetypes.PlayerTier(leader) 由队长等级推出，
+        ///   55 级存档恒为 T3 —— 不做处理的话 T1/T2 两套装备一次都触发不到、没法验。
+        ///   面板上本来就有 GearTierOverride（纯测试用途，0=自动），这里把它自动化：
+        ///   逐档切 1→2→3 各生成一个，最后在 finally 里还原。
+        ///
+        /// ★但只有「装备」按档位走★
+        ///   等级、阶位特性（摒弃血肉2/3/4 那套）仍由队长等级决定，
+        ///   而且过一次图 ApplyRuntimeState 就会按当前阶位全部重算。
+        ///   所以这三个卫兵是「装备档位不同、其余相同」，用来验三套 gear 表够了，
+        ///   验阶位特性还是得换不同等级的存档。
+        ///
+        /// ★skipCap★ 绕过数量上限，否则 T1 阶段只能有 2 个，四个精英根本招不出来。
+        ///   这是开发按钮，不进发布路径。
+        /// </summary>
+        public static void SpawnMechSet()
+        {
+            try
+            {
+                if (!Main.DevMode) { Main.Log("[机械教全套] 仅开发模式可用。"); return; }
+
+                int ai = -1;
+                for (int i = 0; ; i++)
+                {
+                    var q = Archetypes.Get(i);
+                    if (q == null) break;
+                    if (q.Name != null && q.Name.IndexOf("机械教", StringComparison.Ordinal) >= 0) { ai = i; break; }
+                }
+                if (ai < 0) { Main.LogError("[机械教全套] 配表里找不到机械教分型。"); return; }
+                var arch = Archetypes.Get(ai);
+
+                // ★用 GearTierOverride 逐档生成★
+                //   阶位本来由队长等级推出（PlayerTier），55 级存档恒为 T3 ——
+                //   不覆盖的话 T1/T2 两套装备一次都触发不到、没法验。
+                //   这个开关面板上本来就有（纯测试用途），这里自动化：
+                //   逐档切 1→2→3 各生成一个，最后还原。
+                //   ★finally 里还原★ 中途报错也不能把玩家的设置留在被覆盖的状态。
+                int savedTier = Main.Settings.GearTierOverride;
+                int ok = 0;
+                try
+                {
+                    for (int t = 1; t <= 3; t++)
+                    {
+                        Main.Settings.GearTierOverride = t;
+                        Main.Log("[机械教全套] ── 生成 T" + t + " 普通卫兵（装备档位已强制为 T" + t + "）");
+                        if (SpawnOne(ai, null, true, true) != null) ok++;
+                    }
+                    // 精英走自己的 gear，不受档位影响，还原后再生成
+                    Main.Settings.GearTierOverride = savedTier;
+                    var elites = arch.Elites;
+                    if (elites != null)
+                        for (int i = 0; i < elites.Length; i++)
+                        {
+                            Main.Log("[机械教全套] ── 生成精英：" + (elites[i].Name ?? "?"));
+                            if (SpawnOne(ai, elites[i], true) != null) ok++;
+                        }
+                }
+                finally { Main.Settings.GearTierOverride = savedTier; }
+
+                Main.Log("[机械教全套] 完成，共 " + ok + " 名（T1/T2/T3 各一 + 精英）。"
+                       + "\n    ★看完记得【遣散全部】★ 它们是持久实体，会进存档。"
+                       + "\n    ⚠ 只有**装备**按档位发；等级和阶位特性仍由队长等级决定，"
+                       + "过一次图就会被重算回当前阶位。");
+                Main.FlushLog(true);
+            }
+            catch (Exception e) { Main.LogError("[机械教全套] 失败: " + e.Message); }
+        }
 
         /// <summary>
         /// 生成一个卫兵。
@@ -387,7 +458,7 @@ namespace DynastyRetinue
                     // AeldariWeaponProficiency_Feature。之前熟练度在 d2) 里、也就是升完级才发，
                     // 于是升级当场前置不满足，方案里那条一直是"出现过但不可选"（B 类）。
                     // 发装备那一步还会再调一次，GrantFeatures 自带幂等，重复调用无副作用。
-                    try { GearTool.GrantFeatures(g, arch); } catch (Exception e3) { Main.LogError("  预授熟练度: " + e3.Message); }
+                    try { GearTool.GrantFeatures(g, arch, tier); } catch (Exception e3) { Main.LogError("  预授熟练度: " + e3.Message); }
 
                     // 按段合成的方案（攻略只给要点、但各段在别的方案里有现成数据）
                     BuildPlans.Plan composed = null;
@@ -421,8 +492,12 @@ namespace DynastyRetinue
             {
                 int ai2 = RetinueRegistry.ArchetypeOf(g);
                 var arch2 = Archetypes.Get(ai2 >= 0 ? ai2 : Main.Settings.ArchetypeIndex);
-                // 先授熟练度再发装备 —— 顺序反了的话动力甲/重武器一律装不上
-                GearTool.GrantFeatures(g, arch2);
+                // 先授熟练度再发装备 —— 顺序反了的话动力甲/重武器一律装不上。
+                // ★阶位要重算★ 上面那个 tier 在 AutoLevelUp 的分支里，这里不在作用域。
+                //   不传的话就退化成 tier=0，按阶位替换的那组永远不会被撤销 ——
+                //   于是升阶后 T1 的能力会被这里原样发回去，把上面刚做的替换抵消掉。
+                int tier2 = (leader != null) ? Archetypes.PlayerTier(leader) : 0;
+                GearTool.GrantFeatures(g, arch2, tier2);
                 GearTool.Equip(g, arch2);
             }
             catch (Exception e) { Main.LogError("装备: " + e.Message); }
