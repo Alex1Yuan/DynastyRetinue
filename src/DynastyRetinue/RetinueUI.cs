@@ -386,7 +386,15 @@ namespace DynastyRetinue.UI
         private static GameObject _pageRoster, _pageRecruit, _pageLooks;
         private static Transform _looksContent;
         /// <summary>外观页的"画笔"：点格子会把它刷进去。空串 = 跟随装备。</summary>
-        private static string _lookBrush = LookCatalog.FollowGear;
+        /// <summary>每张分表一支画笔。分表依据见 LookCatalog.Groups —— 机械教和前五条线
+        /// 的可用风格不同，共用一支画笔会出现"选项列着、点了没反应"。</summary>
+        private static readonly Dictionary<int, string> _lookBrushes = new Dictionary<int, string>();
+
+        private static string BrushOf(int g)
+        {
+            string s;
+            return _lookBrushes.TryGetValue(g, out s) ? s : LookCatalog.FollowGear;
+        }
         private static Transform _rosterContent;
         private static readonly System.Collections.Generic.List<Button> _tabBtns = new System.Collections.Generic.List<Button>();
         private static Color _tabNormal, _tabActive;
@@ -938,18 +946,10 @@ namespace DynastyRetinue.UI
 
             LookDef[] looks = LookCatalog.All;
 
-            // ---- 画笔 ----
-            Transform brushRow = MakeRow(_looksContent, 44f);
-            MakeRowLabel(brushRow, L.T("风格"), 90f);
-            AddBrushButton(brushRow, LookCatalog.FollowGear, L.T("跟随装备"));
-            for (int i = 0; i < looks.Length; i++) AddBrushButton(brushRow, looks[i].Id, looks[i].Display());
-            Button applyAll = MakeButton(brushRow, L.T("全部设为"), 150f, 38f,
-                delegate { LookAssign.SetAll(_lookBrush); AfterLookChange(); });
-            AddWidth(applyAll.gameObject, 150f);
-
             // 改了 looks.json 之后重读清单。没有它就只能重启游戏 —— 而调配方是
             // "改一件看一眼"的循环，重启的代价高到会让这个配置形同虚设。
-            Button reload = MakeButton(brushRow, L.T("重载风格"), 150f, 38f,
+            Transform topRow = MakeRow(_looksContent, 44f);
+            Button reload = MakeButton(topRow, L.T("重载风格"), 150f, 38f,
                 delegate { LookCatalog.Invalidate(); AfterLookChange(); });
             AddWidth(reload.gameObject, 150f);
 
@@ -957,48 +957,93 @@ namespace DynastyRetinue.UI
                 MakeLabel(_looksContent, L.T("looks.json 里没有可用的风格，只能「跟随装备」。"),
                           17f, VanillaSkin.Gold, TextAlignmentOptions.Left);
 
-            // ---- 列头 ----
             string[] cols = { "T1", "T2", "T3", L.T("精英") };
-            Transform head = MakeRow(_looksContent, 42f);
-            // ★占位不能用 MakeLabel★ 它克隆的是原版控件，那些控件**自带 LayoutElement**；
-            //   再 AddComponent 一个会有两个组件同时争这一格的宽度，实测结果是占位失效、
-            //   整行列头左移一格，和下面的数据行对不上。空物体只挂一个 LayoutElement 最干净。
-            GameObject spacer = NewUI("Spacer", head);
-            LayoutElement sle = spacer.AddComponent<LayoutElement>();
-            sle.minWidth = HeadW; sle.preferredWidth = HeadW;
-            for (int c = 0; c < LookAssign.Cols; c++)
-            {
-                int cc = c;
-                Button b = MakeButton(head, cols[c], ColW, 36f,
-                    delegate { LookAssign.SetCol(cc, _lookBrush); AfterLookChange(); });
-                AddWidth(b.gameObject, ColW);
-            }
-
-            // ---- 矩阵 ----
             ChainProbe.Archetype[] all = null;
             try { all = Archetypes.All; } catch (Exception e) { Main.LogError(e.Message); }
-            for (int i = 0; all != null && i < all.Length; i++)
-            {
-                int ii = i;
-                Transform row = MakeRow(_looksContent, 42f);
-                Button rb = MakeButton(row, all[i].Name ?? "?", HeadW, 36f,
-                    delegate { LookAssign.SetRow(ii, _lookBrush); AfterLookChange(); });
-                AddWidth(rb.gameObject, HeadW);
 
+            // ★一组一张独立的表★ 每张表的调色板里只有这张表刷得动的风格。
+            //   机械教是第六条线、只收自己的教条/异端两套，前五条线看不到它们；
+            //   反过来也一样。分组依据是 looks.json 的 onlyArchetypes/notArchetypes。
+            var groups = LookCatalog.Groups();
+            for (int g = 0; g < groups.Count; g++)
+            {
+                var rows      = groups[g].Key;
+                var groupLook = groups[g].Value;
+                if (rows == null || rows.Count == 0) continue;
+                int gg = g;
+
+                if (groups.Count > 1)
+                {
+                    var names = new System.Text.StringBuilder();
+                    for (int r = 0; r < rows.Count; r++)
+                    {
+                        if (r > 0) names.Append(" / ");
+                        names.Append(all != null && rows[r] < all.Length && all[rows[r]] != null
+                                     ? (all[rows[r]].Name ?? "?") : "?");
+                    }
+                    MakeLabel(_looksContent, names.ToString(), 18f, VanillaSkin.Gold, TextAlignmentOptions.Left);
+                }
+
+                // ---- 这张表的画笔 ----
+                Transform brushRow = MakeRow(_looksContent, 44f);
+                MakeRowLabel(brushRow, L.T("风格"), 90f);
+                AddBrushButton(brushRow, gg, LookCatalog.FollowGear, L.T("跟随装备"));
+                for (int i = 0; i < groupLook.Length; i++)
+                    AddBrushButton(brushRow, gg, groupLook[i].Id, groupLook[i].Display());
+                var capRows = rows;
+                Button applyAll = MakeButton(brushRow, L.T("这几行全刷"), 150f, 38f,
+                    delegate
+                    {
+                        for (int r = 0; r < capRows.Count; r++) LookAssign.SetRow(capRows[r], BrushOf(gg));
+                        AfterLookChange();
+                    });
+                AddWidth(applyAll.gameObject, 150f);
+
+                // ---- 列头 ----
+                Transform head = MakeRow(_looksContent, 42f);
+                // ★占位不能用 MakeLabel★ 它克隆的是原版控件，那些控件**自带 LayoutElement**；
+                //   再 AddComponent 一个会有两个组件同时争这一格的宽度，实测结果是占位失效、
+                //   整行列头左移一格，和下面的数据行对不上。空物体只挂一个 LayoutElement 最干净。
+                GameObject spacer = NewUI("Spacer", head);
+                LayoutElement sle = spacer.AddComponent<LayoutElement>();
+                sle.minWidth = HeadW; sle.preferredWidth = HeadW;
                 for (int c = 0; c < LookAssign.Cols; c++)
                 {
                     int cc = c;
-                    string cur = LookAssign.Get(i, c);
-                    LookDef ld = LookCatalog.Get(cur);
-                    string txt = (ld != null) ? ld.Display() : L.T("跟随装备");
-                    Button cb = MakeButton(row, txt, ColW, 36f,
-                        delegate { LookAssign.Set(ii, cc, _lookBrush); AfterLookChange(); });
-                    AddWidth(cb.gameObject, ColW);
-                    // 和画笔一致的格子高亮 —— 一眼看出这次要刷哪些
-                    if (string.Equals(cur ?? "", _lookBrush ?? "", StringComparison.OrdinalIgnoreCase))
+                    Button b = MakeButton(head, cols[c], ColW, 36f,
+                        delegate
+                        {
+                            for (int r = 0; r < capRows.Count; r++) LookAssign.Set(capRows[r], cc, BrushOf(gg));
+                            AfterLookChange();
+                        });
+                    AddWidth(b.gameObject, ColW);
+                }
+
+                // ---- 这张表的矩阵 ----
+                for (int r = 0; r < rows.Count; r++)
+                {
+                    int ii = rows[r];
+                    if (all == null || ii >= all.Length || all[ii] == null) continue;
+                    Transform row = MakeRow(_looksContent, 42f);
+                    Button rb = MakeButton(row, all[ii].Name ?? "?", HeadW, 36f,
+                        delegate { LookAssign.SetRow(ii, BrushOf(gg)); AfterLookChange(); });
+                    AddWidth(rb.gameObject, HeadW);
+
+                    for (int c = 0; c < LookAssign.Cols; c++)
                     {
-                        Image img = cb.GetComponentInChildren<Image>();
-                        if (img != null) img.color = VanillaSkin.Gold;
+                        int cc = c;
+                        string cur = LookAssign.Get(ii, c);
+                        LookDef ld = LookCatalog.Get(cur);
+                        string txt = (ld != null) ? ld.Display() : L.T("跟随装备");
+                        Button cb = MakeButton(row, txt, ColW, 36f,
+                            delegate { LookAssign.Set(ii, cc, BrushOf(gg)); AfterLookChange(); });
+                        AddWidth(cb.gameObject, ColW);
+                        // 和画笔一致的格子高亮 —— 一眼看出这次要刷哪些
+                        if (string.Equals(cur ?? "", BrushOf(gg) ?? "", StringComparison.OrdinalIgnoreCase))
+                        {
+                            Image img = cb.GetComponentInChildren<Image>();
+                            if (img != null) img.color = VanillaSkin.Gold;
+                        }
                     }
                 }
             }
@@ -1017,12 +1062,13 @@ namespace DynastyRetinue.UI
             MarkLayerDirty();
         }
 
-        private static void AddBrushButton(Transform row, string id, string label)
+        private static void AddBrushButton(Transform row, int group, string id, string label)
         {
             string cap = id;
-            Button b = MakeButton(row, label, 150f, 38f, delegate { _lookBrush = cap; RebuildLooks(); });
+            int g = group;
+            Button b = MakeButton(row, label, 150f, 38f, delegate { _lookBrushes[g] = cap; RebuildLooks(); });
             AddWidth(b.gameObject, 150f);
-            if (string.Equals(_lookBrush ?? "", cap ?? "", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(BrushOf(g) ?? "", cap ?? "", StringComparison.OrdinalIgnoreCase))
             {
                 Image img = b.GetComponentInChildren<Image>();
                 if (img != null) img.color = VanillaSkin.Gold;

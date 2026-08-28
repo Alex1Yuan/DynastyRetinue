@@ -174,6 +174,9 @@ namespace DynastyRetinue
         internal const int KindArmorIgnore = 0;
         internal const int KindBlade = 1;
         internal const int KindCounter = 2;
+        /// <summary>④ 武器分类=Sword 的施法限制。★这道才是真正拦技能的★，见 WeaponClassGatePatch。</summary>
+        internal const int KindSword = 3;
+        private const int KindCount = 4;
 
         /// <summary>
         /// 「这道判定被求值过几次」—— 与 _hits（放行几次）配对。
@@ -185,7 +188,7 @@ namespace DynastyRetinue
         /// 只统计"我们关心的那种"求值（白名单命中的武器 / 要求含 Blade 的族判定），
         /// 不是所有调用 —— 否则数字会大到没意义。
         /// </summary>
-        private static readonly int[] _seen = new int[3];
+        private static readonly int[] _seen = new int[KindCount];
 
         internal static void Seen(int kind)
         {
@@ -202,7 +205,7 @@ namespace DynastyRetinue
                 try { name = u.CharacterName; } catch { }
                 if (string.IsNullOrEmpty(name)) name = "?";
                 int[] a;
-                if (!_hits.TryGetValue(name, out a)) { a = new int[3]; _hits[name] = a; }
+                if (!_hits.TryGetValue(name, out a)) { a = new int[KindCount]; _hits[name] = a; }
                 a[kind]++;
             }
             catch { }
@@ -211,7 +214,7 @@ namespace DynastyRetinue
         /// <summary>开打时清零 —— 由 CombatWatch.Tick 调。</summary>
         internal static void ResetHits()
         {
-            try { _hits.Clear(); _seen[0] = _seen[1] = _seen[2] = 0; } catch { }
+            try { _hits.Clear(); for (int i = 0; i < KindCount; i++) _seen[i] = 0; } catch { }
         }
 
         /// <summary>战斗结束时汇总 —— 由 CombatWatch.Dump 调，接在总账后面。</summary>
@@ -221,8 +224,8 @@ namespace DynastyRetinue
             {
                 if (sb == null) return;
                 sb.AppendLine("  ── 武器判定放行次数（1.5.74 新增）──");
-                sb.AppendLine(string.Format("      判定被求值：无视护甲 {0} 次 · 长剑 {1} 次 · 防御反击 {2} 次",
-                              _seen[KindArmorIgnore], _seen[KindBlade], _seen[KindCounter]));
+                sb.AppendLine(string.Format("      判定被求值：无视护甲 {0} · 武器族Blade {1} · 防御反击 {2} · 长剑(分类Sword) {3}",
+                              _seen[KindArmorIgnore], _seen[KindBlade], _seen[KindCounter], _seen[KindSword]));
                 sb.AppendLine("      ★求值 0 = 原版没走到这道判定（不是我们拒的）；"
                             + "求值 >0 而放行 0 = 走到了但被我们的闸拒了，查单位 guid。★");
                 if (_hits.Count == 0)
@@ -230,11 +233,11 @@ namespace DynastyRetinue
                     sb.AppendLine("      本场一次都没放行。");
                     return;
                 }
-                sb.AppendLine("      卫兵                          无视护甲  长剑判定  防御反击");
+                sb.AppendLine("      卫兵                          无视护甲  武器族  防御反击  长剑");
                 foreach (var kv in _hits)
-                    sb.AppendLine(string.Format("      {0,-28} {1,8} {2,9} {3,9}",
+                    sb.AppendLine(string.Format("      {0,-28} {1,8} {2,7} {3,9} {4,6}",
                         kv.Key.Length > 28 ? kv.Key.Substring(0, 28) : kv.Key,
-                        kv.Value[KindArmorIgnore], kv.Value[KindBlade], kv.Value[KindCounter]));
+                        kv.Value[KindArmorIgnore], kv.Value[KindBlade], kv.Value[KindCounter], kv.Value[KindSword]));
                 sb.AppendLine("      ★放行 ≠ 效果打出来了★ 这只证明条件判定通过。"
                             + "无视护甲要看伤害有没有变、防反要看有没有多出来的那一刀。");
             }
@@ -393,6 +396,57 @@ namespace DynastyRetinue
 
                 WeaponGate.Count(who, WeaponGate.KindCounter);
                 __result = true;   // 就当剑在手上
+                return false;
+            }
+            catch { }
+            return true;
+        }
+    }
+
+    /// <summary>
+    /// ④ 长剑判定（真正管用的那个）：让卫兵通过「你手上有没有 Sword 类武器」的**施法限制**。
+    ///
+    /// ★这才是拦住技能的那道★
+    ///   1.5.74 我补的是 CheckAbilityWeaponFamilyGetter（武器**族** Blade）——
+    ///   1.5.80 实测求值 0 次；离线又查过：全库 41 个用它的蓝图全是武器专精和植入物，
+    ///   我们这两个精英一个都没有。那是个**属性取值器**，用在 PropertyCalculator 里
+    ///   算条件加成，根本不管"技能能不能放"。
+    ///
+    ///   真正决定能不能放的是 AbilityCasterHasWeaponOfClassification —— 它实现
+    ///   IAbilityCasterRestriction，直接比 weapon.Blueprint.Classification == Classification。
+    ///   WeaponClassification 枚举里有 **Sword**（刀锋舞者那类技能要的就是它），
+    ///   而跨音速利刃和静电臂铠实测都是 **Classification=None** ⇒ 一律不通过。
+    ///
+    /// ★只放行 Sword★ 同样是白名单：要求斧/锤/狙击枪/盾的判定照走原版，
+    ///   否则卫兵会凭空满足所有武器分类，能放一堆不该有的技能。
+    /// </summary>
+    [HarmonyPatch(typeof(Kingmaker.UnitLogic.Abilities.Components.TargetCheckers.AbilityCasterHasWeaponOfClassification),
+                  "IsCasterRestrictionPassed")]
+    internal static class WeaponClassGatePatch
+    {
+        private static bool Prefix(
+            Kingmaker.UnitLogic.Abilities.Components.TargetCheckers.AbilityCasterHasWeaponOfClassification __instance,
+            Kingmaker.EntitySystem.Entities.MechanicEntity caster, ref bool __result)
+        {
+            try
+            {
+                if (!Main.Enabled) return true;
+                if (__instance == null) return true;
+
+                // 便宜的判断放前面：不是问 Sword 就走原版，一次反射都不用
+                if (__instance.Classification != Kingmaker.Enums.WeaponClassification.Sword) return true;
+                WeaponGate.Seen(WeaponGate.KindSword);
+
+                // ★默认关★ 见 Settings.SwordClassGate 的头注：放行会让引擎去放长剑动作，
+                //   而这两个精英的动画集里没有 —— 实测摆大字 + 抽搐。
+                //   计数照记（上面那行 Seen 在开关之前），这样即使关着也能知道
+                //   "原版一场问了多少次"，将来要不要重开有数据可依。
+                if (Main.Settings == null || !Main.Settings.SwordClassGate) return true;
+
+                if (!WeaponGate.IsGateTarget(caster)) return true;
+
+                WeaponGate.Count(caster, WeaponGate.KindSword);
+                __result = true;   // 就当你手上是长剑
                 return false;
             }
             catch { }

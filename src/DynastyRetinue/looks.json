@@ -20,6 +20,9 @@
   "looks": [
     {
       "id": "kasrkin",
+      "notArchetypes": [
+        "机械教 Mechanicus"
+      ],
       "name": "卡斯金",
       "name_en": "Kasrkin",
       "_note": "卡迪亚精锐突击兵。拼 EE，脸有 5 种变化。",
@@ -43,7 +46,76 @@
       ]
     },
     {
+      "id": "techpriest",
+      "name": "教条派 · 技术神甫",
+      "name_en": "Dogmatic Tech-Priest",
+      "onlyArchetypes": [
+        "机械教 Mechanicus"
+      ],
+      "_onlyArchetypes注": "★机械教是独立的第六条线★ 它有自己的教条/异端两套外观，前五条线的卡斯金/克里格/天穹机神/仆从都不该出现在它的格子里；反过来这两套也不该跑到狙击线上。onlyArchetypes 在三处生效：矩阵写入时跳过不允许的行、LookFor 生效时再判一次（分配表是持久化字符串，可能存着改限制之前的旧值）、以及界面提示。",
+      "_note": "机械教技术神甫。★这套是拼 EE，不是借模型★ —— 之所以必须走拼件，是因为**机械触须只有娃娃系统能显示**：原版给触须的 Mechadendrites_Coil_Feature 挂的是 AddEquipmentEntity，而它的实现是 view.CharacterAvatar.AddEquipmentEntity(...)；借模型渲染的单位 CharacterAvatar 是 null，那句话被静默跳过。所以无论 appearanceUnit 换成塔祖斯还是帕斯卡，背后都不会长出触须 —— 实测两次都没有。\n★触须就是背包件★ MechadendriteCoilItem_Pascal_KEE（帕斯卡那条触须）只有 211 字节，内容是指向 KEE_BackpackTechPriest。所以下面第 7 件就是触须，不用另外挂 Feature。",
+      "parts": [
+        "4e838814e4094aacbca4ea3e376cf770",
+        "0e5204e4b3b74b3b895236651b2cb9c8",
+        "94397ebf96c74a758b3e70100a50600e",
+        "c1ceff06118a46aeb5f16376ad70a4ed",
+        "da7d82ff34fb4e7783b314a2cf5b877a",
+        "da71c589250f48388da6407a9be2c6e8",
+        "e2f0663468754132a2e2e4fc47c33903"
+      ],
+      "_parts_names": [
+        "KEE_PowerArmorDragonScaleTechPriest 龙鳞动力甲（躯干）",
+        "KEE_HelmetTechPriestClothes2 头盔",
+        "KEE_GlovesTechPriestClothes 手套",
+        "KEE_BootsTechPriestClothes1 靴",
+        "KEE_Randomizer_PantsTechPriestClothes1NPC 裤",
+        "KEE_CloakAdeptMechanicus1 披风",
+        "KEE_BackpackTechPriest 背包 ← ★机械触须在这件★"
+      ],
+      "_没有基础外套件": "TechPriestClothes 家族只有 靴/手套/面罩/头盔/裤/腰带，**没有躯干件** —— 躯干靠上面那件动力甲覆盖。卡斯金那套第一件是 KEE_OccupationAstraMilitarumClothes（基础外套），技术神甫没有对应物。如果实机看到躯干露空或穿模，把第一件换成 KEE_ArmorDragonScaleTechPriest（df81a3dc…，非动力甲版），或者在最前面补一件 KEE_Occupation* 打底。",
+      "_备选件": "面罩 KEE_MaskTechPriestClothes ec2cb447… 可替头盔；披风还有 KEE_CloakMechanicus1 d9c1a1ef… / KEE_CloakAdeptMechanicusExTule1 a8a4538c…；护甲非动力版 KEE_ArmorDragonScaleTechPriest df81a3dc…",
+      "onlyElites": [
+        "2711d4883bb24692afaf1e8a3ab4335f"
+      ],
+      "_onlyElites注": "★只作用于教条贤者这一个单位★ 分配表最细只到「分型 × 列」，而四个机械教精英共用「精英」那一列。锈行者(aa02b505…)和电僧(ab131771…)现在的外观是对的 —— 自带模型配自带武器的动作集，1.5.71/1.5.72/1.5.84 三次栽在动作不匹配上，不能再动它们。只有教条贤者需要走娃娃(为了长出机械触须)。不匹配的单位 LookFor 返回 null = 跟随装备 = 完全不干预 = 保持改动之前的样子，是**兜底**不是报错。 这里是 DarkMagos，即教条贤者的 unit。"
+    },
+    {
+      "id": "heretek",
+      "name": "异端派 · 异铸技师",
+      "name_en": "Heretek",
+      "onlyArchetypes": [
+        "机械教 Mechanicus"
+      ],
+      "_note": "机械教异端派。与教条派同一套骨架，靠**混沌腰带 + 非动力甲 + 面罩**做区分 —— 原版没有成套的异端 KEE，这三件是全库里唯一带异端/混沌味的技术神甫部件。触须那件（背包）两派通用。",
+      "parts": [
+        "df81a3dc6ac24fe19ad3852431a39895",
+        "ec2cb447888140babda076d3d4ae6b45",
+        "94397ebf96c74a758b3e70100a50600e",
+        "c1ceff06118a46aeb5f16376ad70a4ed",
+        "da7d82ff34fb4e7783b314a2cf5b877a",
+        "1bf4b4fb2e1d4b018435d1c046f15c42",
+        "e2f0663468754132a2e2e4fc47c33903"
+      ],
+      "_parts_names": [
+        "KEE_ArmorDragonScaleTechPriest 龙鳞护甲（非动力版，比教条派轻）",
+        "KEE_MaskTechPriestClothes 面罩（教条派用头盔，这里用面罩做区分）",
+        "KEE_GlovesTechPriestClothes 手套",
+        "KEE_BootsTechPriestClothes1 靴",
+        "KEE_Randomizer_PantsTechPriestClothes1NPC 裤",
+        "KEE_Randomizer_BeltChaosTechPriestClothes1 混沌腰带 ← 异端味在这件",
+        "KEE_BackpackTechPriest 背包 ← ★机械触须在这件★"
+      ],
+      "_另一条混沌腰带": "KEE_Randomizer_BeltChaosTechPriestClothes2 7f0c22f2… —— 两条随便挑，实机看哪条好看",
+      "onlyElites": [
+        "e8237ec331214eac8251661293e7796b"
+      ],
+      "_onlyElites注": "★只作用于教条贤者这一个单位★ 分配表最细只到「分型 × 列」，而四个机械教精英共用「精英」那一列。锈行者(aa02b505…)和电僧(ab131771…)现在的外观是对的 —— 自带模型配自带武器的动作集，1.5.71/1.5.72/1.5.84 三次栽在动作不匹配上，不能再动它们。只有教条贤者需要走娃娃(为了长出机械触须)。不匹配的单位 LookFor 返回 null = 跟随装备 = 完全不干预 = 保持改动之前的样子，是**兜底**不是报错。 这里是 HeretekMagi，即异端贤者的 unit。★注意★ 异端贤者本来就自带触须槽和触须，走娃娃是为了两派外观成对；如果实机发现它原样更好看，把这条整个删掉即可。"
+    },
+    {
       "id": "krieg",
+      "notArchetypes": [
+        "机械教 Mechanicus"
+      ],
       "name": "克里格",
       "name_en": "Death Korps of Krieg",
       "_note": "DLC3 的克里格小队。借整体模型，所以需要 DLC3；解析不到会自动回落成跟随装备。",
@@ -63,38 +135,7 @@
         "近战": "Krieg_Watchmaster 纠察长",
         "灵能": "Krieg_Engineer 工兵"
       }
-    },
-    {
-      "id": "skitarii",
-      "name": "天穹机神",
-      "name_en": "Skitarii",
-      "_note": "DLC3 的天穹机神战团。借整体模型，需要 DLC3；解析不到会自动回落成跟随装备。★体型未实测★ 若比 Medium 大会和占位格不匹配，第一次用请先看一眼。",
-      "unit": "737fc140e70f4ac08b642a67deef64a4",
-      "_unit_name": "DLC3_OP_Dogmatic_Skitarii_Unit 教条派天穹机神",
-      "unitByArchetype": {
-        "近战": "aa02b505be774674ae924f19dc17e6f6",
-        "灵能": "b8ec45b228034db48d1658e35d59193a"
-      },
-      "_unitByArchetype_names": {
-        "近战": "DLC3_OP_Dogmatic_SicarianRuststalker 锈行者（双持超音速刃，近战刺客）",
-        "灵能": "DLC3_OP_Xenarite_Skitarii 异端派天穹机神（配色不同，做区分）"
-      }
-    },
-    {
-      "id": "servitor",
-      "name": "战斗仆从",
-      "name_en": "Combat Servitor",
-      "_note": "机械教的战斗仆从。★体型未实测★ 仆从模型不少是 Large，借来可能和 Medium 的占位格对不上 —— 第一次用务必先看一眼，不合适就换 unitByArchetype 里的别的。",
-      "unit": "5ba73a4183c24e909d691acabadc1db8",
-      "_unit_name": "CombatServitorMultiMelta 多重熔火仆从",
-      "unitByArchetype": {
-        "连射": "d789f69771864a15a033a4e922db9c8c",
-        "近战": "4dbb65442685427eaab2453280009873"
-      },
-      "_unitByArchetype_names": {
-        "连射": "CombatServitorBolter_Ranged 爆弹仆从",
-        "近战": "CombatServitorHeavyWarehouseJaeQ1 重型仆从"
-      }
     }
-  ]
+  ],
+  "_已删除的风格": "skitarii(天穹机神) / servitor(战斗仆从) 已删 —— 这两套是机械教味的「借模型」，当初是在没有机械教分型时、给前五条线当机械教风格用的。现在机械教是独立的第六条线、并且有了自己的教条/异端两套拼件外观，这两套就成了「狙击手长得像机械教」的错位选项。旧存档里选过它们的格子会自动退回「跟随装备」（LookAssign.Warn 会记一行）。"
 }

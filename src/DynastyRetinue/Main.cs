@@ -585,7 +585,15 @@ namespace DynastyRetinue
         }
 
         /// <summary>当前"画笔"：点格子会把它刷进去。空串 = 跟随装备。</summary>
-        private static string _lookBrush = LookCatalog.FollowGear;
+        /// <summary>每张分表一支画笔 —— 见 LookCatalog.Groups 的头注。</summary>
+        private static readonly System.Collections.Generic.Dictionary<int, string> _lookBrushes
+            = new System.Collections.Generic.Dictionary<int, string>();
+
+        private static string BrushOf(int g)
+        {
+            string s;
+            return _lookBrushes.TryGetValue(g, out s) ? s : LookCatalog.FollowGear;
+        }
 
         /// <summary>
         /// 外观分配矩阵。行 = 分型，列 = T1/T2/T3/精英。
@@ -601,67 +609,103 @@ namespace DynastyRetinue
         /// </summary>
         private static void DrawLookSection()
         {
-            var looks = LookCatalog.All;
-
             GUILayout.Label(L.T("<color=#aaaaaa>影响<b>所有</b>卫兵，包括之后招募的。"
                               + "外观是本地设置，<b>联机时不同步</b> —— 各人可以设自己喜欢的，不影响同步。</color>"));
             GUILayout.Space(4);
 
-            // ---- 画笔 ----
-            GUILayout.BeginHorizontal();
-            GUILayout.Label(L.T("风格"), GUILayout.Width(50));
-            if (GUILayout.Toggle(_lookBrush == LookCatalog.FollowGear, L.T("跟随装备"), "Button", GUILayout.Width(96)))
-                _lookBrush = LookCatalog.FollowGear;
-            for (int i = 0; i < looks.Length; i++)
-            {
-                var c = new GUIContent(looks[i].Display());
-                float w = 96f;
-                try { if (GUI.skin != null) w = Mathf.Max(96f, GUI.skin.button.CalcSize(c).x + 10f); } catch { }
-                if (GUILayout.Toggle(_lookBrush == looks[i].Id, c, "Button", GUILayout.Width(w)))
-                    _lookBrush = looks[i].Id;
-            }
-            GUILayout.Space(10);
-            if (Btn(L.T("全部设为"), 90f)) { LookAssign.SetAll(_lookBrush); RefreshLooks(); }
-            GUILayout.Space(10);
             // ★改了 looks.json 之后必须重读★ 清单是带缓存的（只在第一次访问时读文件），
-            //   没有这个按钮就只能重启游戏 —— 而调配方是个"改一件看一眼"的循环，
-            //   每次重启的代价高到让这个配置形同虚设。
+            //   没有这个按钮就只能重启游戏 —— 而调配方是个"改一件看一眼"的循环。
+            GUILayout.BeginHorizontal();
             if (Btn(L.T("重载风格"), 100f)) { LookCatalog.Invalidate(); RefreshLooks(); }
-            GUILayout.EndHorizontal();
             GUILayout.Label(L.T("<color=#aaaaaa>【重载风格】= 重读 looks.json 并立刻重建视图。改配方不用重启游戏。</color>"));
+            GUILayout.EndHorizontal();
 
-            if (looks.Length == 0)
+            var groups = LookCatalog.Groups();
+            if (groups.Count == 0)
+            {
                 GUILayout.Label(L.T("<color=#d0a050>looks.json 里没有可用的风格，只能「跟随装备」。</color>"));
+                GUILayout.Space(6);
+                Settings.HideGearLook = !GUILayout.Toggle(!Settings.HideGearLook,
+                    L.T("显示所穿装备的外观"), GUILayout.Width(180));
+                return;
+            }
 
-            GUILayout.Space(6);
-
-            // ---- 矩阵 ----
             var all = Archetypes.All;
             string[] cols = { "T1", "T2", "T3", L.T("精英") };
 
-            GUILayout.BeginHorizontal();
-            GUILayout.Label("", GUILayout.Width(96));
-            for (int c = 0; c < LookAssign.Cols; c++)
-                if (Btn(cols[c] + " ↓", 96f)) { LookAssign.SetCol(c, _lookBrush); RefreshLooks(); }
-            GUILayout.Label(L.T("<color=#aaaaaa>　点列头刷整列</color>"));
-            GUILayout.EndHorizontal();
-
-            for (int i = 0; all != null && i < all.Length; i++)
+            // ★一组一张独立的表★ 每张表的调色板里只有这张表刷得动的风格，
+            //   所以不会出现"选项列着、点了没反应"。分组依据见 LookCatalog.Groups。
+            for (int g = 0; g < groups.Count; g++)
             {
-                GUILayout.BeginHorizontal();
-                if (Btn((all[i].Name ?? "?") + " →", 96f)) { LookAssign.SetRow(i, _lookBrush); RefreshLooks(); }
-                for (int c = 0; c < LookAssign.Cols; c++)
+                var rows  = groups[g].Key;
+                var looks = groups[g].Value;
+                if (rows == null || rows.Count == 0) continue;
+
+                GUILayout.Space(10);
+                if (groups.Count > 1)
                 {
-                    string cur = LookAssign.Get(i, c);
-                    var look = LookCatalog.Get(cur);
-                    string txt = look != null ? look.Display() : L.T("跟随装备");
-                    // 和画笔一致的那些格子高亮，一眼看出这次要刷哪些
-                    bool same = string.Equals(cur ?? "", _lookBrush ?? "", StringComparison.OrdinalIgnoreCase);
-                    if (GUILayout.Toggle(same, txt, "Button", GUILayout.Width(96)) && !same)
-                    { LookAssign.Set(i, c, _lookBrush); RefreshLooks(); }
+                    var names = new System.Text.StringBuilder();
+                    for (int r = 0; r < rows.Count; r++)
+                    {
+                        if (r > 0) names.Append(" / ");
+                        names.Append(all != null && rows[r] < all.Length && all[rows[r]] != null
+                                     ? (all[rows[r]].Name ?? "?") : "?");
+                    }
+                    GUILayout.Label("<b>" + names + "</b>");
+                }
+
+                // ---- 这张表的画笔 ----
+                GUILayout.BeginHorizontal();
+                GUILayout.Label(L.T("风格"), GUILayout.Width(50));
+                if (GUILayout.Toggle(BrushOf(g) == LookCatalog.FollowGear, L.T("跟随装备"), "Button", GUILayout.Width(96)))
+                    _lookBrushes[g] = LookCatalog.FollowGear;
+                for (int i = 0; i < looks.Length; i++)
+                {
+                    var c = new GUIContent(looks[i].Display());
+                    float w = 96f;
+                    try { if (GUI.skin != null) w = Mathf.Max(96f, GUI.skin.button.CalcSize(c).x + 10f); } catch { }
+                    if (GUILayout.Toggle(BrushOf(g) == looks[i].Id, c, "Button", GUILayout.Width(w)))
+                        _lookBrushes[g] = looks[i].Id;
+                }
+                GUILayout.Space(10);
+                if (Btn(L.T("这几行全刷"), 110f))
+                {
+                    for (int r = 0; r < rows.Count; r++) LookAssign.SetRow(rows[r], BrushOf(g));
+                    RefreshLooks();
                 }
                 GUILayout.EndHorizontal();
+
+                // ---- 这张表的矩阵 ----
+                GUILayout.BeginHorizontal();
+                GUILayout.Label("", GUILayout.Width(96));
+                for (int c = 0; c < LookAssign.Cols; c++)
+                    if (Btn(cols[c] + " ↓", 96f))
+                    {
+                        for (int r = 0; r < rows.Count; r++) LookAssign.Set(rows[r], c, BrushOf(g));
+                        RefreshLooks();
+                    }
+                GUILayout.Label(L.T("<color=#aaaaaa>　点列头刷这张表的整列</color>"));
+                GUILayout.EndHorizontal();
+
+                for (int r = 0; r < rows.Count; r++)
+                {
+                    int i = rows[r];
+                    if (all == null || i >= all.Length || all[i] == null) continue;
+                    GUILayout.BeginHorizontal();
+                    if (Btn((all[i].Name ?? "?") + " →", 96f)) { LookAssign.SetRow(i, BrushOf(g)); RefreshLooks(); }
+                    for (int c = 0; c < LookAssign.Cols; c++)
+                    {
+                        string cur = LookAssign.Get(i, c);
+                        var look = LookCatalog.Get(cur);
+                        string txt = look != null ? look.Display() : L.T("跟随装备");
+                        bool same = string.Equals(cur ?? "", BrushOf(g) ?? "", StringComparison.OrdinalIgnoreCase);
+                        if (GUILayout.Toggle(same, txt, "Button", GUILayout.Width(96)) && !same)
+                        { LookAssign.Set(i, c, BrushOf(g)); RefreshLooks(); }
+                    }
+                    GUILayout.EndHorizontal();
+                }
             }
+
 
             GUILayout.Space(6);
             Settings.HideGearLook = !GUILayout.Toggle(!Settings.HideGearLook,
@@ -1990,6 +2034,23 @@ namespace DynastyRetinue
         /// 觉得实心全息难看就关掉，两种都不算坏。
         /// </summary>
         public bool StarMapShipModelSectorMat = false;
+
+        /// <summary>
+        /// 【默认关闭·实验】让两个近战精英通过「手上是不是 Sword 类武器」的施法限制。
+        ///
+        /// ★为什么默认关★ 1.5.84 实测:一场战斗求值 1187 次、全部放行,
+        ///   结果两个精英**摆大字 + 抽搐** —— 我们等于告诉引擎"它们拿的是长剑",
+        ///   于是去放长剑的动作,而它们的动画集是照跨音速利刃/拳套做的,
+        ///   找不到对应片段就回退到绑定姿势(T-pose)。
+        ///   这和 1.5.71 双持姿势崩、1.5.72 给电僧配剑没有挥砍动作是**同一个病**:
+        ///   动作集不匹配。换了个门又犯一次。
+        ///
+        /// ★为什么不直接删★ 判定本身找对了(AbilityCasterHasWeaponOfClassification
+        ///   才是真正拦技能的那道,不是我先前补的 CheckAbilityWeaponFamilyGetter)。
+        ///   将来如果给它们换成动画集兼容长剑的单位，或者只想解锁某个不带动作的被动，
+        ///   打开这个开关即可，不用重新考古一遍。
+        /// </summary>
+        public bool SwordClassGate = false;
 
         /// <summary>
         /// 修正海战武器范围的焦点（见 ShipRangeFocusPatch）。

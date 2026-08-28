@@ -68,10 +68,33 @@ namespace DynastyRetinue
             return m[archIndex][col] ?? LookCatalog.FollowGear;
         }
 
+        /// <summary>
+        /// 这个分型能不能刷成这套风格。
+        ///
+        /// ★为什么拦在写入处而不是调色板★ 界面是"选画笔 → 刷格子"的模型，
+        ///   画笔是全局的，没法按行列不同的调色板。所以在**写入**这一层判：
+        ///   刷整列/全部时，不允许的行自动跳过，其余照刷 —— 玩家不会因为
+        ///   机械教不收卡斯金，就连带刷不了另外五条线。
+        /// </summary>
+        private static bool Allowed(int archIndex, string lookId)
+        {
+            if (string.IsNullOrEmpty(lookId) || lookId == LookCatalog.FollowGear) return true;  // 跟随装备永远允许
+            try
+            {
+                var arch = Archetypes.Get(archIndex);
+                if (arch == null) return true;
+                var look = LookCatalog.Get(lookId);
+                if (look == null) return true;          // 不认识的 id 交给 LookFor 去警告
+                return look.AllowedFor(arch.Name);
+            }
+            catch { return true; }
+        }
+
         public static void Set(int archIndex, int col, string lookId)
         {
             var m = Parse();
             if (archIndex < 0 || archIndex >= m.Length || col < 0 || col >= Cols) return;
+            if (!Allowed(archIndex, lookId)) return;
             m[archIndex][col] = lookId ?? LookCatalog.FollowGear;
             Save(m);
         }
@@ -81,16 +104,18 @@ namespace DynastyRetinue
         {
             var m = Parse();
             if (archIndex < 0 || archIndex >= m.Length) return;
+            if (!Allowed(archIndex, lookId)) return;
             for (int c = 0; c < Cols; c++) m[archIndex][c] = lookId ?? LookCatalog.FollowGear;
             Save(m);
         }
 
-        /// <summary>整列刷成同一个（点列头）。</summary>
+        /// <summary>整列刷成同一个（点列头）。不允许这套风格的分型自动跳过。</summary>
         public static void SetCol(int col, string lookId)
         {
             var m = Parse();
             if (col < 0 || col >= Cols) return;
-            for (int i = 0; i < m.Length; i++) m[i][col] = lookId ?? LookCatalog.FollowGear;
+            for (int i = 0; i < m.Length; i++)
+                if (Allowed(i, lookId)) m[i][col] = lookId ?? LookCatalog.FollowGear;
             Save(m);
         }
 
@@ -98,7 +123,10 @@ namespace DynastyRetinue
         {
             var m = Parse();
             for (int i = 0; i < m.Length; i++)
+            {
+                if (!Allowed(i, lookId)) continue;
                 for (int c = 0; c < Cols; c++) m[i][c] = lookId ?? LookCatalog.FollowGear;
+            }
             Save(m);
         }
 
@@ -132,6 +160,26 @@ namespace DynastyRetinue
                 if (string.IsNullOrEmpty(id)) return null;
                 var look = LookCatalog.Get(id);
                 if (look == null) { Warn(id); return null; }
+                // ★列表过滤了还要再判一次★ 分配表是持久化的字符串：玩家先选了卡斯金、
+                //   之后我们才把机械教限定成技术神甫，那格里的旧值还在。
+                //   只在界面上过滤等于没拦住，必须在**生效处**也判。
+                var arch = Archetypes.Get(ai);
+                if (arch != null && !look.AllowedFor(arch.Name))
+                {
+                    WarnScope(id, arch.Name);
+                    return null;
+                }
+                // ★再窄一层：按具体单位★ 分配表最细只到「分型 × 列」，
+                //   而**四个机械教精英共用「精英」那一列**。只有教条贤者需要走娃娃
+                //   （为了长出机械触须），锈行者和电僧现在的外观是对的，不能被顺带改掉。
+                //   不匹配时返回 null = 跟随装备 = 完全不干预 = 保持改动之前的样子。
+                //   这是**兜底**不是报错，所以不打日志 —— 否则每个卫兵每次过图都会刷一行。
+                if (look.OnlyElites != null && look.OnlyElites.Length > 0)
+                {
+                    string ug = null;
+                    try { if (g.Blueprint != null) ug = g.Blueprint.AssetGuid.ToString(); } catch { }
+                    if (!look.AllowedForUnit(ug)) return null;
+                }
                 return look;
             }
             catch { return null; }
@@ -144,6 +192,15 @@ namespace DynastyRetinue
         {
             if (_warned.Add(id))
                 Main.Log("[外观] 分配表里点名了「" + id + "」，但 looks.json 里没有这套 —— 该格按跟随装备处理。");
+        }
+
+        /// <summary>分配表里的旧值撞上了新加的分型限制。同样每种组合只提醒一次。</summary>
+        private static void WarnScope(string id, string archName)
+        {
+            if (_warned.Add(id + "@" + archName))
+                Main.Log("[外观] 「" + id + "」不对分型「" + archName + "」开放（looks.json 的 "
+                       + "onlyArchetypes / notArchetypes），该格按跟随装备处理。"
+                       + "多半是先前选的旧值 —— 去外观页重选一次即可。");
         }
 
         /// <summary>摘要，给折叠标题用。例："卡斯金 ×7　克里格 ×4　跟随装备 ×9"。</summary>

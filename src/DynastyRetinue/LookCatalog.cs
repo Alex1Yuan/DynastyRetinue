@@ -21,6 +21,60 @@ namespace DynastyRetinue
         /// <summary>拼 EE：KingmakerEquipmentEntity 蓝图 guid 列表。</summary>
         public string[] Parts;
 
+        /// <summary>
+        /// 只对这些分型开放（archetypes.json 里的 name）。为空 = 不限。
+        ///
+        /// ★为什么需要★ 机械教是第六条线，它有自己的教条/异端两套外观，
+        ///   而前五条线的卡斯金/克里格/天穹机神/仆从**不该出现在它的格子里** ——
+        ///   反过来技术神甫那套也不该跑到狙击线上去。
+        ///   没有这层过滤时，矩阵每格都列全部风格，玩家只能靠自觉不选错。
+        /// </summary>
+        public string[] OnlyArchetypes;
+
+        /// <summary>对这些分型隐藏。与 OnlyArchetypes 互补，两个都填时 Only 先判。</summary>
+        public string[] NotArchetypes;
+
+        /// <summary>
+        /// 只对这些**精英单位**生效（BlueprintUnit guid，即 archetypes.json 里精英的 unit）。
+        /// 为空 = 不按精英收窄。
+        ///
+        /// ★为什么需要比分型更细的一层★
+        ///   分配表是「分型 × 列」，而**四个机械教精英共用「精英」那一列** ——
+        ///   给这列配技术神甫娃娃，会把锈行者和电僧一起改掉，而它们现在的外观是对的
+        ///   （自带模型 + 自带武器的动作集）。
+        ///   只有教条贤者需要走娃娃（为了长出机械触须），所以这层收窄到具体单位。
+        ///
+        /// ★不匹配时是「回落」不是「报错」★ LookFor 返回 null = 跟随装备 =
+        ///   完全不干预，也就是这些单位保持改动之前的样子。
+        /// </summary>
+        public string[] OnlyElites;
+
+        /// <summary>这套风格允不允许用在某个具体单位上（精英收窄那一层）。</summary>
+        public bool AllowedForUnit(string unitGuid)
+        {
+            if (OnlyElites == null || OnlyElites.Length == 0) return true;
+            if (string.IsNullOrEmpty(unitGuid)) return false;
+            for (int i = 0; i < OnlyElites.Length; i++)
+                if (string.Equals(OnlyElites[i], unitGuid, StringComparison.OrdinalIgnoreCase)) return true;
+            return false;
+        }
+
+        /// <summary>这套风格允不允许用在某个分型上。archName 为空时一律允许（拿不到分型就别拦）。</summary>
+        public bool AllowedFor(string archName)
+        {
+            if (string.IsNullOrEmpty(archName)) return true;
+            if (OnlyArchetypes != null && OnlyArchetypes.Length > 0)
+            {
+                for (int i = 0; i < OnlyArchetypes.Length; i++)
+                    if (string.Equals(OnlyArchetypes[i], archName, StringComparison.Ordinal)) return true;
+                return false;
+            }
+            if (NotArchetypes != null)
+                for (int i = 0; i < NotArchetypes.Length; i++)
+                    if (string.Equals(NotArchetypes[i], archName, StringComparison.Ordinal)) return false;
+            return true;
+        }
+
         public bool IsBorrow { get { return !string.IsNullOrEmpty(Unit) || (UnitByArchetype != null && UnitByArchetype.Count > 0); } }
         public bool IsCompose { get { return Parts != null && Parts.Length > 0; } }
 
@@ -63,7 +117,75 @@ namespace DynastyRetinue
             get { return System.IO.Path.Combine(Main.ModEntry != null ? Main.ModEntry.Path : ".", "looks.json"); }
         }
 
+        /// <summary>
+        /// 把风格按「作用域」分组，界面据此画成互相独立的几张表。
+        ///
+        /// ★为什么要分表★ 画笔是全局的一支，而作用域限制让一部分格子刷不上 ——
+        ///   玩家看到选项、点了没反应，只能猜。分表之后每张表的调色板里
+        ///   **只有这张表刷得动的风格**，不存在"点了没用"。
+        ///
+        /// 分组依据是数据本身（onlyArchetypes），不硬编码分型名：
+        ///   · 没有 onlyArchetypes 的 → 通用组（作用于所有不排斥它的分型）
+        ///   · 有 onlyArchetypes 的 → 按作用域字符串归为一组
+        /// 返回的每一项是 (这组的分型下标集合, 这组能用的风格)。
+        /// </summary>
+        public static List<KeyValuePair<List<int>, LookDef[]>> Groups()
+        {
+            EnsureLoaded();
+            var res = new List<KeyValuePair<List<int>, LookDef[]>>();
+            var all = Archetypes.All;
+            if (all == null || _all == null) return res;
+
+            // 分型下标 -> 它能用的风格集合的签名，签名相同的归一张表
+            var bySig = new Dictionary<string, List<int>>(StringComparer.Ordinal);
+            var sigOrder = new List<string>();
+            for (int i = 0; i < all.Length; i++)
+            {
+                string name = all[i] != null ? all[i].Name : null;
+                var ids = new List<string>();
+                for (int k = 0; k < _all.Length; k++)
+                    if (_all[k] != null && _all[k].AllowedFor(name)) ids.Add(_all[k].Id);
+                string sig = string.Join("", ids.ToArray());
+                List<int> rows;
+                if (!bySig.TryGetValue(sig, out rows)) { rows = new List<int>(); bySig[sig] = rows; sigOrder.Add(sig); }
+                rows.Add(i);
+            }
+
+            for (int s = 0; s < sigOrder.Count; s++)
+            {
+                var rows = bySig[sigOrder[s]];
+                string name = all[rows[0]] != null ? all[rows[0]].Name : null;
+                var looks = new List<LookDef>();
+                for (int k = 0; k < _all.Length; k++)
+                    if (_all[k] != null && _all[k].AllowedFor(name)) looks.Add(_all[k]);
+                res.Add(new KeyValuePair<List<int>, LookDef[]>(rows, looks.ToArray()));
+            }
+            return res;
+        }
+
         public static LookDef[] All { get { EnsureLoaded(); return _all; } }
+
+        private static string[] ReadNames(Newtonsoft.Json.Linq.JArray a)
+        {
+            if (a == null) return null;
+            var l = new List<string>(a.Count);
+            foreach (var t in a) { var s = (string)t; if (!string.IsNullOrEmpty(s)) l.Add(s); }
+            return l.Count > 0 ? l.ToArray() : null;
+        }
+
+        /// <summary>
+        /// 某个分型能用的风格。给矩阵界面列选项用 —— 不该出现的就别列出来，
+        /// 靠玩家自觉不选错是不行的（机械教格子里列着卡斯金，选了会得到一个卡迪亚人）。
+        /// </summary>
+        public static LookDef[] ForArchetype(string archName)
+        {
+            EnsureLoaded();
+            if (string.IsNullOrEmpty(archName) || _all == null) return _all;
+            var l = new List<LookDef>(_all.Length);
+            for (int i = 0; i < _all.Length; i++)
+                if (_all[i] != null && _all[i].AllowedFor(archName)) l.Add(_all[i]);
+            return l.ToArray();
+        }
 
         public static LookDef Get(string id)
         {
@@ -126,6 +248,10 @@ namespace DynastyRetinue
                             if (!string.IsNullOrEmpty(g)) d.UnitByArchetype[kv.Key] = g;
                         }
                     }
+
+                    d.OnlyArchetypes = ReadNames(o["onlyArchetypes"] as JArray);
+                    d.NotArchetypes  = ReadNames(o["notArchetypes"] as JArray);
+                    d.OnlyElites     = ReadNames(o["onlyElites"] as JArray);
 
                     // 两种做法都没有 = 这条配不出任何东西，收进来只会让玩家选了没反应
                     if (!d.IsBorrow && !d.IsCompose)
