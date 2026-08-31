@@ -1279,6 +1279,48 @@ namespace DynastyRetinue
         /// skipCap=true：绕过名额上限和利润因子闸 —— 测试要的是"全都摆出来"，
         /// 而不是"按玩家规则最多招几个"。
         /// </summary>
+        /// <summary>
+        /// 只生成**某一条线**的全部精英。
+        ///
+        /// ★为什么需要它★ 原来只有「全生成」一个粒度，一次摆 20 个人。
+        ///   而实测发现战斗往往 1~2 回合就结束，先攻序靠后的**根本轮不到** ——
+        ///   14 个卫兵那场有 9 个整场没动，两个近战精英都在里面，
+        ///   于是「死从天降到底放不放」这种问题一场都验不了。
+        ///   人少了每个都能轮到，两三条线一起点就能做横向对照。
+        ///
+        /// ★不清场★ 和 SpawnAll 一样只加不减，所以可以连点几条线叠起来。
+        /// ★绕过名额上限★ 开发按钮，不进发布路径。
+        /// </summary>
+        public static void SpawnEliteSet(int ai)
+        {
+            try
+            {
+                if (!Main.DevMode) { Main.Log("[单线精英] 仅开发模式可用。"); return; }
+                var arch = Archetypes.Get(ai);
+                if (arch == null) { Main.LogError("[单线精英] 分型下标越界: " + ai); return; }
+                var defs = arch.Elites;
+                if (defs == null || defs.Length == 0)
+                { Main.Log("[单线精英] " + arch.Name + " 没有配精英。"); return; }
+
+                int ok = 0, fail = 0;
+                Main.Log("======== 单线精英：" + arch.Name + "（" + defs.Length + " 名）========");
+                foreach (var d in defs)
+                {
+                    if (d == null) continue;
+                    try
+                    {
+                        Main.Log("  ── 生成精英：" + (d.Name ?? "?"));
+                        if (SpawnOne(ai, d, true) != null) ok++; else fail++;
+                    }
+                    catch (Exception e) { fail++; Main.LogError("  ✗ " + d.Name + ": " + e.Message); }
+                }
+                Main.Log("======== 单线精英结束：成功 " + ok + "　失败 " + fail
+                       + "　★看完记得【遣散全部】★ 它们是持久实体，会进存档。");
+                Main.FlushLog(true);
+            }
+            catch (Exception e) { Main.LogError("[单线精英] 失败: " + e.Message); }
+        }
+
         public static void SpawnAll(bool normals, bool elites)
         {
             try
@@ -1338,10 +1380,21 @@ namespace DynastyRetinue
         ///   结果就是连射（战斗修女）读档后变回原生 brain、只会打单发。
         ///
         /// ★幂等★ 当前 brain 已经对就什么都不做，不打日志、不触发行为树重建。
+        ///
+        /// ★1.7.7 加计数★ 作者问「过图还原 brain 那个坑到底修好没有」，而日志里
+        ///   「读档/过图后补回 brain」**一次都没出现过**。这有两种完全相反的解释：
+        ///     (a) BrainKeepPatch 挡住了还原，这里每次一看都是对的 → 系统健康
+        ///     (b) 这个函数根本没被调到 → 坑还在，只是没人发现
+        ///   只靠「改动时才打一行」永远分不开这两种。所以补两个计数器，
+        ///   由 RetinueLifecycle 在过图那一轮结束后汇总成一行 ——
+        ///   「检查 14 名，补回 0 名」和一片空白，是完全不同的情报。
         /// </summary>
+        internal static int BrainChecked, BrainFixed;
+
         public static void ReapplyBrain(BaseUnitEntity g)
         {
             if (g == null) return;
+            BrainChecked++;
             try
             {
                 int ai = RetinueRegistry.ArchetypeOf(g);
@@ -1362,7 +1415,10 @@ namespace DynastyRetinue
                 if (string.Equals(cur, brainId, StringComparison.OrdinalIgnoreCase)) return;   // 已经对了
 
                 if (BrainTool.Apply(g, brainId))
+                {
+                    BrainFixed++;
                     Main.Log("[生命周期] 读档/过图后补回 brain: " + (cur ?? "无") + " -> " + brainId);
+                }
             }
             catch (Exception e) { Main.LogError("[生命周期] 补 brain: " + e.Message); }
         }

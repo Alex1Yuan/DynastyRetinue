@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using Kingmaker.EntitySystem.Entities;   // BaseUnitEntity（逐个改名那段用）
 using Kingmaker.UnitLogic.Parts;         // PartUnitDescription
@@ -149,6 +149,25 @@ namespace DynastyRetinue
         ///              LocalizationPatch 因此死了一整晚没人发现。所以这里专门把
         ///              "带标注却一个方法都没打上"的类挑出来报错。
         /// </summary>
+        /// <summary>
+        /// ★标记：这个补丁类只为诊断存在★ 「详细日志」关着时**根本不挂载**。
+        ///
+        /// ═══ 为什么必须做到「不挂载」而不是「挂了再 return」═══
+        /// 1.7.x 这一串动画排查里我陆续往热路径上堆了十几个钩子，其中好几个在
+        /// **每帧每单位**的路径上（get_DontReleaseOnInterrupt、StartInternal/FinishInternal、
+        /// UpdateInternal、Execute）。即使补丁体第一行就 return，
+        /// **Harmony 的调度开销本身是省不掉的**。
+        /// 实测代价（战斗中 10 秒内帧数）：
+        ///     1.5.21 基线   712 / 727 / 602 / 358
+        ///     1.7.43        312 / 251 / 295
+        ///     1.7.45        141 / 138 / 138      ← 掉到基线的 1/5
+        /// 作者直接问了「不会又引入什么会导致游戏变卡的修改吧」—— 问得对，数据也证实了。
+        /// ⇒ 纯诊断的钩子，关的时候就不该存在。代价是打开诊断要重启游戏，
+        ///   而排查时本来每换一版都要重启，没有额外成本。
+        /// </summary>
+        [AttributeUsage(AttributeTargets.Class)]
+        internal sealed class DiagOnlyAttribute : Attribute { }
+
         private static void PatchAllSafe(Harmony harmony, System.Reflection.Assembly asm)
         {
             if (harmony == null || asm == null)
@@ -169,7 +188,7 @@ namespace DynastyRetinue
                 return;
             }
 
-            int ok = 0;
+            int ok = 0, skippedDiag = 0;
             var failedNames = new System.Collections.Generic.List<string>();
             var inertNames  = new System.Collections.Generic.List<string>();
 
@@ -180,6 +199,19 @@ namespace DynastyRetinue
                 bool isPatchClass;
                 try { isPatchClass = t.GetCustomAttributes(typeof(HarmonyPatch), false).Length > 0; }
                 catch { isPatchClass = false; }
+
+                // ★诊断专用补丁：开关关着就整个跳过，一个钩子都不装★
+                if (isPatchClass)
+                {
+                    bool diagOnly;
+                    try { diagOnly = t.GetCustomAttributes(typeof(DiagOnlyAttribute), false).Length > 0; }
+                    catch { diagOnly = false; }
+                    if (diagOnly && (Settings == null || !Settings.WatchMomentum))
+                    {
+                        skippedDiag++;
+                        continue;
+                    }
+                }
 
                 try
                 {
@@ -357,6 +389,9 @@ namespace DynastyRetinue
             // ═══════════════════════════════════════════════════════════════
             // 帧时间监视：每帧一次浮点比较，只在有尖峰的窗口记一行。
             FrameWatch.Tick();
+            AnimFallback.RefreshPresence();
+            MixerWeightProbe.Tick();          // 每 2 秒、只在诊断日志开着时、只看我们的卫兵   // 每 2 秒刷一次「场上有没有近战精英」的全局闸
+            CommandStallWatch.Tick();      // 每秒最多一次，只在战斗中查我们的卫兵
             // 舰船帧级采样：只在「详细日志」开着时工作，且一次会话最多记 60 条。
             // 放在最前面是因为它自己就有节流，不需要等后面那些判定。
             ShipFrameProbe.Tick();
@@ -1392,6 +1427,31 @@ namespace DynastyRetinue
             // 「发放装备」这四个字太省，作者本人都问过它是干嘛的 ——
             // 作者看不懂的标签，玩家一定看不懂。改成把**两边的后果**都写出来。
             GUILayout.Label(L.T("<b>解除限制</b>　<color=#aaaaaa>互不相干的几件事，分开控制</color>"));
+
+            // ---------- 近战精英 ----------
+            // ★1.7.31 把 7 个控件砍成 3 个★ 作者反馈面板选项太多 —— 是我一天之内塞进来的。
+            //   四个技能闸合并成 ReaperSkillGate（实测从来一起开关）；
+            //   动画片段兜底改成常开（它只在原版必定出问题时介入，没有「关掉更好」的情形，
+            //   留个开关只是让人多做一次无意义的决定）；
+            //   三类诊断日志合并到 DiagVerbose，默认关，玩家一行都看不到。
+            GUILayout.BeginHorizontal();
+            Settings.ReaperSkillGate = GUILayout.Toggle(Settings.ReaperSkillGate,
+                L.T("解锁近战精英的收割者技能"), GUILayout.Width(230));
+            GUILayout.Label(L.T("烧血技能血量下限%"), GUILayout.Width(130));
+            Settings.WoundAbilityHpFloor = (int)GUILayout.HorizontalSlider(
+                Settings.WoundAbilityHpFloor, 0f, 90f, GUILayout.Width(120));
+            GUILayout.Label(Settings.WoundAbilityHpFloor.ToString(), GUILayout.Width(30));
+            GUILayout.EndHorizontal();
+            GUILayout.BeginHorizontal();
+            Settings.MeleeEliteNoEndTurn = GUILayout.Toggle(Settings.MeleeEliteNoEndTurn,
+                L.T("森罗刃网不结束回合"), GUILayout.Width(190));
+
+            GUILayout.EndHorizontal();
+            GUILayout.Label(L.T("<color=#ffaa66>收割者技能：这两个单位的武器分类不是长剑，原版会把整条线的技能挡在 AI 视野外。"
+                + "打开后放行判定并给死从天降补上落点选择。★动作可能对不上（T-pose），开了先打一场看看★。"
+                + "烧血下限：鲜血誓言/森罗刃网的消耗是生命值而 AI 不会收手，低于这个百分比就暂停它们，0=关闭。</color>"));
+            GUILayout.Space(6);
+
             // ★「全部解除」放在单独一行、且排在最前★
             // 原来它和另外三个并排，看着像第四个并列项，实际是总开关 ——
             // 玩家勾了它以后发现精英还是招不了，因为下面那两个精英开关当时没被它管到。
@@ -1466,8 +1526,9 @@ namespace DynastyRetinue
             GUILayout.BeginHorizontal();
             Settings.WatchMomentum = GUILayout.Toggle(Settings.WatchMomentum,
                 L.T("详细日志"), GUILayout.Width(100));
-            GUILayout.Label(L.T("<color=#aaaaaa>记录每次士气变化、帷幕跳过、AI 换脑拦截。"
-                              + "平时不用开（日志会涨很快）；作者让你复现问题时再打开。</color>"));
+            GUILayout.Label(L.T("<color=#aaaaaa>记录士气变化、帷幕跳过、AI 换脑拦截，以及动画诊断（查表/时间轴/卡顿现场）。"
+                              + "★关着时相关补丁根本不挂载，对性能零影响；打开后需重启游戏才生效。★"
+                              + "平时不用开；作者让你复现问题时再打开。</color>"));
             GUILayout.EndHorizontal();
 
             // 一键还原 —— 调坏了不用去翻 Settings.xml，也不用重装
@@ -1590,12 +1651,38 @@ namespace DynastyRetinue
             GUILayout.Label("<b>实战测试</b>　<color=#aaaaaa>只生成、不清场；生成完去打一场，"
                           + "战斗结束会自动打一份「战斗行为总账」（谁动了、放了什么技能、还是只普攻）</color>");
             GUILayout.BeginHorizontal();
-            if (Btn("生成 5 个普通", 130f))  RetinueTest.SpawnAll(true,  false);
-            if (Btn("生成 10 个精英", 130f)) RetinueTest.SpawnAll(false, true);
-            if (Btn("全生成（15 个）", 140f)) RetinueTest.SpawnAll(true,  true);
+            // ★数字从配表算，不写死★ 原来写的是「5 个普通 / 10 个精英 / 全生成（15 个）」，
+            //   而加了机械教之后实际是 6 / 14 / 20 —— 标签一直在骗人。
+            //   这种「常量抄进文案」的错误只会重演，所以直接数。
+            int _nNorm = Archetypes.All != null ? Archetypes.All.Length : 0;
+            int _nElite = 0;
+            if (Archetypes.All != null)
+                for (int i = 0; i < Archetypes.All.Length; i++)
+                    _nElite += (Archetypes.All[i] != null && Archetypes.All[i].Elites != null)
+                             ? Archetypes.All[i].Elites.Length : 0;
+            if (Btn("生成 " + _nNorm + " 个普通", 130f))  RetinueTest.SpawnAll(true,  false);
+            if (Btn("生成 " + _nElite + " 个精英", 130f)) RetinueTest.SpawnAll(false, true);
+            if (Btn("全生成（" + (_nNorm + _nElite) + " 个）", 140f)) RetinueTest.SpawnAll(true,  true);
             GUILayout.Label("<color=#ffaa66>会绕过名额上限。装备档位用【规则】区那个设，"
                           + "但它不追溯 —— 要先设好再生成。</color>");
             GUILayout.EndHorizontal();
+
+            // ---------- 按线生成精英 ----------
+            // ★为什么加★ 一次摆 20 个人，战斗常常 1~2 回合就结束，先攻序靠后的根本轮不到 ——
+            //   14 人那场有 9 个整场没动，两个近战精英都在里面，于是刀剑技能一场都验不了。
+            //   按线点，人少了每个都能轮到；连点两三条还能做横向对照（不清场，会叠加）。
+            GUILayout.Label("<color=#aaaaaa>只生成某条线的精英 —— 人少才轮得到，"
+                          + "连点几条可叠加做对照。</color>");
+            for (int i = 0; Archetypes.All != null && i < Archetypes.All.Length; i++)
+            {
+                if (i % 3 == 0) GUILayout.BeginHorizontal();   // ★每行 3 个★ 一行挤 13 个按钮会溢出面板，最后两个点不到
+                var _a = Archetypes.All[i];
+                int _ne = (_a != null && _a.Elites != null) ? _a.Elites.Length : 0;
+                string _nm = _a != null ? (_a.Name ?? ("分型" + i)) : ("分型" + i);
+                int _idx = i;                                  // ★闭包陷阱★ 别在回调里用循环变量
+                if (Btn(_nm + "（" + _ne + " 精英）", 200f)) RetinueTest.SpawnEliteSet(_idx);
+                if (i % 3 == 2 || i == Archetypes.All.Length - 1) GUILayout.EndHorizontal();
+            }
             GUILayout.BeginHorizontal();
             Settings.AutoEndPlayerTurn = GUILayout.Toggle(Settings.AutoEndPlayerTurn,
                 "自动结束我的回合", GUILayout.Width(150));
@@ -1638,6 +1725,12 @@ namespace DynastyRetinue
             // 老玩家存档里的卫兵 —— 必须读组件数值，不能拿文案当依据。
             if (Btn("读特性组件数值", 150f)) LegendProbe.DumpFeatureComponents();
             if (Btn("清理候选", 100f)) LegendProbe.ClearShown();
+            GUILayout.EndHorizontal();
+
+            // ★换行★ 这一排原本 13 个按钮挤在一个 BeginHorizontal 里，超出面板宽度的
+            //   直接被截掉、点不到（作者截图实证：末尾两个看不见）。GUILayout 的水平组
+            //   不会自动折行，只能自己拆。以后再加按钮记得也往下一行放。
+            GUILayout.BeginHorizontal();
             // 开发区的按钮不进本地化表 —— 这里的文案只给作者看
             if (Btn("字体覆盖检查", 120f)) FontCheck.Run();
             // 职业链探测是真把单位一级级推上去 —— 55 级存档上全量跑会卡几分钟。
@@ -2051,6 +2144,160 @@ namespace DynastyRetinue
         ///   打开这个开关即可，不用重新考古一遍。
         /// </summary>
         public bool SwordClassGate = false;
+
+        /// <summary>
+        /// 【默认开】两个近战精英放 森罗刃网 / 利刃之舞 时不结束回合。
+        ///
+        /// ★为什么给这个补偿★ 这两个技能都挂着 WarhammerEndTurn，放完整个回合就没了。
+        ///   而实测这两个精英的动作里辅助技占了四分之三（战术家树的团队增益），
+        ///   本来输出就吃紧，再被一个技能吃掉整回合，等于没有输出窗口。
+        ///
+        /// ★和长剑闸的区别：这个不碰动画★ 技能照常播它自己的动作，只是回合不结束，
+        ///   所以没有 1.5.84 那种 T-pose 风险。因此默认开。
+        ///
+        /// ★范围★ 走同一个 IsGateTarget，只有那两个近战精英。别的单位
+        ///   （包括玩家自己的收割者）一律走原版 —— 这是给卫兵的补偿，不是全局改数值。
+        /// </summary>
+        public bool MeleeEliteNoEndTurn = true;
+
+        /// <summary>
+        /// 【默认开】只给「死从天降」(ReaperDeathWaltzAbility) 放行武器分类限制。
+        ///
+        /// ★和 SwordClassGate 的区别：粒度★
+        ///   SwordClassGate 是按**分类**放行 —— 一开就把四个收割者技能全解锁，
+        ///   其中死亡华尔兹(Desperate/Ultimate)动作最花哨，引擎去取长剑动作、
+        ///   单位动画集里没有 ⇒ 1.5.84 实测摆大字 + 抽搐。
+        ///   这个是按**组件实例**认技能：只有死从天降那一个组件被放行，
+        ///   另外三个照常走原版判定，所以不会去播它们的动作。
+        ///
+        /// ★仍然有动画风险，但范围只有一个技能★ 死从天降是瞬移攻击。
+        ///   若实测它也摆大字，关掉这一个开关即可，不影响别的。
+        /// </summary>
+        public bool DeathFromAboveGate = true;
+
+        /// <summary>
+        /// 放行「收割者终极 / 收割者绝境」的长剑施法限制。★默认关，需要肉眼验动画★
+        ///
+        /// ★为什么值得开★ 近战精英被这道闸拿掉了收割者线 6 招里的 5 招，
+        ///   于是能放的只剩战术家那一串增益 —— 实测辅助技占比一度到 58%。
+        ///   **不是 AI 爱放 buff，是能放的就剩 buff。**
+        ///
+        /// ★为什么相信这两招开了就能放（而死从天降开了却不放）★ 离线 dump 组件表对比：
+        ///     死从天降   独有 AbilityTargetIsReacheble —— 跳跃攻击的实现。
+        ///                贴脸时无处可跳，AI 打分 0。它的沉默有独立解释。
+        ///     收割者绝境 与**战术家终极**共有三项：AbilitySpecialMomentumAction +
+        ///                AbilityMomentumLogic + ContextConditionCasterHasFact，
+        ///                只多这一道武器闸。而战术家终极每场都放得出来。
+        ///   动势资源、触发时机、AI 权重因此都被证明没问题，卡的就是闸。
+        ///
+        /// ★为什么默认关★ 放行 ≠ 动作对得上。前科三次：1.5.71 双持大剑骨骼挂点错位、
+        ///   1.5.72 电僧配剑（拳套动作集里没有挥砍）、长剑闸全开 ⇒ T-pose。
+        ///   真正的解法是任务 #46 的动画片段按类型匹配 + 兜底，**那个还没做**；
+        ///   在它做出来之前，唯一的验证手段是开了打一场、肉眼看。
+        ///   所以默认关，由玩家自己决定何时验。
+        ///
+        /// ★一个实例管两招★ 这两招身上挂的是同一个组件实例(3b0892cc…)，
+        ///   所以这一个开关同时管它们俩，没法只开一个。
+        /// </summary>
+        public bool ReaperUltimateGate = false;
+
+        /// <summary>
+        /// 放行「利刃之舞 / 森罗刃网」的长剑施法限制。★默认关★
+        ///
+        /// ★实际主要是给森罗刃网开路★ 利刃之舞另有两道我们碰不到的闸：
+        ///   CheckHasTwoWeaponsOfClassificationGetter —— 要**两把** Sword
+        ///   AbilityCustomBladeDance{Classification=Sword} —— 投放时自己再去找剑
+        /// 后者只能靠改武器蓝图的 Classification 解，而那会波及所有用这把武器的
+        /// 原版单位，撞「只改我们卫兵」的硬约束。所以开了它也大概率不动。
+        /// ★森罗刃网另有一个独立实例★ 所以这里收的是两个蓝图上的**全部**同类组件（2~3 个）。
+        /// </summary>
+        public bool BladeDanceGate = false;
+
+        /// <summary>
+        /// 给「死从天降」补上 AoE 图案，让 AI 能选出目标。★默认关，改动最深的一个★
+        ///
+        /// ★这是真病因★ 详见 DeathWaltzAoePatch 的头注。一句话：
+        ///   AI 给它分派了 SingleTargetSelector（只枚举单位实体），
+        ///   而它是点目标技能且要求落点**没人站** ⇒ 每个候选都被否掉 ⇒ 静默跳过。
+        ///   这解释了为什么武器闸放行 204/147/770 次、施放恒为 0 ——
+        ///   **不是打分低，是压根选不出目标。**
+        /// ★为什么和武器闸是两回事★ 武器闸决定「能不能考虑」，这个决定「考虑时选得出目标吗」。
+        ///   两个都得开，缺一不可。
+        /// ★风险★ 补上之后走的全是原版 AOETargetSelector，我们不写打分逻辑。
+        ///   但技能真放出来之后**动画仍未验过** —— #46 片段替换没做，T-pose 前科三次。
+        /// </summary>
+        public bool DeathWaltzAoeFix = false;
+
+        /// <summary>
+        /// 动画片段兜底（任务 #46）。★默认开★
+        ///
+        /// 两件事，都只对两个近战精英生效：
+        ///   A 查不到片段时，把查表用的 WeaponAnimationStyle 换成这个动作真有的那个 —— 治 T-pose
+        ///   B 拦下 LocoMotion 的空片段 —— 治「移动动画句柄被 NRE 永久打死」导致的卡死
+        ///
+        /// ★为什么默认开★ 这两处**只在原版必定出问题时才介入**：
+        ///   A 只在「当前风格在表里根本不存在」时动手，那种情况原版的结局是 100% T-pose；
+        ///   B 只在 SelectClip 已经返回 null 时动手，那种情况原版的结局是 NRE + 永久损坏。
+        ///   也就是说不开的话那两种情形不会变好，只会保持坏。
+        /// ★B 是存量 bug 的护栏★ 不只影响收割者技能 —— 任何让武器风格变化的效果都可能触发，
+        ///   所以即使三个技能开关全关，这道护栏也该留着。
+        /// </summary>
+        public bool AnimClipFallback = true;
+
+        /// <summary>
+        /// 收割者线技能的总闸（原来是四个开关）。★默认关，需要肉眼验动画★
+        ///
+        /// ★为什么合并★ 作者反馈「整个设置盘面的开关和选项有点太多了」—— 是我的问题，
+        ///   一天之内往同一栏塞了 7 个。而这四个（收割者终极/绝境、森罗刃网/利刃之舞、
+        ///   双持长剑判定、死从天降的目标选择修复）**实测从来都是一起开一起关**，
+        ///   拆开只增加负担、不增加控制力。合成一个。
+        /// ★它管什么★ 近战精英的收割者线技能能不能被 AI 考虑并正常施放：
+        ///   · 放行「手上得有长剑」的施法限制（这两个单位的武器分类是 None）
+        ///   · 放行「要两把长剑」的双持判定
+        ///   · 给死从天降补 AoE 图案，否则 AI 的目标选择器选不出落点（详见 DeathWaltzAoePatch）
+        /// ★为什么默认关★ 放行 ≠ 动作对得上。历史上三次 T-pose 前科。
+        /// </summary>
+        public bool ReaperSkillGate = false;
+
+        /// <summary>
+        /// 诊断日志总开关。★默认关★
+        ///
+        /// ★为什么要有★ 排查动画/卡顿问题时加了一批探针（动画查表、动画闸、指令卡顿），
+        ///   它们的输出对**我**有用，对玩家是纯噪音，还会把日志撑大。
+        ///   作者明确要求过：上线前必须把这些清理掉，别影响正常玩家。
+        ///   与其发布前逐个删（容易漏），不如统一挂在这一个开关下，默认关。
+        /// ★打开后会多出什么★ [动画查表] [动画闸] [指令卡顿] 三类，
+        ///   都带「★怎么读★」的判读说明，用来定位具体问题。
+        /// </summary>
+        /// <summary>
+        /// ★1.7.48 合并★ 原来「诊断日志」和「详细日志」是两个开关，作者反馈「有点重合」——
+        /// 确实：一个管动画诊断、一个管士气/帷幕/换脑观测，但用户视角都是「排查时打开的东西」，
+        /// 而且我自己都在两条消息里说反过一次（让作者开错了开关，白打一场）。
+        /// 现在合并成一个，DiagVerbose 只是 WatchMomentum 的别名，存档字段不变（不破坏已有设置）。
+        /// </summary>
+        public bool DiagVerbose { get { return WatchMomentum; } }
+
+        /// <summary>
+        /// 烧血技能的血量下限（百分比）。低于它就暂停鲜血誓言/森罗刃网。★默认 50★
+        ///
+        /// 这两招的消耗是**生命值**（AbilityResourceWounds），而 AI 没有「快死了收手」的判断 ——
+        /// 实测鲜血誓言一场放 8~11 次，把自己烧死。
+        /// 设成 0 = 关掉这道闸（恢复原版行为，AI 会继续自尽）。
+        /// 只对我们的两个近战精英生效。
+        /// </summary>
+        public int WoundAbilityHpFloor = 50;
+
+        /// <summary>
+        /// 指令卡顿探针：某个卫兵的当前指令跑了 5 秒还没结束就打一份现场快照。★默认开★
+        ///
+        /// ★为什么加★ 作者反馈「电僧卡住」「卡在敌人回合」「超时才结束」，
+        ///   而原有三个探针（CombatWatch 只量 AI 决策、StuckWatch 只管非战斗走位、
+        ///   FrameWatch 只量帧）一个都答不了「卡在哪一步」。
+        ///   我因此只能靠静态追代码猜动画路径，**连猜四次全错**，白花五个版本。
+        ///   作者的原话：「你探测不出来是哪里卡了吗？」—— 对，那就该先做这个探针。
+        /// ★开销★ 每秒最多一次、只在战斗中、只看卫兵，同一情形只报一次。
+        /// </summary>
+        public bool CommandStallWatch = true;
 
         /// <summary>
         /// 修正海战武器范围的焦点（见 ShipRangeFocusPatch）。

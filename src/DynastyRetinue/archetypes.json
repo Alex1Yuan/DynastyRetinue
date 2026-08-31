@@ -848,9 +848,11 @@
           "name": "锈蚀 · 斯卡里安追踪者",
           "rank": "锈行猎手",
           "rank_en": "Ruststalker",
-          "brain": "b81b43296c3346bfb6bd4d18d424d4bc",
-          "_brain注": "【1.5.73】MeleeFlankerBaseBrain —— ★这才是两个近战精英打不出输出的真因★。精英不填 brain 会回落到分型级的 6bfff31e…，那是**狙击线**的 brain；两个近战精英一直在跑远程 AI：拉距离、绕位、少攻击。1.5.68 的战斗总账坐实了 —— 电僧 3 个回合只砍 1 次、走了 6 次，锈行者 3 回合砍 3 次，而同场的远程技工 2 回合砍 17 次。\n选它的依据（按 EliteDef.BrainId 头注的两条验收）：① 蓝图里**没有组件、没有技能清单**，不存在 m_UseOnlyListedAbilities 锁死的坑；② 近战分型（rt_abelard_vanguard）早就在用同一个 guid，生产环境已验证。",
+          "brain": "95b1ca391e1e4d43abf365c43966a66a",
+          "_brain注": "★1.7.10 A/B 实验：改用它自己的原生脑★ 上一手是 MeleeFlankerBase b81b4329…，见下方留档。改这一下的依据全部来自实测，不是推断：\n  · 探测实测：原生脑 UseOnlyListed=**False** 列表2 近战型=**Smart**；MeleeFlankerBase 是 False 列表0 近战型=**Usual**。两项都是升级。\n  · UseOnlyListed=False 时那个「列表」不是白名单而是**优先级提示**。列表0 = 没有任何提示，AI 只能按通用权重打分；而它自己的脑那 2 条十有八九点着自己的招。\n  · 工作流的结论是「死从天降没有结构阻塞，是 AI 没选它」。而「AI 不选」的直接解药就是优先级提示。\n★对照数据（1.7.8，MeleeFlankerBase）★ 3 回合 48 动作，辅助技 28（58%），长剑闸放行 312 次，收割者攻击技施放 0 次。这场每个卫兵都轮到了，所以「没机会」已被排除。\n★注意电僧不能这么改★ 实测电僧原生脑 UseOnlyListed=**True** 列表1 —— 真受限，只认 1 个技能。那边必须保留 MeleeFlankerBase 覆盖。两个精英在这一点上不对称。\n★回退★ 改回 b81b43296c3346bfb6bd4d18d424d4bc 即可。\n──── 以下为 1.5.73 选 MeleeFlankerBase 时的留档 ────\n",
+          "_历史_brain注": "【1.5.73】MeleeFlankerBaseBrain —— ★这才是两个近战精英打不出输出的真因★。精英不填 brain 会回落到分型级的 6bfff31e…，那是**狙击线**的 brain；两个近战精英一直在跑远程 AI：拉距离、绕位、少攻击。1.5.68 的战斗总账坐实了 —— 电僧 3 个回合只砍 1 次、走了 6 次，锈行者 3 回合砍 3 次，而同场的远程技工 2 回合砍 17 次。\n选它的依据（按 EliteDef.BrainId 头注的两条验收）：① 蓝图里**没有组件、没有技能清单**，不存在 m_UseOnlyListedAbilities 锁死的坑；② 近战分型（rt_abelard_vanguard）早就在用同一个 guid，生产环境已验证。",
           "plan": "kibellah_reaper_tactician",
+          "_plan注": "★1.7.16 换回收割者线，验三个刀锋舞者技能★ 作者提的，数据完全支持。\n★收割者线为什么废★ 离线 dump 组件表：6 招里 5 招挂着 AbilityCasterHasWeaponOfClassification{Sword}，而跨音速利刃/静电臂铠的 Classification=**None** ⇒ 一律不通过。1.7.12 我们把闸放行了（长剑判定放行数 204→770，闸确实开了），**技能仍然 0 次** —— 因为收割者终极/绝境内部引用 ReaperDeathWaltzUltimate + ReaperUltimateQueueAttack，它们是**死从天降的包装**，而死从天降独有 AbilityTargetIsReacheble（跳跃落点）。所以那条线是两道病叠着：武器分类 + 落点。\n★先锋线为什么干净★ 11 个技能逐个 dump：\n    VanguardDeperate / Bulwark / DefensiveStance / Disposal / FightMe —— **一条施放限制都没有**\n    VanguardUltimate —— 只有 ContextConditionCasterHasFact，和**每场都放得出来的**战术家终极同款\n    WallOfStone / FollowMyLead —— 只有 AbilityTargetsInPattern（范围模板，不是武器条件）\n  零武器闸、零可达限制。差别不是程度问题，是有和没有。\n★实机佐证★ 近战分型的铁壁卫长跑的就是这份方案，实测 2 回合 28 动作、14 次攻击、辅助占比正常；而锈行猎手在收割者线下辅助占比一度 58%、收割者攻击技 0 次。\n★已知的不完美（作者指出）★ rt_abelard_vanguard 是照**远近混合**定位点的，发给纯近战精英会有几个天赋点浪费在远程专精上。接受这个代价：先锋 5 个可用攻击技 vs 收割者 0 个，几个废点换不回来。要更对的做法是新做一份纯近战先锋方案（ref/rt_probe/mkplans.py 生成），但那要先有源 build —— 先验方向对不对，对了再花那个力气。\n★回退★ 改回 kibellah_reaper_tactician 即可。",
           "chain": [
             "dd6948ee596346a69733d0bb107c2f42",
             "604fa184d7d944c8ae5965f9700782b5",
@@ -858,6 +860,7 @@
           ],
           "gear": [
             "e8dc5248bfa943cf891127ce05317417",
+            "1d383546b84c42d1a2adf49acfa8bb6a",
             "1d383546b84c42d1a2adf49acfa8bb6a",
             "3803098850504a7ebf80d6fbb70c37c6",
             "be68b27f13e14e64a9dd2a1d8f9e9bde",
@@ -877,9 +880,9 @@
             "d1a76d2a304241ff926a15b3d34ec360",
             "a3c5541e26f5428f853318342edcbbf4"
           ],
-          "_preGrant注": "动力装甲专精 + 重甲专精。★不能只靠 grantFeaturesT3★ —— 那个按玩家阶位发，而精英是毕业形态、与玩家阶位无关；玩家 T1 时精英就会穿不上顶级护甲。\n【1.5.74 肉盾/防反定位】后三个是一套，配合 WeaponGatePatch 生效：\n· Parry25_Feature da338f7c… —— 招架 +25。★1.5.73 给的 Parry10 是错的★：查 RuleCalculateParryChance 发现 `Defender => base.Initiator`，即这条规则里「发起者」就是防守方；而 Parry10 挂的是 Target/Attacker 侧的组件，那是**攻击方视角**，给自己加不到招架。Parry25 是整条阶梯里唯一只挂 WarhammerParryChanceModifierDefender 的，语义无歧义（15/20/30 同时挂了两种，40/50 只挂 Initiator）。\n· DoombringerSword_Feature d1a76d2a… —— 无视护甲（ArmorIgnoreOnTargetInitiator）。它自带 CheckAbilityWeaponBlueprintGetter 写死「必须手持命运使者」，靠补丁①放行。\n· AutoStriking_PowerSword_Feature a3c5541e… —— 防御触发自动还击（WarhammerDefenseTriggerTarget → ContextActionAttackWithFirstWeaponAbility）。它自带 ContextConditionItemInSlot 写死「必须手持自主攻击能量剑」，靠补丁③放行。\n★这三个是「堆招架 → 招架成功 → 自动还击 → 还击无视护甲」一条链★ 招架不只是减伤，它是反击的触发源，所以招架值同时是防御和输出。\n★补丁关掉会怎样★ 关 mod 之后后两个不触发（条件回到原版判定），只剩招架照常生效。不会报错、不会崩存档 —— 三个都是原版 guid。",
           "_preGrant注": "动力装甲专精 + 重甲专精。★不能只靠 grantFeaturesT3★ —— 那个按玩家阶位发，而精英是毕业形态、与玩家阶位无关；玩家 T1 时精英就会穿不上顶级护甲。\n【1.5.73】加 Parry10_Feature（招架 +10）—— 这是**命运使者身上两个效果之一**，现在武器还原成自带的了，把效果搬到人身上。查过它的蓝图：只有一个 WarhammerParryChanceModifierTarget 组件、**没有任何武器条件**，所以拿什么武器都生效。\n★另一个效果搬不过来★ DoombringerSword_Feature 挂的是 ArmorIgnoreOnTargetInitiator（无视护甲）+ CheckAbilityWeaponBlueprintGetter，后者**写死了必须手持命运使者**。直接授予不会报错，但永远不触发。要让自带武器吃到，只能补丁那个 getter —— 留到实测之后再定。",
-          "_gear注": "近战位。武器用命运使者（DoombringerSword，Unique）—— 作者指定。而且它是有明确武器族的常规武器，比单位自带的跨音速利刃/静电臂铠更可能吃到职业链天赋。其余抄绮贝菈：零和透镜（头）· 刀锋舞者斗篷（肩）· 大脑逆变器 MK\"战术家\"（植入物）· 活力项饰（颈）。 【1.5.64】副手再加一把命运使者做双持 —— GearTool 的 worn 是**发装备前的快照**，不会把第一把判成「已在身上」；used 会记住第一把占了哪个槽，第二把自然去另一个。装不上的话日志会说明哪道检查拒的。 【1.5.71】双持撤回，命运使者只留一把 —— 实机发现锈行者双持后姿势异常：它的模型和动作是照自带的跨音速利刃做的，塞两把大剑之后骨骼挂点对不上。 【1.5.73】命运使者**整个去掉**，回到自带的跨音速利刃（DLC3_OP_Dogmatic_SicarianRuststalker_Weapon，已在表里第一位）—— 与电僧还原同一次改动。原来留它的理由是「有明确武器族、更可能吃到职业链天赋」，但 1.5.68 的战斗总账显示锈行者照样在放 森罗刃网/蛮力猛击（刺客链技能），说明自带武器并不挡职业链；而单持大剑的姿势问题一直没解决。命运使者的招架 +10 已经用 Parry10_Feature 搬到 preGrant 里了。"
+          "_gear注": "近战位。武器用命运使者（DoombringerSword，Unique）—— 作者指定。而且它是有明确武器族的常规武器，比单位自带的跨音速利刃/静电臂铠更可能吃到职业链天赋。其余抄绮贝菈：零和透镜（头）· 刀锋舞者斗篷（肩）· 大脑逆变器 MK\"战术家\"（植入物）· 活力项饰（颈）。 【1.5.64】副手再加一把命运使者做双持 —— GearTool 的 worn 是**发装备前的快照**，不会把第一把判成「已在身上」；used 会记住第一把占了哪个槽，第二把自然去另一个。装不上的话日志会说明哪道检查拒的。 【1.5.71】双持撤回，命运使者只留一把 —— 实机发现锈行者双持后姿势异常：它的模型和动作是照自带的跨音速利刃做的，塞两把大剑之后骨骼挂点对不上。 【1.5.73】命运使者**整个去掉**，回到自带的跨音速利刃（DLC3_OP_Dogmatic_SicarianRuststalker_Weapon，已在表里第一位）—— 与电僧还原同一次改动。原来留它的理由是「有明确武器族、更可能吃到职业链天赋」，但 1.5.68 的战斗总账显示锈行者照样在放 森罗刃网/蛮力猛击（刺客链技能），说明自带武器并不挡职业链；而单持大剑的姿势问题一直没解决。命运使者的招架 +10 已经用 Parry10_Feature 搬到 preGrant 里了。",
+          "_双持注": "★1.5.97 恢复原生双持★ 配两把 DLC3_OP_Dogmatic_SicarianRuststalker_Weapon。锈行者出厂就是双持跨音速利刃，动作集是照双持做的。1.5.64 那次双持崩姿势，塞的是两把**命运使者**（大剑），骨骼挂点对不上 —— 换回它自己的武器，那个原因不成立。\n★但这解不开利刃之舞★ ReaperBladeDanceAbility 要的是 CheckHasTwoWeaponsOfClassificationGetter「两把某分类的武器」，而跨音速利刃的 Classification=None。两把 None 仍然不是两把 Sword。要放出来还得开 Settings.SwordClassGate，而那个开了就 T-pose。所以双持只是恢复原样，不是解锁手段 —— 别把这两件事混起来。"
         },
         {
           "unit": "ab131771270542b69fb7a687062b39c0",
@@ -889,6 +892,7 @@
           "brain": "b81b43296c3346bfb6bd4d18d424d4bc",
           "_brain注": "【1.5.73】同锈行者 —— MeleeFlankerBaseBrain。见锈行者那条的完整理由。",
           "plan": "kibellah_reaper_tactician",
+          "_plan注": "★1.7.16 换回收割者线，验三个刀锋舞者技能★ 作者提的，数据完全支持。\n★收割者线为什么废★ 离线 dump 组件表：6 招里 5 招挂着 AbilityCasterHasWeaponOfClassification{Sword}，而跨音速利刃/静电臂铠的 Classification=**None** ⇒ 一律不通过。1.7.12 我们把闸放行了（长剑判定放行数 204→770，闸确实开了），**技能仍然 0 次** —— 因为收割者终极/绝境内部引用 ReaperDeathWaltzUltimate + ReaperUltimateQueueAttack，它们是**死从天降的包装**，而死从天降独有 AbilityTargetIsReacheble（跳跃落点）。所以那条线是两道病叠着：武器分类 + 落点。\n★先锋线为什么干净★ 11 个技能逐个 dump：\n    VanguardDeperate / Bulwark / DefensiveStance / Disposal / FightMe —— **一条施放限制都没有**\n    VanguardUltimate —— 只有 ContextConditionCasterHasFact，和**每场都放得出来的**战术家终极同款\n    WallOfStone / FollowMyLead —— 只有 AbilityTargetsInPattern（范围模板，不是武器条件）\n  零武器闸、零可达限制。差别不是程度问题，是有和没有。\n★实机佐证★ 近战分型的铁壁卫长跑的就是这份方案，实测 2 回合 28 动作、14 次攻击、辅助占比正常；而锈行猎手在收割者线下辅助占比一度 58%、收割者攻击技 0 次。\n★已知的不完美（作者指出）★ rt_abelard_vanguard 是照**远近混合**定位点的，发给纯近战精英会有几个天赋点浪费在远程专精上。接受这个代价：先锋 5 个可用攻击技 vs 收割者 0 个，几个废点换不回来。要更对的做法是新做一份纯近战先锋方案（ref/rt_probe/mkplans.py 生成），但那要先有源 build —— 先验方向对不对，对了再花那个力气。\n★回退★ 改回 kibellah_reaper_tactician 即可。",
           "chain": [
             "dd6948ee596346a69733d0bb107c2f42",
             "604fa184d7d944c8ae5965f9700782b5",
@@ -915,17 +919,19 @@
             "d1a76d2a304241ff926a15b3d34ec360",
             "a3c5541e26f5428f853318342edcbbf4"
           ],
-          "_preGrant注": "动力装甲专精 + 重甲专精，外加 1.5.74 的肉盾/防反三件套（招架25 + 无视护甲 + 防御反击）。完整理由见锈行者那条。电僧 352 血比锈行者还厚，这套定位更贴它。",
           "_preGrant注": "动力装甲专精 + 重甲专精。★不能只靠 grantFeaturesT3★ —— 那个按玩家阶位发，而精英是毕业形态、与玩家阶位无关；玩家 T1 时精英就会穿不上顶级护甲。\n【1.5.73】加 Parry10_Feature（招架 +10），与锈行者同理 —— 无武器条件，静电臂铠也吃得到。",
           "_gear注": "近战位。武器用命运使者（DoombringerSword，Unique）—— 作者指定。而且它是有明确武器族的常规武器，比单位自带的跨音速利刃/静电臂铠更可能吃到职业链天赋。其余抄绮贝菈：零和透镜（头）· 刀锋舞者斗篷（肩）· 大脑逆变器 MK\"战术家\"（植入物）· 活力项饰（颈）。 【1.5.64】副手再加一把命运使者做双持 —— GearTool 的 worn 是**发装备前的快照**，不会把第一把判成「已在身上」；used 会记住第一把占了哪个槽，第二把自然去另一个。装不上的话日志会说明哪道检查拒的。 【1.5.71】双持撤回，命运使者只留一把 —— 实机发现锈行者双持后姿势异常：它的模型和动作是照自带的跨音速利刃做的，塞两把大剑之后骨骼挂点对不上。 【1.5.72】命运使者去掉，保留自带的静电臂铠 —— 电僧的动作集是照**拳套**做的（挥拳/近身放电），给它剑连挥砍动作都没有，单持也解决不了类型不匹配。而全物品表里拳套类只有静电臂铠一种、只有 Common 档，没有高阶替代。动作正确优先于武器稀有度。\n★对照★ 锈行者自带跨音速利刃（刀刃类），换成命运使者是同类武器，动作集通用，所以保留。"
         },
         {
-          "unit": "2711d4883bb24692afaf1e8a3ab4335f",
-          "appearanceUnit": "4eeb0a3e89fd47e59bae8759c530329d",
+          "unit": "ca936a024b954b188d2bd397e6ea49d3",
           "name": "静默 · 高阶贤者",
           "rank": "高阶贤者",
           "rank_en": "High Magos",
           "plan": "pascal_adept_assassin",
+          "brain": "dc1e20cc434f4f21a0b3de37cb4d2bb3",
+          "_brain注": "★1.7.15 定案：改用德曼兹的脑 Dementz_ScrapCode_Brain dc1e20cc★ 作者拍板。理由：自带技能确认不会丢（见下），而德曼兹脑实测移动 1.0/回合、稳。\n★已知代价：走位难看★ 实测移动/回合 —— 分型狙击脑 1.0~2.0（11 场），换原生脑后 2 回合的场次是 7.0 / 9.5 / 7.0。原生脑是给剧情里方舟船那场 boss 战做的，不是泛用战斗脑，普通遭遇战里来回蹭。\n★换来的★ 同样那几场她打出 15 / 19 次攻击，是全部精英里最好的，而且放出了终焉联结 + 机魂真理 + 谦逊协议。\n★作者担心的那件事不成立★ 「换脑会不会导致她不放自带技能」——不会。1.7.5 之前她跑的是分型的狙击脑（日志 281aa0b1 -> 6bfff31e），15:29 和 15:58 两场照样放出终焉联结。原因是 UseOnlyListed=False 时脑的列表只有否决权、没有准入权，技能在不在列表里都会被考虑。\n★但有一点证不了★ 原生脑的 2 回合场次放出 2~3 种自带技能，狙击脑的 1 回合场次只有 1 种 —— 这两组回合数不同，**混杂**，不能据此说原生脑放得更全。要证得让狙击脑也拿到 2 回合。\n★中途试过又撤回的★ 1.7.14 曾换成 RangedCloseBase（不限制技能、偏近身），但它是 近战型=Usual，而原生脑是 Smart；且当时把异端贤者一起换了 —— 那是误伤，异端本来移动 1.0、表现正常。\n★验收教训★ 换脑不能只验「限不限制技能」。移动/回合这个数字总账里一直有，1.7.5 那次我没把它当验收项，于是放过了这个回归。",
+          "_历史_brain注_原生脑": "★1.7.5 曾改用她自己的原生脑 IronWhisper_ArcShip_01_Brain★ 作者提的，数据支持：\n  · 探测实测 UseOnlyListed=**False** 列表1 —— 不限制技能（这是运行时真值，不是推断）\n  · **近战型=Smart**，而分型脑 RangedPositionalSniper 是 Usual。贤者是主手近战+副手双手远程的混合定位，Smart 更贴\n  · UseOnlyListed=False 时那个「列表」不是白名单而是**优先级提示** —— 原生脑会优先考虑终焉联结，那正是她自己的技能\n★注意：在此之前她跑的不是原生脑★ 精英没配 brain 时会**继承分型的**（RetinueTest.ApplyRuntimeState：先取 _a.BrainId，精英有自己的才覆盖）。所以 1.7.1~1.7.4 她一直在跑机械教分型的狙击脑，日志里 281aa0b1 -> 6bfff31e 那行就是。我一度以为「没配 brain = 跑原生脑」，是读错了自己导出的表。\n★备选★ 同族还有 IronWhisper_ArcShip_02_Brain 0576a7e4…；想回分型脑就删掉本行。\n──── 以下 1.7.2/1.7.3 的推理留档，其中「原生脑有调校不能换」那段前提是假的（她当时根本没跑原生脑）────\n",
+          "_历史_brain注": "★1.7.3 撤回换脑★ 1.7.2 我把它覆盖成 RangeCommonBaseBrain 16c191c3…，1.7.3 撤回。\n★为什么撤★ 作者 1.7.1 的实战总账直接推翻了我的前提：高阶贤者顶着**原生脑**，放出了 战术知识/暴露弱点/死亡低语·副手/瞄准破绽/完美地点/分析敌人 —— 全是天赋线给的，一个都不在她原生脑的引用列表里。所以「具名脑 = 技能白名单」是错的，那些引用多半只是**优先级提示**而非限制。\n★而且换脑是净损失★ 原生脑带条件判断（妮赫尔那个有 UnitsInRangeGetter 决定何时放终焉联结，德曼兹那个有 HPGetter 决定何时修理），0 引用的通用脑没有。她 1.7.1 确实放出了终焉联结，说明那套调校在工作 —— 换掉等于白扔。\n★教训★ 我从「blob 里引用了几个技能蓝图」推出「会锁死技能列表」，中间隔着一个没验证的跳跃。真正的判据是 BlueprintBrain.m_UseOnlyListedAbilities，而它**离线读不到**（全库 663 个脑的 blob 没有一个序列化这个字段）。BrainTool 自己的文档里早写着 DLC3_DL_* 的脑是 UseOnlyListed=True —— 那是**运行时实测**的，我拿它当成了所有具名脑的通则。\n★怎么收口★ 两个原生脑已加进 BrainTool.Candidates，点开发区「探测 brain」读运行时真值。若真是 UseOnlyListed=True 再谈换脑；同族备选 RangeCommonBase 16c191c3… / RangedPositionalBase adcf80a5… / RangedCloseBase 4a5beadb…。\n──── 以下是 1.7.2 当时的推理，已证伪，留档 ────\n★1.7.1 覆盖成 RangeCommonBaseBrain★ 作者本来说脑子不用覆盖、让原生脑配原生技能，但要求先查一句「原生脑会不会锁定技能列表」。查完结论是**会**，所以改覆盖。\n★证据★ 全库 663 个脑，按「引用了哪些技能蓝图」分成两类：\n  · 具名脑 = 写死的行动清单。妮赫尔的 IronWhisper_ArcShip_01_Brain 引用 EschatosLink_Ability + **FlamerPistolT2CH4_Item + OmnissiahAxeT2CH4_Item**；德曼兹的 Dementz_ScrapCode_Brain 引用 6 个具体技能；旧教条底子的 ArtisanAoE_Brain 引用 5 个。\n  · 通用脑 = 0 技能引用，用单位身上有什么就打什么。共 221 个。\n★为什么具名脑对我们尤其致命★ 它不只锁技能，还锁**具体武器物品**。妮赫尔那个脑的动作指向燃焰手枪和欧姆尼赛亚之斧 T2CH4，而我们的装备表会把武器换掉 —— 动作指向的武器不在手上，那些动作全部失效，脑子就只剩走位和普攻。天赋线点出来的技能它更是一个都不认。\n★为什么选这个★ RangeCommonBaseBrain(375 字节, 0 引用) 是 MeleeFlankerBaseBrain(385 字节, 0 引用) 的同族兄弟 —— 后者正是两个近战精英在用、且实测能吃到我们发的技能的那个。贤者是主手近战+副手双手远程，走远程通用脑。\n★同族备选★ RangedPositionalBaseBrain adcf80a5…(397，偏走位) / RangedCloseBaseBrain 4a5beadb…(310，偏近身) / RangeCommonBaseBrain(本选)。表现不对就在这三个里换。",
           "chain": [
             "1529e5a0e7844bf3bb8d0cc0501264d4",
             "7b90955673a54136be9c11743943fdfe",
@@ -949,17 +955,21 @@
           "_gear注": "★贤者：主手近战 + 副手双手远程★ 靠弹道机械触须实现。\n之前失败的真因不在武器类型，而在**我们自己的代码**：CandidateSlots 里写死了「双手武器只能进主手」，于是副手从未进入候选，日志只显示两次主手被拒。那条规则是我们的推断，不是游戏规则 —— 弹道触须的作用正是让副手能拿双手远程武器。1.5.67 已改成两个手位都列候选、由引擎的 CanInsertItem 决定。\n教条贤者(DarkMagos)不自带弹道触须，配表里补一条（它三个触须位被 Central/Coil/Utility 占满，能否挤进去看日志）；异端贤者(HeretekMagi)自带，不重复发。\n【1.5.76 解决】不是「三个触须位被占满」，是**教条贤者压根没有触须槽**。真正的开关是 Mechadendrites_Ballistic_Feature，已加进 preGrant。",
           "preGrant": [
             "5069a24051354e50a663da0125e19b02",
-            "684c766dc9c24fcf856dc1d6f01d9290",
-            "bde399f936324b8e9fc7b950a0cdd2ff"
+            "684c766dc9c24fcf856dc1d6f01d9290"
           ],
-          "_preGrant注": "动力装甲专精 + 重甲专精。★不能只靠 grantFeaturesT3★ —— 那个按玩家阶位发，而精英是毕业形态、与玩家阶位无关；玩家 T1 时精英就会穿不上顶级护甲。\n【1.5.76 触须】加 Mechadendrites_Ballistic_Feature bde399f9…。\n★为什么之前一直装不上★ 日志从 19:25 起每一次都是「装不上: 弹道机械触须 ← 没有可用槽位」。触须是**装备**，槽位来自 unit —— 教条贤者用的技术神甫(DarkMagos)没有这个槽，异端贤者用的 HeretekMagi 自带。所以换 appearanceUnit(塔祖斯→帕斯卡)怎么换都不会长出来：**外观只改长相，不改槽位**。\n★正确的开关★ Mechadendrites_Ballistic_Feature 通过 AddFacts 拉进 Mechadendrites_Coil_Feature，后者挂两个组件：ActivateMechadendrites(激活槽位) + AddEquipmentEntity(把触须的视觉实体加到模型上)。两个类在活的 Code.dll 里都在。所以这一个 Feature 同时解决「装不上」和「看不见」。\n★为什么可以放心加★ 原版 guid，和动力甲专精走完全相同的 preGrant 路径，不碰 AssetId 红线。"
+          "_preGrant注": "动力装甲专精 + 重甲专精。★不能只靠 grantFeaturesT3★ —— 那个按玩家阶位发，而精英是毕业形态、与玩家阶位无关；玩家 T1 时精英就会穿不上顶级护甲。\n【1.7.1 撤回触须特性】Mechadendrites_Ballistic_Feature bde399f9… 已从 preGrant 移除 —— 新底子妮赫尔自带 Ballistic+Coil+Utility 三条，不需要补。\n★这条注释原来是写反的★ 旧文写「DarkMagos 没有这个槽，HeretekMagi 自带」，实际 dump 正相反：四个单位里**只有 DarkMagos** 显式带 Body.m_Mechadendrites 并挂着三条触须，HeretekMagi 反而没有这个字段。我据着反了的结论去补特性，治的是一个不存在的病，绕了六个版本。真因见 _底子注：DarkMagos 是娃娃单位，触须靠 CharacterAvatar 挂载，被我们自己的 prefab 覆盖顶掉了。",
+          "_底子注": "★1.7.1 妮赫尔从「借模型」改成「当底子」★ 作者指出两件事，都对：技能明显还是黑暗贤者的（欧姆尼赛亚之斧+克拉克手雷），而且高阶贤者始终没触须。\n★为什么只换脸不够★ appearanceUnit 只 patch 一个 getter（AppearancePatch → get_PrefabGuid），改的**只有 prefab 的 assetId**。技能、属性、脑子、物品、视觉设置全部仍来自 unit。所以借妮赫尔=只借网格，终焉联结/机魂真理/谦逊协议一个都进不来。\n★触须消失的真因（我之前判反了）★ 四个单位 dump 对比，只有 DarkMagos 显式带 Body.m_Mechadendrites，而且它是**唯一**有 m_VisualSettings + VisualsDone 的 —— 娃娃单位。它那三条触须靠 AddEquipmentEntity 挂到 CharacterAvatar 上，而我们换掉 prefab 等于把娃娃摘了，挂载点没了。换句话说：不是借来的模型没触须，是**本来有、被我们借模型这个动作弄没的**。AppearancePatch 自己第 36 行就写着「Doll 那一支必须尊重」，但守卫只判 __result 非空，DarkMagos 返回了非空 prefab 于是照换不误。\n★旁证★ looks.json 里记着作者跑过的决定性对照：同样是跟随装备，异端有触须、教条没有，区别只在教条配了 appearanceUnit。\n★顺带的好处★ 两条线都不再用 appearanceUnit，机械教的「跟随装备」终于和前五条分型同义（以前 LookFor 返回 null 之后还会回落到 appearanceUnit，所以「跟随装备」并不等于不干预）。两位各带各的技能、触须、视觉设置，差异性天然成立。\n★仍需实机确认★ 血量只能实机测（CheckNewStatsComponent 是运行时算的，离线读不到）—— 裁判庭狙击手那次就是模型挑对了结果 96 血。\n★但担心可以放下一半★ 我一度按 CutsceneNeutrals 阵营判她是「过场摆件」，那是误读 —— 阵营只说明她默认不敌对。全库按名字反查 Whisper 一族发现：有 Obj4_KillBrassWhisper（击杀目标）、BrassWhisper50Percent（半血阶段变体）、BrassWhisper_Death，还有一个带 UnitsInRangeGetter 的战斗脑。**她是个正经 boss**，不是几十血的摆件。LegendProbe 已把她和德曼兹加进对照，招齐后点血量探针看数字。要退回旧底子：unit 改 2711d4883bb24692afaf1e8a3ab4335f。",
+          "_历史注_appearanceUnit": "★BrassWhisper（妮赫尔）★ 帕斯卡个人任务终章、隐士之舟上那位。作者认了很久，我按名字找不到 —— 全库按显示名搜 3069 个单位 0 命中，因为她的显示名是运行时拼的，蓝图上没有那四个字。\n★最后是怎么找到的★ 顺着任务线单位 TechpriestLogos_*_PasqualQuest 身上的 TechpriestLogos_EschatosVicinity_Feature 抓到关键词 **Eschatos（终焉）**，再由 IronWhisper_EschatosLink_Ability（终焉联结）找到 Whisper 一族，最终定位 BrassWhisper。教训：中文名反查不可靠，**按技能/特性的关键词反查**才是路。\n★逐条对上作者的截图★ 终焉联结 / 机魂真理(MachineSpiritAbsolute) / 谦逊协议(MachineCurse) / 终焉审判之怒(EschatosWrath) / 压阻场发射器(VoltagheistFieldEmitter_Item 60548ad4…)。\n★选它的硬条件★ 自带三条触须：Ballistic + Coil + Utility + Coil_Feature。弹道触须尤其贴 —— 我们给贤者的配装就是主手近战+副手双手远程。她还带欧姆尼赛亚之斧，和异端贤者用的同系列。\n★仍需实机确认★ 借的是 prefab（VisualSettings=CorruptedMagus_VisualSettings），触须是烘在网格里还是装备挂载的，数据里分不出来 —— 看不见的话换 PasqalQuest_Dements（异端贤者已在用，确认可见）。"
         },
         {
-          "unit": "e8237ec331214eac8251661293e7796b",
+          "unit": "287d7a4d2bb146998dc450cb3eccee78",
           "name": "异铸 · 异端贤者",
           "rank": "异端贤者",
           "rank_en": "Heretek Magos",
           "plan": "pascal_adept_assassin",
+          "brain": "dc1e20cc434f4f21a0b3de37cb4d2bb3",
+          "_brain注": "★1.7.5 改用它自己的原生脑 Dementz_ScrapCode_Brain★ 同教条贤者，理由见那边。实测 UseOnlyListed=False 列表3、近战型=Smart。它的列表里是废码近战协议/废码修复协议/等离子过载 —— 不限制技能时这是优先级提示，而这三样它自己都有（1.7.1 实战它确实放了废码：近战协议）。而且带 HPGetter 条件分支：血低了会去放修复协议，分型的狙击脑没有这个。\n想回分型脑就删掉本行。",
+          "_历史_brain注": "★1.7.3 同教条贤者一起撤回换脑★ 理由见那边的 _brain注：作者 1.7.1 的实战数据证明原生脑并不锁技能列表。德曼兹的原生脑 Dementz_ScrapCode_Brain 带 HPGetter 条件分支（血低了去放修复协议），换成通用脑就没有了；而它 1.7.1 确实放出了废码：近战协议。留着原生脑。",
           "chain": [
             "1529e5a0e7844bf3bb8d0cc0501264d4",
             "7b90955673a54136be9c11743943fdfe",
@@ -984,7 +994,9 @@
             "5069a24051354e50a663da0125e19b02",
             "684c766dc9c24fcf856dc1d6f01d9290"
           ],
-          "_preGrant注": "动力装甲专精 + 重甲专精。★不能只靠 grantFeaturesT3★ —— 那个按玩家阶位发，而精英是毕业形态、与玩家阶位无关；玩家 T1 时精英就会穿不上顶级护甲。"
+          "_preGrant注": "动力装甲专精 + 重甲专精。★不能只靠 grantFeaturesT3★ —— 那个按玩家阶位发，而精英是毕业形态、与玩家阶位无关；玩家 T1 时精英就会穿不上顶级护甲。",
+          "_底子注": "★1.7.1 德曼兹从「借模型」改成「当底子」★ 和教条那边同一次改动，理由见高阶贤者的 _底子注：appearanceUnit 只换网格，技能/属性/脑子/物品仍来自 unit，所以之前这位的技能其实是 HeretekMagi 的（电弧步枪+破片手雷+掷弹兵），不是德曼兹的。\n★这边风险比教条那边小★ 德曼兹是 Mobs（正经战斗单位），妮赫尔是 CutsceneNeutrals（过场单位）。而且外观结果不该有变化 —— 以前就是在渲染德曼兹的 prefab，现在只是连底子一起用。\n★但血量要重测★ HeretekMagi 带 CorruptedTechpriest_Normal_CP（成长档），德曼兹没有；原注写的 306 血是 HeretekMagi 的，换底子后不作数。LegendProbe 里两个都有条目，招齐后点血量探针对比。要退回旧底子：unit 改 e8237ec331214eac8251661293e7796b。\n★自带的东西不清理★ 作者明确要求保留两位各自带的物品与触须，维持差异性 —— 德曼兹自带 PlasmaRifleT1CH2 + 便携认知机 + Coil/Ballistic 两条触须，妮赫尔自带压阻场发射器 + 欧姆尼赛亚之斧 + 三条触须。GearTool 只在槽位冲突时替换，不会主动清空。",
+          "_历史注_appearanceUnit": "★PasqalQuest_Dements 德曼兹（帕斯卡任务线）★ 作者用「摆出全部候选」看过一轮后挑的，理由是**这个模型自带等离子**，跟我们给贤者的配装（主手近战+副手双手远程等离子）最贴。\n核对过它确实带触须：MechadendriteCoilItem + Mechadendrites_Ballistic_Item + Mechadendrites_Coil_Feature，还自带 PlasmaRifleT1CH2_Item。\n★为什么借模型这次不会丢触须★ 我一度以为「借 prefab 一定丢触须」，那是错的 —— 作者实测异端贤者在跟随装备下触须在，而它走的就是自己的 prefab。真正的规律是：\n  · 触须**烘进 prefab 网格**的 → 跟着模型走，借过来照样在\n  · 触须靠装备/EE 挂载的 → 需要娃娃系统(CharacterAvatar)才渲染\n塔祖斯那次丢触须，是因为**那个模型本身就没有**（Body 只有 m_Armor/m_PrimaryHand/m_SecondaryHand），不是借模型这个动作导致的。我把两件事混成一条规律，据此排除了整条正确路线，绕了六个版本。\n★所以挑模型的硬条件★ 只能实机看背后有没有管子，数据里分不出烘死的和挂载的。"
         }
       ],
       "guardNames": [

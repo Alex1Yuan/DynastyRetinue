@@ -464,6 +464,63 @@ namespace DynastyRetinue
         /// HandsEquipmentSet[2]，而 PrimaryHand/SecondaryHand 只指向 CurrentHandsEquipmentSet。
         /// 双手武器占满一整组，所以两把双手武器只能一组放一把 —— 只看当前组必然失败。
         /// </summary>
+        /// <summary>
+        /// 这名单位有没有装着**弹道**机械触须 —— 双手武器能否进副手就看它。
+        ///
+        /// ★为什么按名字判而不是列 guid★ 和 GearLookPatch.IsMechadendrite 同一个理由：
+        ///   触须物品有 6 种以上，还有专属变体；列 guid 早晚漏一个，而漏了的表现是
+        ///   「这个贤者的副手武器莫名其妙装不上」—— 又一个不报错的静默失败。
+        /// ★为什么用反射★ PartUnitBody.Mechadendrites 是**字段**不是属性
+        ///   （tools\dump_type.ps1 实测：FIELDS 里 `List`1 Mechadendrites`，
+        ///   PROPERTIES 里没有），而且元素类型在 Code.dll 里没有可强类型引用的
+        ///   MechadendriteSlot。反射一次拿 FieldInfo 缓存住，之后只是取值 + 遍历三五个槽位。
+        /// ★取不到时返回 false★ 保守侧：双手武器只列主手，不会顶掉已装好的武器。
+        ///   宁可贤者少一把副手枪，也不能让别人的毕业武器被静默挤飞。
+        /// ★频率★ 只在发装备时按件调用，不是每帧路径。
+        /// </summary>
+        private static System.Reflection.FieldInfo _mechField;
+        private static bool _mechLooked;
+
+        private static bool HasBallisticMechadendrite(PartUnitBody body)
+        {
+            try
+            {
+                if (body == null) return false;
+                if (!_mechLooked)
+                {
+                    _mechLooked = true;
+                    _mechField = typeof(PartUnitBody).GetField("Mechadendrites",
+                        System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic
+                      | System.Reflection.BindingFlags.Instance);
+                    if (_mechField == null)
+                        Main.Log("[装备] 取不到 PartUnitBody.Mechadendrites 字段 —— "
+                               + "双手武器一律只列主手（保守侧，不会顶掉已装的武器）。");
+                }
+                if (_mechField == null) return false;
+                var en = _mechField.GetValue(body) as System.Collections.IEnumerable;
+                if (en == null) return false;
+                foreach (var slot in en)
+                {
+                    if (slot == null) continue;
+                    object item = null;
+                    try
+                    {
+                        var pi = slot.GetType().GetProperty("MaybeItem");
+                        if (pi != null) item = pi.GetValue(slot, null);
+                    }
+                    catch { }
+                    var ie = item as ItemEntity;
+                    string n = ie != null && ie.Blueprint != null ? ie.Blueprint.name : null;
+                    if (!string.IsNullOrEmpty(n)
+                        && n.IndexOf("Mechadendrite", StringComparison.OrdinalIgnoreCase) >= 0
+                        && n.IndexOf("Ballistic", StringComparison.OrdinalIgnoreCase) >= 0)
+                        return true;
+                }
+                return false;
+            }
+            catch { return false; }
+        }
+
         private static IEnumerable<ItemSlot> CandidateSlots(PartUnitBody body, BlueprintItem bp, HashSet<ItemSlot> used)
         {
             var list = new List<ItemSlot>();
@@ -476,6 +533,30 @@ namespace DynastyRetinue
                     // 先当前组的主手（毕业武器该当主武器），再当前组副手，再另一组
                     int cur = 0;
                     try { cur = body.CurrentHandEquipmentSetIndex; } catch { }
+
+                    // ★双手武器能不能进副手，取决于这名单位有没有弹道机械触须★
+                    //
+                    //   1.5.67 把副手也列进了双手武器的候选，理由写在下面那段注释里 ——
+                    //   弹道机械触须**就是**让副手能拿双手远程武器的那个东西，机械教贤者
+                    //   的「主手近战 + 副手双手远程」全靠它。那次改动对贤者是对的。
+                    //
+                    //   ★但它漏了一个前提★ 那条例外是**触须**开的，不是所有单位都有。
+                    //   圣焰净罪（战斗修女）没有触须，却继承了这条例外，于是：
+                    //       候选顺序 = 套组1主手 → 套组1副手 → 套组2主手 → 套组2副手
+                    //       血腥礼赞（双手）占了套组1主手
+                    //       高级重型伐木枪（双手）跳过已占的主手，落到**套组1副手**
+                    //       —— 双手武器进副手，引擎把整组占掉，主手的血腥礼赞被顶飞
+                    //   实测三次生成三次复现：最终两把伐木枪、礼赞消失，日志报
+                    //   「装上后又被挤掉 1 件: 血腥礼赞」。而只有一把双手武器的怒火枪长完全正常。
+                    //
+                    //   ★为什么不能改成「所有主手排前面」★ 那样贤者的双手等离子会被赶去
+                    //   套组2，主手近战+副手远程就不在同一组了，得切套组才能用 ——
+                    //   等于把 1.5.67 解决的问题又造回来。实测贤者确实在吃这条
+                    //   （总账里的「死亡低语——副手武器」「生机断绝-副手武器」）。
+                    //   所以判别必须落在**触须**上，回到那条例外本来的因果。
+                    bool twoH = false;
+                    try { var _w = bp as BlueprintItemWeapon; twoH = _w != null && _w.IsTwoHanded; } catch { }
+                    bool offhandOk = !twoH || HasBallisticMechadendrite(body);
                     for (int k = 0; k < sets.Count; k++)
                     {
                         var set = sets[(cur + k) % sets.Count];
@@ -502,7 +583,7 @@ namespace DynastyRetinue
                         //   后发的才落副手，落位语义不变。
                         //   被拒时 1.5.60 那套诊断会说清是哪道检查挡的，不会静默失败。
                         Add(list, set.PrimaryHand, used);
-                        Add(list, set.SecondaryHand, used);
+                        if (offhandOk) Add(list, set.SecondaryHand, used);
                     }
                 }
                 return list;

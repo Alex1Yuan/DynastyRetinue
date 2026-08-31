@@ -70,6 +70,28 @@ namespace DynastyRetinue
         /// </summary>
         private static readonly string[,] MechLine =
         {
+            // ★1.6.7 加：找一个 prefab 里带触须的教条侧模型★
+            //   实测:HeretekMagi 的 prefab 触须是烘在网格里的（借过来也在），
+            //   DarkMagos 的没有。数据里分不出哪个是烘死的、哪个是装备挂的 —— 只能看。
+            //   下面这些都在「反查带触须的单位」名单里（引用 MechadendriteCoilItem 的共 56 个），
+            //   摆出来一眼就能挑出哪个背后真有管子。
+            { "69d40ecaf9354e758a312d9e3ed23c0d", "触须候选·Opticon22 奥普蒂孔22号",     "Medium" },
+            { "82c9efb12739f3342815786f19c81b5f", "触须候选·AgriWorldMagus 农业世界贤者", "Medium" },
+            { "eeaee064bfda4f1a822ce57bc8265412", "触须候选·TechPriest_RTPalace 宫殿技师","Medium" },
+            { "db965c01bf4d47a892ce417ac635915d", "触须候选·FabricatorsLeutenant 工造副官","Medium" },
+            { "2869eb5bcf614796b11d8cfc1089ec87", "触须候选·AssassinTechpriest 刺客技师", "Medium" },
+            { "ddb53592cea949d98d85c738af61a3e1", "触须候选·MechanicusMob 机械教众",      "Medium" },
+            // ★1.7.1 换底子后的四个关键对照★ 前两个是新底子，后两个是旧底子。
+            //   血量只能实机测（CheckNewStatsComponent 是运行时算的，离线读不到），
+            //   而换底子最大的风险正是「模型挑对了、结果只有几十血」——
+            //   裁判庭狙击手那次就是这么栽的（FootfallAnverSniper 96 血）。
+            //   妮赫尔应该没问题：她有击杀目标(Obj4_KillBrassWhisper)、半血阶段变体
+            //   (BrassWhisper50Percent)和战斗脑，是正经 boss —— CutsceneNeutrals
+            //   只是说她默认不敌对，不代表她是摆件。但数字还是要看。
+            { "ca936a024b954b188d2bd397e6ea49d3", "★新底子·教条 BrassWhisper 妮赫尔",        "Medium" },
+            { "287d7a4d2bb146998dc450cb3eccee78", "★新底子·异端 PasqalQuest_Dements 德曼兹", "Medium" },
+            { "2711d4883bb24692afaf1e8a3ab4335f", "旧底子·教条 DarkMagos（对照）",           "Medium" },
+            { "e8237ec331214eac8251661293e7796b", "旧底子·异端 HeretekMagi 306（对照）",     "Medium" },
             { "4c77d8f0acc2473cadd14ae869aac708", "T1候选·技工（教条）152",          "Medium" },
             { "737fc140e70f4ac08b642a67deef64a4", "T2候选·护教军游骑兵（教条）297",   "Medium" },
             { "bd8e6264794945cbab40c5201b5fb6f3", "T3候选·高阶助祭阿尔瓦-9 423",      "Medium" },
@@ -131,6 +153,18 @@ namespace DynastyRetinue
             { "82526c450b3446e186c82aa82ebd51d4", "物品·MechadendriteCoilItem" },
             { "f0996a1c715a403296177d8833d16511", "物品·MechadendriteUtilityItem" },
             { "af44851d14bb4ee98cff1fb6a67083df", "物品·弹道机械触须" },
+            // ★1.5.88 加这两条★ 卫兵右键看不到防御属性（不是队伍成员，原版检视面板残缺），
+            //   而「招架」不是 StatType 里的字段、是 RuleCalculateParryChance 算出来的结果，
+            //   没有一个数可以直接读。所以改从**组件字段**入手，一次点击回答两个问题：
+            //   ① Parry25 挂的到底是哪个组件、加多少 —— 1.5.73 给错过一次
+            //      （Parry10 挂的是 Target/Attacker 侧，那是攻击方视角，给自己加不到招架）
+            //   ② AutoStriking 的四个触发开关（Dodge/Parry/Cover/Block）分别是什么
+            //      —— 防御反击实测求值 0 次，可能是"没被近战打到"，
+            //         也可能是"发生的事件类型不在它的开关里"。这两者靠计数分不开。
+            { "da338f7caf3e44ddac7da84ee6f2ddc9", "招架25（现用）" },
+            { "53c19a9468d24539863989b3be9ed1f5", "招架10（1.5.73 用错的那个，做对照）" },
+            { "a3c5541e26f5428f853318342edcbbf4", "自主攻击能量剑·防御反击" },
+            { "d1a76d2a304241ff926a15b3d34ec360", "命运使者特性·无视护甲" },
         };
 
         public static void DumpFeatureComponents()
@@ -431,15 +465,24 @@ namespace DynastyRetinue
                     // 技能清单 —— 找 Charge / 招架 / 穿甲一类
                     try
                     {
+                        // ★中文名和内部名一起打★ 作者说话用中文名（森罗刃网/利刃之舞/死从天降），
+                        //   而补丁和配表只认蓝图 guid。中间那层对照表（features_zh.tsv）
+                        //   在旧 mod 目录里、已经没了，离线查不到。所以在这里一次打全：
+                        //   显示名 · 内部名 · guid，之后按名字定位技能就不用再猜。
                         var names = new List<string>();
                         if (u.Abilities != null && u.Abilities.RawFacts != null)
                             foreach (var ab in u.Abilities.RawFacts)
-                                if (ab != null && ab.Blueprint != null) names.Add(ab.Blueprint.name);
+                            {
+                                if (ab == null || ab.Blueprint == null) continue;
+                                var bp = ab.Blueprint;
+                                string disp = null;
+                                try { disp = bp.Name; } catch { }
+                                names.Add(string.Format("{0,-16} {1,-46} {2}",
+                                          string.IsNullOrEmpty(disp) ? "(无名)" : disp, bp.name, bp.AssetGuid));
+                            }
                         names.Sort(StringComparer.Ordinal);
-                        sb.AppendLine("      技能 " + names.Count + " 个: " + string.Join(" / ", names.ToArray()));
-                        bool hasCharge = names.Exists(delegate (string s)
-                        { return s.IndexOf("Charge", StringComparison.OrdinalIgnoreCase) >= 0; });
-                        sb.AppendLine("      ★有没有冲锋类技能: " + (hasCharge ? "有" : "没有"));
+                        sb.AppendLine("      技能 " + names.Count + " 个（显示名 · 内部名 · guid）:");
+                        foreach (var n in names) sb.AppendLine("          " + n);
                     }
                     catch (Exception e3) { sb.AppendLine("      技能: 读失败 " + e3.Message); }
 

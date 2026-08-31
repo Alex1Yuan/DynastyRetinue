@@ -50,10 +50,30 @@ namespace DynastyRetinue
                 //   做好之前还能测。界面上线后它变成了 bug：矩阵明明全是「跟随装备」，
                 //   卫兵却还是卡斯金 —— 因为空表恰好命中兜底。已删除。
                 var look = LookAssign.LookFor(u);
-                if (look == null || !look.IsCompose) return true;
+                if (look == null)
+                {
+                    // ★这条岔路以前是完全静默的★ 1.5.87 实测：作者在外观页选了「教条派·
+                    //   技术神甫」，日志里却一条 [外观] 都没有 —— 分不清是"格子没选上"、
+                    //   "作用域把它挡了"还是"根本没走到这里"。Bail 按原因去重，不会刷屏。
+                    Bail("LookFor 返回空（该格是跟随装备，或被 onlyArchetypes/onlyElites 挡下）");
+                    return true;
+                }
+                if (!look.IsCompose)
+                {
+                    Bail("选中的「" + (look.Id ?? "?") + "」不是拼件风格（借模型走 AppearancePatch，不归这里管）");
+                    return true;
+                }
 
                 DollData doll = DollLook.Build(u, look.Parts);
-                if (doll == null || doll.RacePreset == null) return true;   // 造不出来就走原版
+                if (doll == null || doll.RacePreset == null)
+                {
+                    // 造不出来就走原版 —— 但要说出来。DarkMagos 这类 NPC 蓝图未必有
+                    // RacePreset，那样拼件这条路对它就是走不通的，得换别的办法。
+                    Bail("DollLook.Build 造不出（doll=" + (doll == null ? "null" : "有")
+                       + "，RacePreset=" + (doll != null && doll.RacePreset != null ? "有" : "null")
+                       + "）—— 这个单位不支持拼件");
+                    return true;
+                }
 
                 UnitEntityView view = doll.CreateUnitView();
                 if (view == null) { Main.LogError("[外观] CreateUnitView 返回 null，回退原版外观。"); return true; }

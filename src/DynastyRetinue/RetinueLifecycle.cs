@@ -235,6 +235,7 @@ namespace DynastyRetinue
                 if (leader == null) return;
 
                 var list = RetinueRegistry.All();
+                RetinueTest.BrainChecked = 0; RetinueTest.BrainFixed = 0;
                 foreach (var g in list)
                 {
                     try
@@ -267,6 +268,14 @@ namespace DynastyRetinue
                     try { RetinueTest.ReapplyBrain(g); }
                     catch (Exception e) { Main.LogError("补 brain 失败: " + e.Message); }
                 }
+
+                // ★无论有没有补都打一行★ 见 ReapplyBrain 的注释：只在「改动时」打日志，
+                //   会让「一切正常」和「这段代码压根没跑」在日志里长得一模一样。
+                //   这一行每次过图只打一次，开销可忽略。
+                if (RetinueTest.BrainChecked > 0)
+                    Main.Log("[生命周期] 过图后校验 brain：检查 " + RetinueTest.BrainChecked
+                           + " 名，补回 " + RetinueTest.BrainFixed + " 名"
+                           + (RetinueTest.BrainFixed == 0 ? "（都没被还原，BrainKeepPatch 挡住了）" : ""));
             }
             catch (Exception e) { Main.LogError("TickPending: " + e); }
         }

@@ -113,6 +113,20 @@ namespace DynastyRetinue
             /// </summary>
             public string AppearanceUnitId;
 
+            /// <summary>
+            /// 内容层的默认外观风格 id（looks.json 里的 id）。玩家没在分配表里选过时用它。
+            ///
+            /// ★为什么需要它★ AppearanceUnitId 是内容层默认，但它只能**借模型**；
+            ///   而机械触须只有**拼件**能显示（AddEquipmentEntity 要 CharacterAvatar，
+            ///   借 prefab 的单位那是 null）。教条贤者的默认长相就该是技术神甫拼件，
+            ///   不该要求玩家先去外观页点一下才对。
+            ///
+            /// ★优先级★ 玩家分配表 > 这个 > AppearanceUnitId > 跟随装备。
+            ///   玩家一旦在那格里选过东西（哪怕选的是「跟随装备」），就以玩家的为准 ——
+            ///   内容配置不该覆盖玩家的明确选择。
+            /// </summary>
+            public string DefaultLook;
+
             /// <summary>专属名字。旧格式，只在没有 Rank 时用。</summary>
             public string Name;
             /// <summary>英文位阶（archetypes.json 的 "rank_en"）。缺失回落中文。</summary>
@@ -227,6 +241,9 @@ namespace DynastyRetinue
             /// 它们没有 EliteDef，不给的话分型方案里的学派天赋照样一条都进不来。
             /// 精英自己声明了 preGrant 就用自己的，没声明才回落到这里。</summary>
             public string[] PreGrant;
+            /// <summary>分型级的默认外观风格 id。精英没配 DefaultLook 时回落到这里。
+            /// 语义见 EliteDef.DefaultLook。</summary>
+            public string DefaultLook;
             /// <summary>可选：普通卫兵按阶位发的三套渐进装备。
             /// 分档依据是物品 Rarity（Common → Pattern → Unique）——
             /// ItemLevel 在本作里 2755/2940 是 0，用不了。

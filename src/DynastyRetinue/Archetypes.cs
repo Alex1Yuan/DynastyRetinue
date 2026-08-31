@@ -260,6 +260,7 @@ namespace DynastyRetinue
                                 BrainId  = (string)e["brain"],   // 可选：不填沿用分型的
                                 // 借别人的模型、属性仍用 unit 那个（见 EliteDef.AppearanceUnitId）
                                 AppearanceUnitId = (string)e["appearanceUnit"],
+                                DefaultLook      = (string)e["defaultLook"],
                                 Name     = (string)e["name"],
                                 Rank     = (string)e["rank"],
                                 RankEn   = (string)e["rank_en"],

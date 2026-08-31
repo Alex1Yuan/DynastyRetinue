@@ -61,6 +61,20 @@ namespace DynastyRetinue
             if (Main.Settings != null) Main.Settings.LookMatrix = sb.ToString();
         }
 
+        /// <summary>配表里给这名卫兵指定的默认风格。精英优先读自己那条，没有就读分型的。</summary>
+        private static string DefaultLookFor(BaseUnitEntity g, int archIndex)
+        {
+            try
+            {
+                var arch = Archetypes.Get(archIndex);
+                if (arch == null) return null;
+                var ed = GearTool.EliteDefOf(g, arch);
+                if (ed != null && !string.IsNullOrEmpty(ed.DefaultLook)) return ed.DefaultLook;
+                return arch.DefaultLook;
+            }
+            catch { return null; }
+        }
+
         public static string Get(int archIndex, int col)
         {
             var m = Parse();
@@ -157,7 +171,18 @@ namespace DynastyRetinue
                 int ai = RetinueRegistry.ArchetypeOf(g);
                 if (ai < 0) return null;
                 string id = Get(ai, ColumnOf(g, ai));
-                if (string.IsNullOrEmpty(id)) return null;
+                if (string.IsNullOrEmpty(id))
+                {
+                    // ★内容层默认★ 玩家没在这格里选过 → 用配表指定的默认风格。
+                    //   为什么不能只靠 appearanceUnit：那条是**借模型**，而机械触须
+                    //   只有**拼件**显示得出来（AddEquipmentEntity 要 CharacterAvatar，
+                    //   借 prefab 的单位那是 null）。教条贤者的默认长相就该是技术神甫，
+                    //   不该要求玩家先去外观页点一下。
+                    //   ★只在「从没选过」时生效★ 玩家一旦选过（哪怕选的是跟随装备），
+                    //   Get 会返回那个值，就轮不到这里 —— 内容配置不覆盖玩家的明确选择。
+                    id = DefaultLookFor(g, ai);
+                    if (string.IsNullOrEmpty(id)) return null;
+                }
                 var look = LookCatalog.Get(id);
                 if (look == null) { Warn(id); return null; }
                 // ★列表过滤了还要再判一次★ 分配表是持久化的字符串：玩家先选了卡斯金、
