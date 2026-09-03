@@ -57,33 +57,112 @@ namespace DynastyRetinue
     /// 且第一道闸 ReferenceEquals(蓝图) 是 O(1)，绝大多数调用一行就返回。
     /// </summary>
     /// <summary>
-    /// 【探针】死从天降的伤害到底以哪里为中心 —— 落点还是出发点。
+    /// 【几何对照表】死从天降**父技能**施放时的出发点与落点。
     ///
-    /// ★为什么要它★ 作者观察：「锈行猎手的死从天降好像是从出发位置算的伤害？
-    /// 而不是落点？电僧好像是正常算落点的？」
-    /// 而我手上的证据只是可疑的几何（一次施放里，某个受击单位距落点约 3~4 格，
-    /// 而我自己的日志写着「图案外延=1」），但那两条 Apply 未必都属于这个技能，
-    /// 也没有施法者跳跃前的坐标 —— **不足以定案**。
-    /// 这一轮我已经三次凭一行日志下错结论（BlockAttackAnimation、路线 B、死从天降伤害），
-    /// 所以这次先拿判据。
+    /// ★上一版这个探针为什么是废的★
+    ///   它挂在 AbilityData.Cast 上，打 caster → context.ClickedTarget 的距离。
+    ///   但 Strike 蓝图 m_CastOnSelf=1 ⇒ ClickedTarget 就是施法者自己
+    ///   ⇒ from == to ⇒ **打出来的「两点距离」结构上恒为 0.0**。
+    ///   我却拿它当过「拍到了 0.4 格」的依据 —— 那个数从来就不存在。
+    ///   ★教训★ 探针上线前要先问一句「它在被测对象上真的能取到两个不同的值吗」。
     ///
-    /// ★怎么读★ 同一行里同时给出「受击点到落点」和「受击点到出发点」两个距离：
-    ///   离落点近   ⇒ 正常，以落点为中心（原版设计）
-    ///   离出发点近 ⇒ 图案锚在了施法者原位，多半与我们注入的 pattern 有关
-    /// 两个精英各放一次就能对比出差异。
+    /// ★现在的职责★ 只做一件事：在**父技能**（ReaperDeathWaltzAbility）施放时，
+    ///   把「出发点」和「落点」按施法者记下来，供 DeathWaltzStrikeProbe 在打击真正
+    ///   结算的那一刻做三点比对（结算点 / 出发点 / 落点）。
+    ///   单独一个点没有意义，必须三点同框才能分辨「锚在出发点」还是「飞行中结算」。
     ///
-    /// ★开销★ 只在**我们的卫兵施放死从天降**时打，一次施放一行；走诊断日志开关。
+    /// ★用格坐标比，不用连续坐标★ 取样链路本来就是格子量化的
+    ///   （AbilityTargetsInPattern → GetBestShootingPosition → Caster.CurrentUnwalkableNode），
+    ///   连续坐标的零点几格差属于噪声，不构成判据。
+    internal static class DeathWaltzGeometry
+    {
+        private struct Shot
+        {
+            public UnityEngine.Vector3 From, To;
+            public int FromX, FromZ, ToX, ToZ;
+            public bool HasCells;
+        }
+
+        private static readonly System.Collections.Generic.Dictionary<object, Shot> _shots =
+            new System.Collections.Generic.Dictionary<object, Shot>();
+
+        /// <summary>
+        /// 每个施法者的施放序号。★为什么需要它★
+        /// 死从天降会来回跳（A→B 然后 B→A），而这里是「按施法者一个槽、后写覆盖前写」。
+        /// 若第二跳的结算比对到了第一跳的记录，就会打出「更靠近出发点」——
+        /// 那是**配对错位**，不是真的锚错。1.7.81 起把序号一起打出来，
+        /// 几何行和结算行的序号对不上就说明配对错了，这一行作废。
+        /// ★教训（本轮第四次同类）★ 探针不能只输出结论，还得输出「这条结论比对的是哪一次」。
+        /// </summary>
+        private static readonly System.Collections.Generic.Dictionary<object, int> _seq =
+            new System.Collections.Generic.Dictionary<object, int>();
+
+        internal static int SeqOf(object caster)
+        {
+            int n; return (caster != null && _seq.TryGetValue(caster, out n)) ? n : -1;
+        }
+
+        internal static void Record(Kingmaker.EntitySystem.Entities.BaseUnitEntity caster,
+                                    UnityEngine.Vector3 from, UnityEngine.Vector3 to)
+        {
+            try
+            {
+                if (caster == null) return;
+                if (_shots.Count > 32) _shots.Clear();       // 有界，句柄用完不会通知我们
+                var sh = new Shot { From = from, To = to };
+                try
+                {
+                    var n = caster.CurrentUnwalkableNode;
+                    sh.FromX = n.XCoordinateInGrid; sh.FromZ = n.ZCoordinateInGrid;
+                    sh.HasCells = true;
+                }
+                catch { }
+                int seqNow; _seq.TryGetValue(caster, out seqNow);
+                _seq[caster] = seqNow + 1;
+                _shots[caster] = sh;
+            }
+            catch { }
+        }
+
+        /// <summary>结算点相对「出发点 / 落点」的两个距离。没记录过就返回空串。</summary>
+        internal static string Compare(Kingmaker.EntitySystem.Entities.BaseUnitEntity caster,
+                                       UnityEngine.Vector3 resolveAt)
+        {
+            try
+            {
+                Shot sh;
+                if (caster == null || !_shots.TryGetValue(caster, out sh)) return "　（没记到本次施放的出发点）";
+                float dFrom = UnityEngine.Vector3.Distance(resolveAt, sh.From);
+                float dTo   = UnityEngine.Vector3.Distance(resolveAt, sh.To);
+                return "　[第" + SeqOf(caster) + "跳]　距出发点=" + dFrom.ToString("F1")
+                     + " 距落点=" + dTo.ToString("F1")
+                     + "　出发=(" + sh.From.x.ToString("F1") + "," + sh.From.z.ToString("F1") + ")"
+                     + " 落点=(" + sh.To.x.ToString("F1") + "," + sh.To.z.ToString("F1") + ")"
+                     // ★1.7.82 去掉那句判语★ 它按「外跳」写死了，而杂技表演的**逆跳腿**
+                     //   目的地本来就是该 Entry 的出发点 —— 落在那里是**正确**行为，
+                     //   套用外跳的判语会把正常结果误报成异常。本轮已因此虚惊一次。
+                     // ★教训（第五次同类）★ 判语是「结论」，而结论依赖上下文；
+                     //   探针只在能确定上下文时才配给结论，否则就只报事实。
+                     + (dFrom < dTo
+                        ? "　【离出发点更近】外跳腿⇒异常；杂技表演的逆跳腿⇒正常（终点本就是出发点）"
+                        : "　【离落点更近】外跳腿⇒正常");
+            }
+            catch { return ""; }
+        }
+    }
+
+    /// <summary>
+    /// 在**父技能**施放时记下出发点与落点。只记录，不下结论 ——
+    /// 结论由 DeathWaltzStrikeProbe 在打击结算那一刻给出。
     /// </summary>
-    // ★1.7.61 修挂点★ 1.7.60 我写的是 Cast(TargetWrapper)，而实际签名是
-    //   Cast(AbilityExecutionContext)。Harmony 直接 FAIL：
-    //     [Harmony] FAIL DeathWaltzGeometryProbe —— Undefined target method
-    //   这正是记忆里 rt-verify-patch-targets-offline 那条规则的原样重犯：
-    //   **改补丁前先离线 dump 目标方法的真实签名**，别凭印象写。
-    //   好在 mod 自己的 Harmony 报告有「失败清单」，没有静默 —— 这个报告值得保留。
+    [Main.DiagOnly]
     [HarmonyPatch(typeof(Kingmaker.UnitLogic.Abilities.AbilityData), "Cast",
                   new Type[] { typeof(Kingmaker.UnitLogic.Abilities.AbilityExecutionContext) })]
     internal static class DeathWaltzGeometryProbe
     {
+        /// <summary>ReaperDeathWaltzAbility（父技能，带位移的那个）。</summary>
+        private const string DeathWaltzGuid = "6f1b7cfb48a0450cb85ce8a8879502de";
+
         private static void Prefix(Kingmaker.UnitLogic.Abilities.AbilityData __instance,
                                    Kingmaker.UnitLogic.Abilities.AbilityExecutionContext context)
         {
@@ -92,21 +171,26 @@ namespace DynastyRetinue
                 var s = Main.Settings;
                 if (s == null || !s.DiagVerbose) return;
                 var bp = __instance != null ? __instance.Blueprint : null;
-                if (bp == null || bp.name == null) return;
-                if (bp.name.IndexOf("DeathWaltz", StringComparison.Ordinal) < 0) return;
+                if (bp == null) return;
+                string g = null;
+                try { g = bp.AssetGuid.ToString(); } catch { }
+                // ★按 GUID 判★ 旧版用 name.IndexOf("DeathWaltz")，会把 Strike / Spring /
+                //   Ultimate 等一整族都匹配进来，记录互相覆盖。
+                if (!string.Equals(g, DeathWaltzGuid, StringComparison.OrdinalIgnoreCase)) return;
 
                 var caster = __instance.Caster as Kingmaker.EntitySystem.Entities.BaseUnitEntity;
                 if (caster == null || !WeaponGate.IsGateTarget(caster)) return;
 
                 var from = caster.Position;
                 var to = (context != null && context.ClickedTarget != null) ? context.ClickedTarget.Point : from;
-                Main.Log("[死从天降·几何] " + (caster.CharacterName ?? "?") + "　技能=" + bp.name
+                DeathWaltzGeometry.Record(caster, from, to);
+
+                Main.Log("[死从天降·几何] " + (caster.CharacterName ?? "?")
                        + "　出发点=(" + from.x.ToString("F1") + "," + from.z.ToString("F1") + ")"
                        + "　落点=(" + to.x.ToString("F1") + "," + to.z.ToString("F1") + ")"
-                       + "　两点距离=" + UnityEngine.Vector3.Distance(from, to).ToString("F1")
-                       + "　★怎么读★ 稍后的伤害若集中在出发点附近 ⇒ 图案锚错了；"
-                       + "集中在落点附近 ⇒ 正常。对照游戏日志里同一时刻的 "
-                       + "「Apply ability effect to [Target: unit … (x,y,z)]」坐标。");
+                       + "　跳跃距离=" + UnityEngine.Vector3.Distance(from, to).ToString("F1")
+                       + "　[第" + DeathWaltzGeometry.SeqOf(caster) + "跳]"
+                       + "　★这一行只是记录，结论看稍后的 [死从天降·结算]★");
             }
             catch { }
         }

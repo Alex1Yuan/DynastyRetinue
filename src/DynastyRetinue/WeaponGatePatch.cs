@@ -296,6 +296,7 @@ namespace DynastyRetinue
                     sb.AppendLine("      ★补副手动作 " + AnimFallback.OffHandFallback + " 次"
                                 + "　替换施法风格 " + AnimFallback.CastSwapped + " 次★"
                                 + "　★★拦下异骨架片段 " + AnimFallback.ForeignClipBlocked + " 次★★"
+                                + "　★换上位移片段 " + AnimFallback.ForceMoveClipUsed + " 次★"
                                 + "　—— 前者治利刃之舞「一点动作都没有」（引擎实测：两个单位的动画集里"
                                 + "都没有 OffHandAttack）；后者治辅助技能「没有手指他人那个动作」"
                                 + "（原版会 set_IsSkipped 静默跳过）。");
@@ -326,7 +327,7 @@ namespace DynastyRetinue
                     AnimFallback.AttackUnblockedParent = 0; AnimFallback.CoverThrew = 0;
                     AnimFallback.QueueUnblocked = 0; AnimFallback.QueueFused = 0;
                     AnimFallback.OffHandFallback = 0; AnimFallback.CastSwapped = 0; AnimFallback.LoopProtected = 0;
-                    AnimFallback.ForeignClipBlocked = 0;
+                    AnimFallback.ForeignClipBlocked = 0; AnimFallback.ForceMoveClipUsed = 0;
                     AnimFallback.StyleRepaired = 0;
                     AnimFallback.TA.Reset(); AnimFallback.TC.Reset(); AnimFallback.TE.Reset();
                     AnimFallback.TF.Reset(); AnimFallback.TL.Reset(); AnimFallback.TJ.Reset();

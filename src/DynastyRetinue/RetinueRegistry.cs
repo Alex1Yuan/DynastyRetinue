@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using Kingmaker;
@@ -206,6 +206,15 @@ namespace DynastyRetinue
             if (u == null) return false;
             try
             {
+                // ★1.7.75 必须排除召唤物★
+                //   RulePerformSummonUnit / ContextActionSpawnMonster 会让召唤物**继承施法者的
+                //   CombatGroup.Id**（OnTrigger IL_008E-009B）。而本方法正是按 GuardTag 前缀判定的，
+                //   于是卫兵召唤出来的机仆会被判成「卫兵」，连锁污染：
+                //     名册 / 遣散(DismissAll) / 每场统计 / 经验缩放 / 所有以 IsGuard 为闸的补丁。
+                //   判据用 UnitPartSummonedMonster —— 它是引擎给召唤物挂的部件，最直接。
+                if (u.GetOptional<Kingmaker.UnitLogic.Parts.UnitPartSummonedMonster>() != null)
+                    return false;
+
                 var cg = u.CombatGroup;
                 var id = (cg != null) ? cg.Id : null;
                 return id != null && id.StartsWith(GuardTag, StringComparison.Ordinal);

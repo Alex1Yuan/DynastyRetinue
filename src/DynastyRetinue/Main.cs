@@ -390,7 +390,8 @@ namespace DynastyRetinue
             // 帧时间监视：每帧一次浮点比较，只在有尖峰的窗口记一行。
             FrameWatch.Tick();
             AnimFallback.RefreshPresence();
-            MixerWeightProbe.Tick();          // 每 2 秒、只在诊断日志开着时、只看我们的卫兵   // 每 2 秒刷一次「场上有没有近战精英」的全局闸
+            MixerWeightProbe.Tick();
+            JumpAndActFix.JumpWatchdog.Tick();   // 未武装时一次 int 比较就走          // 每 2 秒、只在诊断日志开着时、只看我们的卫兵   // 每 2 秒刷一次「场上有没有近战精英」的全局闸
             CommandStallWatch.Tick();      // 每秒最多一次，只在战斗中查我们的卫兵
             // 舰船帧级采样：只在「详细日志」开着时工作，且一次会话最多记 60 条。
             // 放在最前面是因为它自己就有节流，不需要等后面那些判定。

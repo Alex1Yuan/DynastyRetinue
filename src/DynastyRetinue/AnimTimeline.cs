@@ -34,7 +34,15 @@ namespace DynastyRetinue
     internal static class AnimTimeline
     {
         /// <summary>每种「技能|动作类」最多记几条。</summary>
-        private const int MaxPerKind = 3;
+        // ★1.7.77 从 3 提到 12★
+        //   3 条上限让这个探针在关键时刻失明：作者报「完成任务接打击没有攻击动画」，
+        //   而日志里那次打击确实只有 BuffLoopAction、没有 SpecialAttack ——
+        //   看起来是铁证，其实 `打击|SpecialAttack` 早在同一场的前三次攻击里就用完了配额，
+        //   **缺席只说明没被记录，不说明没发生**。
+        //   差一点又拿一条测量伪影当结论（同一轮里 l10n 审计已经栽过一次）。
+        //   ★通用规则★ 带上限的探针，要么上限足够覆盖一整场，
+        //   要么在达到上限时**明确打一行「后续已省略」**，绝不能静默停止。
+        private const int MaxPerKind = 12;
 
         private sealed class Rec
         {
@@ -114,7 +122,16 @@ namespace DynastyRetinue
                 string key = r.Ability + "|" + r.Action;
                 int n;
                 _count.TryGetValue(key, out n);
-                if (n >= MaxPerKind) return;
+                if (n >= MaxPerKind)
+                {
+                    if (n == MaxPerKind)
+                    {
+                        _count[key] = n + 1;      // 只提示一次
+                        Main.Log("[动画时间轴] " + key + " 已达 " + MaxPerKind
+                               + " 条上限，后续同类不再记录。★之后该组合的「缺席」不能当判据★");
+                    }
+                    return;
+                }
                 _count[key] = n + 1;
 
                 float now = UnityEngine.Time.realtimeSinceStartup;

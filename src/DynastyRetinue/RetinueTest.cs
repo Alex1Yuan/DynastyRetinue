@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -478,6 +478,11 @@ namespace DynastyRetinue
                                                       // Biomancy_IronArm。分型级只服务于没有 EliteDef 的普通卫兵。
                                                       ed != null ? ed.PreGrant : arch.PreGrant,
                                                       composed);
+                    // ★1.7.75 机械教线：装上召唤机仆能力★
+                    //   放在装配链之后，因为它要读等级/精英身份来决定召唤普通机仆还是战斗机仆。
+                    //   幂等，重复调用不会叠加。
+                    try { ServitorSummon.EnsureGranted(g); } catch { }
+
                     if (g.Progression.CharacterLevel != lvBefore)
                         Main.Log("  成长: lv" + lvBefore + " -> " + g.Progression.CharacterLevel
                                  + " (阶位T" + tier + " 上限" + lvCap + ", 调用 " + calls + " 次)");

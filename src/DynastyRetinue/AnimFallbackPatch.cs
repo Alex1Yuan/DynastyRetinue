@@ -478,6 +478,85 @@ namespace DynastyRetinue
             catch { return null; }
         }
 
+        // ═══════════ 1.7.82：手势限流 —— 每回合每技能只补一次 ═══════════
+        //
+        // ★为什么要限流（实测数据，不是估计）★
+        //   AI 回合有一道 40 秒硬墙（AiBrainController，实测 40.055 / 40.050 秒），
+        //   到点 InterruptAll(cmd => true) 把没跑完的指令全砍掉。
+        //   而实测回合 1 的 40 秒里，**21.3 秒是我们自己的施法动画**：
+        //       ReaperBloodOath ×7          8750 ms   ← 单这一条就 8.75 秒
+        //       ReaperDeathWaltz ×2         2469 ms
+        //       SpringAttackMovement ×1     1566 ms
+        //       杂技表演 ×1                 1561 ms
+        //       Inspire/Linchpin/Strongpoint 各 ~1540 ms
+        //       BladeShroud ×1              1201 ms
+        //       DeathWaltzSpring ×1         1099 ms
+        //   同一张表里的对照极干净 —— 没被我们补手势的技能只花 4~6 ms：
+        //       MobTechpriestMagi_VoxSkullSummon    6 ms
+        //       DLC3_..._Slice（单位自带）           5 ms
+        //   ⇒ 「原版不撞墙」不只因为它在玩家回合，更因为**原版根本不花这 21 秒**。
+        //
+        // ★后果★ 杂技表演（ReaperSpringAttackAbility）的 Deliver 是个按墙钟推进的协程，
+        //   要为本回合每一条死从天降 Entry 还债（走回落点→逆跳回出发点→走回起始格）。
+        //   回合 1 施放时只剩 5.07 秒、需要 ≥10 秒 ⇒ 被砍在半路；
+        //   回合 2 只剩一条 Entry 且免归位，3.39 秒跑完 ⇒ 正常。
+        //   **这就是作者看到的「一回合坏、二回合好」。**
+        //
+        // ★为什么限流而不是砍回溯★ 作者明确要求保留完整还原。
+        //   砍掉重复手势能省约 7.5 秒，而观感损失极小 ——
+        //   鲜血誓言连放 7 次，第 2~7 次的手势是同一个动作重复七遍，没有增量信息。
+        //
+        // ★为什么用 (CurrentUnit, CombatRound) 当回合令牌★
+        //   两者任一变化就说明换回合/换单位了。比自己数回合可靠，也不需要新挂点。
+        private static object _turnUnit;
+        private static int _turnRound = -1;
+        private static readonly System.Collections.Generic.HashSet<string> _gestured =
+            new System.Collections.Generic.HashSet<string>(StringComparer.Ordinal);
+
+        internal static int GestureSkipped;
+
+        /// <summary>这一回合这个技能是不是已经补过手势了。补过就返回 true（本次跳过）。</summary>
+        private static bool AlreadyGesturedThisTurn(string bpName)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(bpName)) return false;
+                var tc = Kingmaker.Game.Instance != null
+                       ? Kingmaker.Game.Instance.TurnController : null;
+                object cu = tc != null ? (object)tc.CurrentUnit : null;
+                int round = tc != null ? tc.CombatRound : -1;
+                if (!ReferenceEquals(cu, _turnUnit) || round != _turnRound)
+                {
+                    _turnUnit = cu; _turnRound = round; _gestured.Clear();
+                }
+                return !_gestured.Add(bpName);       // Add 返回 false = 已存在 = 补过了
+            }
+            catch { return false; }                  // 判不出来就放行，宁可多花时间也别丢动作
+        }
+
+        /// <summary>当前正在放的技能蓝图名。取不到返回 null。</summary>
+        internal static string CurrentAbilityName(BaseUnitEntity u)
+        {
+            try
+            {
+                var use = CurrentUse(u);
+                var ab = use != null ? use.Ability : null;
+                var bp = ab != null ? ab.Blueprint : null;
+                return bp != null ? bp.name : null;
+            }
+            catch { return null; }
+        }
+
+        /// <summary>补手势之前的最后一道闸：同回合同技能的重复施放不再补。</summary>
+        internal static bool GestureBudgetAllows(BaseUnitEntity u)
+        {
+            string n = CurrentAbilityName(u);
+            if (n == null) return true;
+            if (!AlreadyGesturedThisTurn(n)) return true;
+            GestureSkipped++;
+            return false;
+        }
+
         internal static bool IsOurGrantedAbility(BaseUnitEntity u)
         {
             try
@@ -500,11 +579,76 @@ namespace DynastyRetinue
                 //   （DeathCultAssassin_InnateAbility），同样由收割者线带来，不是单位自带。
                 //   实测时间轴：锈行猎手身上播 4~10 ms（表里只有 Grenade，没命中 ⇒ 大字），
                 //   电僧身上播 1585 ms（它的表里有 Directional，命中）—— 长短交替正是两个单位表不同。
+                // ═══ 1.7.78：排除「自己会派生一次攻击」的技能 ═══
+                //
+                // ★作者报的现象★「锈行者的完成任务接打击那里好像没有攻击动画」。
+                // ★工作流查实（IL + 引擎自己的 GameLogFull 时间戳）★
+                //   TacticianFinishTheJobAbility 的效果是 ContextActionAttackWithFirstWeaponAbility：
+                //     RunAction IL_00AA newobj UnitUseAbilityParams
+                //               IL_00B1 set_IgnoreCooldown(true)
+                //               IL_00B8 set_FreeAction(true)
+                //               IL_00E2 Commands.AddToQueue      ← 把武器自己的打击排进指令队列
+                //   也就是说它**自己会派生一次攻击**，而那次攻击要用同一个动画管理器。
+                //
+                //   而我们在这里给它换上的手势是「扔手雷」（表里唯一有 CastClip 的条目），
+                //   实测占住动画管理器 1315 ms；原版这里是 set_IsSkipped，4~21 ms 就过。
+                //   时序对得上：打击的句柄 912 ms 才启动，912+429 = 1341 ≈ 1315。
+                //   ⇒ **攻击动画在排队等我造出来的手势播完**，看着就像"没有攻击动画"。
+                //
+                // ★为什么只排它一个，不整条线关掉★ 其余 Tactician 技能（鼓舞人心/关键战术/
+                //   战术枢纽/扩大优势…）不派生攻击，手势是净收益 —— 没有它们就是 7~21 ms 的大字，
+                //   那正是 1.7.44 加这条闸要治的东西。只有「自己带攻击」的会跟自己抢管理器。
+                //
+                // ★教训★ 「给没动作的技能补一个动作」这个策略，对**会派生其它动作**的技能不成立。
+                //   补的动作不是填空白，是在跟后续动作抢一条独占资源。
+                if (IsSelfChainingAttack(bp.name)) return false;
+
                 return bp.name.StartsWith("Reaper", StringComparison.Ordinal)
                     || bp.name.StartsWith("Tactician", StringComparison.Ordinal)
                     || bp.name.StartsWith("DeathCultAssassin", StringComparison.Ordinal);
             }
             catch { return false; }
+        }
+
+        /// <summary>
+        /// 这个技能会不会**自己派生一次攻击指令**。这类技能不能补施法手势 ——
+        /// 手势会占住动画管理器，把它自己派生的那次攻击挤到后面去。
+        /// ★判据是蓝图行为，不是名字风格★ 目前已确证的只有一个；
+        ///   以后若发现别的带 ContextActionAttackWithFirstWeaponAbility 的技能，加进来即可。
+        /// </summary>
+        private static bool IsSelfChainingAttack(string bpName)
+        {
+            // TacticianFinishTheJobAbility：ContextActionAttackWithFirstWeaponAbility
+            //   会把武器自己的打击排进指令队列 ⇒ 手势会跟它派生的攻击抢动画管理器。
+            if (bpName == "TacticianFinishTheJobAbility") return true;
+
+            // ═══ 1.7.83：ReaperSpringAttackMovementAbility 也不能补手势 ═══
+            //
+            // ★这就是作者一路在报的「平移」★（工作流反编译级确证）
+            //   杂技表演 = ReaperSpringAttackAbility，它的 Deliver 末段无条件排一条
+            //   「免费走回本回合起点」的移动（AbilityCustomMoveToTarget，FreeAction、不花 MP、
+            //   无格数上限）—— 走多远取决于这回合往前走了多远。**距离是设计如此，不该改。**
+            //   但那条腿会请求一次 CastSpell，风格 = None：
+            //     原版：SingleOrDefault 落空 → IsSkipped=true; Release(); RestoreLoopAnimation()
+            //           ⇒ 不播手势，locomotion 层照常跑 ⇒ **正常走路**
+            //     我们：把 None 改写成 Grenade/Directional ⇒ 播 1.5 秒原地施法手势、权重 1.00，
+            //           而 UnitMoveToProper 同时拉着单位走 ⇒ **一边滑一边站着做手势**
+            //   实测手势时长 1566/1559/1524/1579/1523/1573 ms；
+            //   混合器同时采到 ElectroPriest_Spell_Direct 权重 1.00、Idle 0.00。
+            //
+            // ★为什么排除是安全的（这条推翻了我自己写在 JumpAndActFix.cs 里的说法）★
+            //   我曾写「撤掉 CastStyleFallback ⇒ 技能整个不起播 ⇒ 1.7.67 那类卡死」。
+            //   反编译不支持：IsSkipped=true + Release() 是**已完成态**，
+            //   AbstractUnitCommand.Tick 的两条 Error 被 IsSkipped 抑制、flag3 立刻置真、
+            //   **同一个 Tick 就走 OnAction**。代价只是观感（没手势），不是死锁。
+            //   ⇒ 对「本来就该让 locomotion 播」的技能，排除不但安全，而且是唯一正确做法。
+            //
+            // ★教训★ 「给没动作的技能补一个动作」这条策略，对**本身就在移动**的技能是有害的：
+            //   补的不是空白，是在跟移动动画抢同一条独占通道。
+            //   判据不该是「它有没有施法动作」，而是「补上去会不会挤掉别的东西」。
+            if (bpName == "ReaperSpringAttackMovementAbility") return true;
+
+            return false;
         }
 
         /// <summary>
@@ -560,6 +704,19 @@ namespace DynastyRetinue
                    + "而循环动画**原封不动继续播**。这替代了 1.7.36~1.7.39 那个 Release 做法 —— "
                    + "那个能放行队列，但杀掉循环之后没有任何东西恢复它，"
                    + "单位从回合结束起就一直站在绑定姿势里。");
+        }
+
+        /// <summary>给带位移的施法换上自己的 ForceMove 片段的次数。</summary>
+        internal static int ForceMoveClipUsed;
+        private static bool _loggedFmc;
+        internal static void NoteForceMoveClip()
+        {
+            ForceMoveClipUsed++;
+            if (_loggedFmc) return;
+            _loggedFmc = true;
+            Main.Log("[位移片段] 首次换上 —— 带位移的施法（Fly）原本被换成静止的施法手势，"
+                   + "人在滑行动作却是原地施法。两个单位其实都有 ForceMove 片段，"
+                   + "只是挂在 ForceMove(26) 动作下、不在施法表里，永远轮不到。这里直接取来用。");
         }
 
         /// <summary>拦下异骨架片段的次数 —— 回合末 bind pose 的根因修复。</summary>
@@ -1157,7 +1314,12 @@ namespace DynastyRetinue
     ///     else if (队列 > 10) 丢弃  else Enqueue
     /// 只要把占位的循环句柄答成「受保护」，排队的攻击就走**直接启动**那条，
     /// 而循环动画**原封不动继续播**。
-    /// 而且 UpdateActions 的排空条件（IL_0113）读的是同一个属性，一处生效两处受益。
+    /// ★1.7.78 更正★ 这里原本写着「UpdateActions 的排空条件读的是同一个属性，
+    ///   一处生效两处受益」—— **不成立**。ProtectScope 只在 base Execute 那一次调用内为真
+    ///   （Prefix 置位、Finalizer 复位），而 UpdateActions 由 Update 驱动、跑在窗口之外，
+    ///   那时补丁第一行就 return，IL_0113 读到的是 vanilla 的 false ⇒ 队列并不会因此排空。
+    ///   这个「附带好处」从来没存在过。留着这条更正是因为：错的注释比没有注释更贵，
+    ///   它会让后来的人（包括我自己）据此排除掉本该怀疑的方向。
     ///
     /// ★这不是绕法，是 vanilla 自己的路径★ 全库只有 LocoMotion 两个类的
     ///   DontReleaseOnInterrupt 返回 true（IL 都是 [17 2A]），
@@ -1343,6 +1505,13 @@ namespace DynastyRetinue
                 //   1.7.37 没这道闸，把请求 Fly（带位移）的自带技能替换成 Grenade（站着扔），
                 //   利刃切割的位移直接消失。原版跳过施法动作是正常的，别管。
                 if (!AnimFallback.IsOurGrantedAbility(AnimFallback.UnitOf(handle))) return;
+
+                // ★1.7.82 手势限流★ 同一回合同一技能只补第一次。
+                //   实测回合 1 的 40 秒 AI 预算里有 21.3 秒是我们的施法动画，
+                //   其中鲜血誓言 ×7 就占 8.75 秒 —— 而后 6 次手势是同一个动作重复，
+                //   没有增量信息，却把杂技表演的完整回溯挤出了预算。详见 AnimFallback 里的说明。
+                if (!AnimFallback.GestureBudgetAllows(AnimFallback.UnitOf(handle))) return;
+
                 AnimFallback.TJ.GatePassed++;
 
                 if (!_looked)
@@ -1443,6 +1612,16 @@ namespace DynastyRetinue
                 // 现状：位移技能退回「换成 Grenade（扔手雷手势）」，观感不贴切但稳定。
                 // 素材是有的（Sicarian_Forcemove_v1~v5），将来若要重试，
                 // 正确方向应该是找到引擎自己播 ForceMove 的入口去复用，而不是伪造 CastSpell 条目。
+
+                // ★1.7.70★ Fly 是**带位移**的施法风格。换成静止的施法手势（电僧只有 Directional、
+                //   锈行猎手只有 Grenade）会让人在滑行而动作是原地施法 —— 作者原话
+                //   「平移过去了很远的距离…怎么也没播出移动的动画」。
+                //   两个单位其实**都有**位移片段（ElectroPriest_ForceMove_01~05 /
+                //   Sicarian_Forcemove_v1~v5），只是它们挂在 ForceMove(26) 动作下、不在施法表里，
+                //   所以永远轮不到。
+                //   这里给句柄打个标记，由 StartClip 那一步把**片段**换成 ForceMove ——
+                //   ★不再往共享的施法表里插伪造条目★（1.7.50 那么干过，在管线上开了洞导致卡死）。
+                if (IsDisplacementStyle(cur)) ForeignRigClipBlockPatch.MarkDisplacement(handle);
 
                 AnimFallback.NoteCastSwap(cur, cand);
                 __state = cur;                       // ★记下原值，Postfix 立刻还原★
