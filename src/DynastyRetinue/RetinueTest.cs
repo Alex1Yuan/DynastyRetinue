@@ -39,6 +39,18 @@ namespace DynastyRetinue
         /// </summary>
         public static bool AligningExperience;
 
+        /// <summary>
+        /// 仅供开发区全路线矩阵测试使用：1/2/3 强制真实阶位，0=正常按主角等级。
+        /// 纯内存态，不进 Settings/存档/联机；测试器必须在 finally 中归零。
+        /// </summary>
+        internal static int TestTierOverride;
+
+        private static int EffectiveTier(BaseUnitEntity leader)
+        {
+            return TestTierOverride >= 1 && TestTierOverride <= 3
+                 ? TestTierOverride : Archetypes.PlayerTier(leader);
+        }
+
         public static int SpawnedCount { get { return RetinueRegistry.Count; } }
 
         public static void SpawnOne() { SpawnOne(-1, null, false); }
@@ -132,7 +144,7 @@ namespace DynastyRetinue
 
                 if (!skipCap)
                 {
-                    int tier = Archetypes.PlayerTier(leader);
+                    int tier = EffectiveTier(leader);
                     // 上限三选一，优先级从高到低：
                     //   解除数量上限 > 利润因子闸（未被单独解除时）> 阶位数量上限
                     int cap;
@@ -252,6 +264,13 @@ namespace DynastyRetinue
                     if (_elite != null)
                         RetinueRegistry.SetEliteTag(u, archIdx, GearTool.IndexOfElite(_arch0, _elite));
 
+                    // ★1.7.91 立即播种近战精英存在性闸★
+                    //   不能等 RetinueRegistry.All()：SpawnUnit 此时只进了 m_ToSpawn，
+                    //   下一次 EntitySpawnController.Tick 才真正入册；而后面的 Faction.Set /
+                    //   ApplyRuntimeState 已可能触发动画。此时 CombatGroup.Id 已写好、蓝图也在，
+                    //   是最早且确定的入口。coop 招募两端执行同一条 kgd.recruit，也会一起播种。
+                    AnimFallback.ObserveMeleeElite(u);
+
                     // ③ Faction.Set 必须在 SnapToGrid 之前（占格按阵营区分敌我）。
                     //    它会同步触发 HandleFactionChanged → RestoreSharedInventory，
                     //    由 InventoryPatch 拦下，卫兵装备才不会被倒进玩家仓库。
@@ -280,6 +299,9 @@ namespace DynastyRetinue
                         Game.Instance.EntityDestroyer.Tick();
                     }
                     catch (Exception rb) { Main.LogError("回滚也失败了，请勿存档: " + rb.Message); }
+                    // 生成入口已在身份标记后把 UID 加进事件驱动集合；失败必须配对撤销，
+                    // 否则主开关会被一个不存在的精英永久锁住，动画全局闸也恒为 true。
+                    try { AnimFallback.ForgetMeleeElite(u); } catch { }
                     return null;
                 }
                 finally { RetinueRegistry.EndProtect(u); }
@@ -291,14 +313,50 @@ namespace DynastyRetinue
                 Main.Log("已生成 " + bp.name + "  落点 " + before + " -> " + u.Position
                          + "  uid=" + u.UniqueId + "  (在册约 " + (RetinueRegistry.Count + 1) + " 名)");
                 DumpUnit(u, "spawn 后");
-                // 外观：视图要过若干帧才挂上（见 RebuildWhenReady 的注释），
-                // 那时才认得出这是卫兵，所以排队等它出现再重建一次。
-                if (Main.Settings != null && !string.IsNullOrEmpty(Main.Settings.LookMatrix))
+                // 外观：只有**这名单位确实命中自定义外观**才排异步重建。
+                // 旧代码只要整张 LookMatrix 非空就排，机械教这一格明明是跟随装备，
+                // 加入方仍会单边 RebuildOne、房主不会；完整 UnitEntityView 含 AnimationManager，
+                // 这是联机生成日志全同、几十 tick 后才分叉的高危异步窗口。
+                // 此处仍在 CoopSettings 临时作用域内，LookMatrix 已随 kgd.recruit 同步，
+                // 两端会得出同一个 needViewRebuild；Deferred 之后不再重新读设置决定要不要做。
+                bool needViewRebuild = false;
+                try
+                {
+                    needViewRebuild = LookAssign.LookFor(u) != null
+                                   || (_elite != null && !string.IsNullOrEmpty(_elite.AppearanceUnitId));
+                }
+                catch { }
+                if (needViewRebuild && !CoopState.SharedGameplayRequired)
                     DollLookPatch.RebuildWhenReady(u.UniqueId);
                 return u;
             }
             catch (Exception e) { Main.LogError(e); }
             return null;
+        }
+
+        private const string OrdinaryPsykerStationaryUnitId = "1df7ad7561ca47a08a2c2b0a8152871e";
+        private const int OrdinaryGuardMovementPoints = 6;
+
+        private static void RepairOrdinaryPsykerMovement(BaseUnitEntity g)
+        {
+            if (g == null || !RetinueRegistry.IsGuard(g)) return;
+
+            // 精英有自己的原版移动值；只修没有 EliteTag 的普通卫兵。
+            RetinueRegistry.GetEliteTag(g, out int _, out int eliteIndex);
+            if (eliteIndex >= 0) return;
+
+            var bp = g.OriginalBlueprint ?? g.Blueprint;
+            if (bp == null || !string.Equals(bp.AssetGuid.ToString(), OrdinaryPsykerStationaryUnitId,
+                                                StringComparison.OrdinalIgnoreCase)) return;
+
+            var combat = g.CombatState;
+            var initial = combat != null ? combat.WarhammerInitialAPBlue : null;
+            if (initial == null || initial.BaseValue >= OrdinaryGuardMovementPoints) return;
+
+            int before = initial.BaseValue;
+            initial.BaseValue = OrdinaryGuardMovementPoints;
+            Main.Log("[灵能卫] 修复站桩底盘初始移动力 " + before + " -> "
+                   + OrdinaryGuardMovementPoints + "（仅此卫兵实例；行动点不变）");
         }
 
         /// <summary>
@@ -311,6 +369,19 @@ namespace DynastyRetinue
         public static void ApplyRuntimeState(BaseUnitEntity g, BaseUnitEntity leader)
         {
             if (g == null) return;
+
+            // a0) 普通灵能卫的原版底盘 OfficersDeckGuardAstro 是舰桥站桩 NPC：
+            //     BlueprintUnit.WarhammerInitialAPBlue=0、Yellow=6。我们以前只看了它的
+            //     模型/brain，没核对这个字段，于是转成卫兵后每回合 RuleCalculateMovementPoints
+            //     仍然会算出 0。普通 OfficersDeckGuard 的基准是 6/6，两个战斗灵能者则是
+            //     10/10；这里取保守的 6，只补移动、不额外增加行动点。
+            //
+            //     ★只改实体 stat，不改 BlueprintUnit★ 蓝图是全局单例，直接写蓝图会让剧情里的
+            //     原版舰桥 NPC 也能移动。BaseValue 属于该实体自己的 PartStatsContainer，读档/
+            //     过图和新招募都会经 ApplyRuntimeState 幂等自愈。当前回合的 ActionPointsBlue
+            //     不在这里灌满；原版会在 PrepareForNewTurn 中按修正后的 ModifiedValue 正常重算。
+            try { RepairOrdinaryPsykerMovement(g); }
+            catch (Exception e) { Main.LogError("灵能卫移动力自愈: " + e.Message); }
 
             // a) IsInGame —— SceneLoader.cs:1490 在区域卸载时无条件重置为
             //    Player.Party.Contains(...)，卫兵不在队伍里 ⇒ 变 false，必须自己置回
@@ -420,8 +491,9 @@ namespace DynastyRetinue
             {
                 try
                 {
-                    int tier      = Archetypes.PlayerTier(leader);
-                    bool unlocked = Main.Settings.NoLevelCap();
+                    int tier      = EffectiveTier(leader);
+                    bool testing  = TestTierOverride >= 1 && TestTierOverride <= 3;
+                    bool unlocked = !testing && Main.Settings.NoLevelCap();
                     int lvCap     = unlocked ? 55 : Archetypes.GuardLevelCap(tier);
                     int depth     = unlocked ? 3  : Archetypes.ChainDepth(tier);
                     // ★ 用卫兵**自己**的分型，不是面板当前选中的那个。
@@ -450,8 +522,9 @@ namespace DynastyRetinue
                         catch (Exception e2) { Main.LogError("  设种族失败: " + e2.Message); }
                     }
 
-                    // 精英是毕业形态，生成时就顶到等级上限 —— 普通卫兵才按主角经验×比例起步
-                    if (ed != null) Archetypes.GrantXpForLevel(g, lvCap);
+                    // 精英是毕业形态，生成时就顶到等级上限；矩阵测试的普通样本也必须
+                    // 精确拿到 T1/T2/T3 目标经验，否则 55 级存档上的“T1”只是换了装备标签。
+                    if (ed != null || testing) Archetypes.GrantXpForLevel(g, lvCap);
 
                     // ★ 熟练度必须在升级**之前**授予 ★
                     // v0.8.1 实测：TrueSight_Feature（致命精准）的前置就是
@@ -501,7 +574,7 @@ namespace DynastyRetinue
                 // ★阶位要重算★ 上面那个 tier 在 AutoLevelUp 的分支里，这里不在作用域。
                 //   不传的话就退化成 tier=0，按阶位替换的那组永远不会被撤销 ——
                 //   于是升阶后 T1 的能力会被这里原样发回去，把上面刚做的替换抵消掉。
-                int tier2 = (leader != null) ? Archetypes.PlayerTier(leader) : 0;
+                int tier2 = (leader != null) ? EffectiveTier(leader) : 0;
                 GearTool.GrantFeatures(g, arch2, tier2);
                 GearTool.Equip(g, arch2);
             }
@@ -882,7 +955,8 @@ namespace DynastyRetinue
                 finally { AligningExperience = false; }
 
                 float ratio;
-                if (!float.TryParse(Main.Settings.XpRatio, out ratio)) ratio = 0.8f;
+                if (!float.TryParse(Main.Settings.XpRatio, System.Globalization.NumberStyles.Float,
+                                    System.Globalization.CultureInfo.InvariantCulture, out ratio)) ratio = 0.8f;
                 Main.Log("经验起点: 主角 lv" + leader.Progression.CharacterLevel + " xp=" + rtXp
                          + (Main.Settings.ScaleGuardXp ? "  x" + ratio + "(由 XpPatch 缩放)" : "  (未缩放)")
                          + " => 卫兵 xp " + before + " -> " + guard.Progression.Experience);
@@ -904,7 +978,8 @@ namespace DynastyRetinue
             if (amount <= 0) { Main.Log("经验数必须为正。"); return; }
 
             float ratio;
-            if (!float.TryParse(Main.Settings.XpRatio, out ratio)) ratio = 0.8f;
+            if (!float.TryParse(Main.Settings.XpRatio, System.Globalization.NumberStyles.Float,
+                                System.Globalization.CultureInfo.InvariantCulture, out ratio)) ratio = 0.8f;
             Main.Log("=== 发经验 " + amount + " 点"
                      + (Main.Settings.ScaleGuardXp ? "（预期实收 " + (int)(amount * ratio) + " = x" + ratio + "）" : "（未缩放）")
                      + " ===");
@@ -1017,6 +1092,9 @@ namespace DynastyRetinue
         {
             var list = RetinueRegistry.All();
             if (list.Count == 0) { Main.Log("没有在册卫兵。"); return 0; }
+            // 名字分配会扫描“前面已经用了哪些人名”；两端必须使用相同顺序。
+            list.Sort((a, b) => string.CompareOrdinal(a != null ? a.UniqueId : "",
+                                                      b != null ? b.UniqueId : ""));
 
             foreach (var g in list)
             {

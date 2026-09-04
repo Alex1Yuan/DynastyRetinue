@@ -119,21 +119,132 @@ namespace DynastyRetinue
 
         private static bool InList(object entity, string[] units)
         {
+            // ★最便宜且最有选择性的判断先做★ 全场绝大多数调用不是卫兵；
+            //   不要让每个原版单位先去读设置/联机会话状态。
+            var u = entity as BaseUnitEntity;
+            if (u == null || !RetinueRegistry.IsGuard(u)) return false;
+
+            // ★近战精英支持的总闸（1.7.86）★ 放在这一处，是因为**全部 13 个相关补丁**
+            //   都必经 IsGateTarget 或 IsBladeAnimTarget：
+            //     AnimFallbackPatch ×8 与 ForeignRigClipBlockPatch 走 AnimFallback.Applies → IsGateTarget
+            //     JumpAndActFix ×3（ActReentryGate / SupplyJumpAction / ArmWatchdog）→ IsGateTarget
+            //     DeathWaltzAoePatch → IsBladeAnimTarget
+            //   一处收口，不用在 13 个地方各加一句（那种写法一定会漏，而漏掉的那个
+            //   在联机里就是一个不同步源）。
+            // ★读 Active 不读字段★ 联机时它强制返回 true，忽略本机设置 —— 见 Main 的注释。
+            if (!Main.MeleeEliteSupportActive) return false;
+            return InListCore(u, units);
+        }
+
+        /// <summary>
+        /// 冷路径注册判据：**不看主开关，不依赖已注册 UID 集合**。
+        /// 只允许生成/读档/启用重建时调用；内部会解析 EliteTag（Substring+Split，有分配）。
+        ///
+        /// 同时要求两件事：
+        ///   ① 标签指向当前配置里的锈行猎手/电僧 —— 排除曾共用 Ruststalker 蓝图的赏金猎首；
+        ///   ② 实际 Blueprint 也确实是该 rig —— 排除 DLC 缺失后落到通用 UnitAssetId 的替身。
+        /// </summary>
+        internal static bool IsMeleeEliteForRegistration(BaseUnitEntity u)
+        {
+            if (!Main.Enabled || u == null || !RetinueRegistry.IsGuard(u)) return false;
+            try
+            {
+                if (u.Blueprint == null || !IdIn(u.Blueprint.AssetGuid.ToString(), MeleeEliteUnits))
+                    return false;
+
+                int ai, ei;
+                RetinueRegistry.GetEliteTag(u, out ai, out ei);
+                if (ai < 0 || ei < 0) return false;       // 公开版本的精英都有显式标签
+                var arch = Archetypes.Get(ai);
+                var elites = arch != null ? arch.Elites : null;
+                if (elites == null || ei >= elites.Length || elites[ei] == null) return false;
+                return IdIn(elites[ei].UnitId, MeleeEliteUnits);
+            }
+            catch { return false; }
+        }
+
+        /// <summary>兼容旧调用名；仅用于冷路径注册/重建，不可放进每帧补丁。</summary>
+        internal static bool IsMeleeEliteIgnoringMaster(object entity)
+        {
+            return IsMeleeEliteForRegistration(entity as BaseUnitEntity);
+        }
+
+        /// <summary>
+        /// 招募列表用：主开关关掉时，这两个近战精英不给招
+        /// （作者要求：「如果关闭开关…并关闭招募他们的选项」）。
+        ///
+        /// ★为什么按 UnitId 判而不是按实体★ 招募列表里还没有实体，只有 EliteDef.UnitId。
+        /// ★联机下恒为 false★ Active 在联机里强制为真 ⇒ 不会出现"一台能招一台不能"。
+        /// </summary>
+        internal static bool IsRecruitBlocked(string unitId)
+        {
+            // ★招新权限不能读 MeleeEliteSupportActive★ Active 会因为「名册已有精英」
+            //   被强制为 true，以保证旧档中的现有单位继续得到修复；但这不代表玩家同意
+            //   再招第二个。招募只认：联机强制，或本机保存偏好。
+            bool allowed = Main.Settings == null || Main.Settings.MeleeEliteSupport;
+            try { if (CoopState.SharedGameplayRequired) allowed = true; } catch { allowed = true; }
+            if (allowed) return false;
+            return IdIn(unitId, MeleeEliteUnits);
+        }
+
+        /// <summary>
+        /// 这个分型是否含有被主开关挡住的精英（给 fallback 灰按钮一个准确理由）。
+        /// 不能问「所有配置项是否都被挡」：机械教还有两个贤者；他们已招募后，剩余的
+        /// 两个近战精英仍被挡，但按全数组会因为已拥有的贤者而误答 false、显示“已招满”。
+        /// </summary>
+        internal static bool HasMissingRecruitBlockedElite(
+            int archIndex, ChainProbe.Archetype a,
+            System.Collections.Generic.List<BaseUnitEntity> roster, string recruitGroup = null)
+        {
+            if (a == null || a.Elites == null || a.Elites.Length == 0) return false;
+            var have = new System.Collections.Generic.HashSet<int>();
+            if (roster != null)
+                foreach (var g in roster)
+                {
+                    if (RetinueRegistry.ArchetypeOf(g) != archIndex) continue;
+                    int i = GearTool.IndexOfElite(a, GearTool.EliteDefOf(g, a));
+                    if (i >= 0) have.Add(i);
+                }
+            for (int i = 0; i < a.Elites.Length; i++)
+            {
+                var e = a.Elites[i];
+                if (e == null || have.Contains(i)) continue;
+                if (recruitGroup != null && !GearTool.SameRecruitGroup(e.RecruitGroup, recruitGroup)) continue;
+                if (IsRecruitBlocked(e.UnitId)) return true;
+            }
+            return false;
+        }
+
+        private static bool InListCore(object entity, string[] units)
+        {
             if (!Main.Enabled) return false;
             var u = entity as BaseUnitEntity;
             if (u == null) return false;
             // ★顺序★ IsGuard 是 O(1)（只读一次 CombatGroup.Id 做前缀比较），
-            //   放在 guid 比对之前，非卫兵一次字符串比较就走掉。
+            //   放在身份解析之前，非卫兵一次字符串比较就走掉。
             if (!RetinueRegistry.IsGuard(u)) return false;
             try
             {
+                // ★热路径不解析 EliteTag★ Observe/Rebuild 已在生成/加载事件中一次性用标签
+                //   排除了「赏金·猎首」等共用蓝图的其他精英，并把正确单位 UID 缓存起来。
+                //   GetEliteTag 会 Substring + Split，每帧调用会制造 GC。
+                if (!AnimFallback.IsKnownMeleeElite(u)) return false;
+
+                // ★实际 rig 仍必须匹配★ DLC 缺失时精英可能落到通用 UnitAssetId，
+                //   但 EliteTag 仍是近战精英下标。只看标签会把 Sicarian/Electro 专用动画
+                //   套到无关底盘上。标签负责「你是谁」，实际蓝图负责「这个 rig 接得住吗」。
                 if (u.Blueprint == null) return false;
-                string g = u.Blueprint.AssetGuid.ToString();
-                for (int i = 0; i < units.Length; i++)
-                    if (string.Equals(g, units[i], StringComparison.OrdinalIgnoreCase))
-                        return true;
+                return IdIn(u.Blueprint.AssetGuid.ToString(), units);
             }
             catch { }
+            return false;
+        }
+
+        private static bool IdIn(string id, string[] units)
+        {
+            if (string.IsNullOrEmpty(id) || units == null) return false;
+            for (int i = 0; i < units.Length; i++)
+                if (string.Equals(id, units[i], StringComparison.OrdinalIgnoreCase)) return true;
             return false;
         }
 
@@ -602,8 +713,10 @@ namespace DynastyRetinue
             {
                 if (!Main.Enabled) return true;
                 if (__instance == null) return true;
-                var s = Main.Settings;
-                if (s == null || !s.ReaperSkillGate) return true;
+                // ★1.7.86 并进主开关★ 原来读 Settings.ReaperSkillGate（本机设置）。
+                //   下面的 IsGateTarget/IsBladeAnimTarget 已经带主开关闸，
+                //   这里保留一道早退只是为了省掉后面的取值 —— 语义与那边一致。
+                if (!Main.MeleeEliteSupportActive) return true;
 
                 // 便宜的判断放前面：不是问 Sword 就走原版，一次反射都不用
                 if (__instance.Classification != Kingmaker.Enums.WeaponClassification.Sword) return true;
@@ -841,10 +954,12 @@ namespace DynastyRetinue
                 //   ★一次只加一个实例★ 同时加两个，T-pose 了分不清是谁干的。
                 EnsureResolved();
                 bool allow = false;
-                if (Main.Settings != null)
+                // ★1.7.86★ 原来是 `if (Main.Settings != null) { if (!ReaperSkillGate) {} else if ... }`
+                //   —— 那个空块是「关着就什么都不做」的写法，读起来像漏了分支。
+                //   现在闸并进主开关，顺手把空块拆成一次早退。
+                if (Main.MeleeEliteSupportActive)
                 {
-                    if (!Main.Settings.ReaperSkillGate) { }
-                    else if (ReferenceEquals(__instance, _deathWaltz)) allow = true;
+                    if (ReferenceEquals(__instance, _deathWaltz)) allow = true;
                     else if (ReferenceEquals(__instance, _reaperUlt)) allow = true;
                     else
                         for (int i = 0; i < _bladeDance.Length; i++)
@@ -857,17 +972,11 @@ namespace DynastyRetinue
                     return false;
                 }
 
-                // ★默认关★ 见 Settings.SwordClassGate 的头注：放行会让引擎去放长剑动作，
-                //   而这两个精英的动画集里没有 —— 实测摆大字 + 抽搐。
-                //   计数照记（上面那行 Seen 在开关之前），这样即使关着也能知道
-                //   "原版一场问了多少次"，将来要不要重开有数据可依。
-                if (Main.Settings == null || !Main.Settings.SwordClassGate) return true;
-
-                if (!WeaponGate.IsGateTarget(caster)) return true;
-
-                WeaponGate.Count(caster, WeaponGate.KindSword);
-                __result = true;   // 就当你手上是长剑
-                return false;
+                // ★1.7.93 移除隐藏旧开关 SwordClassGate 的运行时分支★
+                //   当前 UI 已没有这个控件，但旧 Settings.xml 可能保存 true；继续读取会让
+                //   玩家在新面板只看到一个主开关，背后却仍有一个不可关闭的「所有 Sword
+                //   判定全放行」，重新制造 1.5.84 的 T-pose。未命中上面精确白名单的一律走原版。
+                return true;
             }
             catch { }
             return true;

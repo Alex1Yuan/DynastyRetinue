@@ -34,6 +34,8 @@ namespace DynastyRetinue
             {
                 if (!Main.Enabled) return true;
                 if (Main.Settings == null) return true;
+                // 合作模式统一走原版 UnitEntityView；Doll 视图同样会重绑运行时部件/动画管理器。
+                if (CoopState.SharedGameplayRequired) return true;
 
                 var u = __instance != null ? __instance.Owner as BaseUnitEntity : null;
                 if (u == null) { Bail("拿不到单位实体"); return true; }
@@ -115,6 +117,11 @@ namespace DynastyRetinue
         /// </summary>
         public static int RebuildAllGuardViews()
         {
+            if (CoopState.SharedGameplayRequired)
+            {
+                Main.Log("[外观] 合作模式中不重建卫兵 View；两端统一使用原版外观以保证同步。");
+                return 0;
+            }
             int n = 0;
             var list = RetinueRegistry.All();
             for (int i = 0; i < list.Count; i++)
@@ -127,7 +134,7 @@ namespace DynastyRetinue
         /// <summary>重建一名卫兵的视图。没有视图（还没挂上）返回 false。</summary>
         public static bool RebuildOne(BaseUnitEntity u)
         {
-            if (u == null) return false;
+            if (u == null || CoopState.SharedGameplayRequired) return false;
             try
             {
                 var old = u.View;

@@ -113,6 +113,9 @@ namespace DynastyRetinue
                 //   B 档 cue=0，0 个单位佩戴。备选是狙击瞄准型义眼的军队女性。
                 { "53281ae602a34756a47c3e23f66c06cd",
                   "12a70d4ed7204766b38e730fb84cd998|ba1bdefff9f44351b0b7c139bf5b036f|86163d32b05d4b14a7fb674c92c7113d" },
+                // 当前配表已换成 DLC3_DL_Arbites_Sniper_Unit；沿用原赏金猎首立绘链。
+                { "8104e86cc05c42bfbb2c11c70332ef06",
+                  "12a70d4ed7204766b38e730fb84cd998|ba1bdefff9f44351b0b7c139bf5b036f|86163d32b05d4b14a7fb674c92c7113d" },
 
                 // 圣焰·净罪修女  DLC3_DL_Sororitas_Melta_Unit（女）-> AdeptusMinistorumFemale
                 //   金发+额头虔信刻痕的教会系女性。全库唯一非同伴的教会女脸
@@ -126,6 +129,9 @@ namespace DynastyRetinue
                 //   苍白发青的皮肤、发白光的眼睛、近乎光头 —— 和模型 BCT_Inquisition_Mystic
                 //   是同一套设计语言。B 档 cue=0。
                 { "d1287134a3e64a4dbdae16b58d21bd8b",
+                  "3c1cff3901824c0298ba4abe1801c807|05aca1a00dd4450da436696868650518|ac7139caf2544bc29e19a8f031635e63" },
+                // 当前配表已换成 DLC3_DL_Inquisitor_Unit；沿用原亚空间审判者立绘链。
+                { "5bc8b3a8fb834977a3692a2325aff0f6",
                   "3c1cff3901824c0298ba4abe1801c807|05aca1a00dd4450da436696868650518|ac7139caf2544bc29e19a8f031635e63" },
 
                 // 火杖行刑者  Ch04Chorda_Pyromancer_unit -> DecadenceFemale
@@ -144,6 +150,27 @@ namespace DynastyRetinue
                 //   而且模型 BCT_Male_Astropath 是苍白光头、和海军那张黑发青年对不太上。
                 { "bc5ca9badb2042b48afb13c1829619b3",
                   "d03e6b0de6994d8f8b10a8ad16ebd94e|b8c150a212dc43b8ae2a580c0145fa20|3df3df7a73a544d79455a40e2dc1156a" },
+
+                // ================= 机械教精英 =================
+                // 四个底子自身 m_Portrait 全为空；原生 Mechanicus portrait 蓝图的三条
+                // SpriteLink 又没有实际资源，所以只能借可加载的 vanilla 建卡立绘。
+                // 主候选四张互不相同；候选链继续走 PickNonClashing，避免撞主控脸。
+
+                // 锈行猎手：全覆法务盔，最接近无脸的机械刺客
+                { "aa02b505be774674ae924f19dc17e6f6",
+                  "53f44b5aa25442ed8bedd0015e33d25c|f0d5da655acb4b47846e52e8e97a5254|1b9082909e854f6d97c366358a280102" },
+
+                // 电僧：Wrack 多目荧光面罩，最贴近电僧的无脸义体造型
+                { "ab131771270542b69fb7a687062b39c0",
+                  "e412531302564174bdf77a540d11703b|0114a2db302c45a9bc780593d0ec5134|3df3df7a73a544d79455a40e2dc1156a" },
+
+                // 高阶贤者 BrassWhisper：Opticon 红兜帽 + 多目镜 + 呼吸管，全库最贴机械教的可加载立绘
+                { "ca936a024b954b188d2bd397e6ea49d3",
+                  "8f00a7482297468fbf1ffd01b14c4d8b|266dedae5ac84028bd244148487d9766|a350677333ab4250b266c8b2c569200e" },
+
+                // 异端贤者 Dements：Neutral2 多目荧光面罩；不再借内政部 Prefect NPC
+                { "287d7a4d2bb146998dc450cb3eccee78",
+                  "83f3fec9796c4f1f9adc326a9607131a|734c108401874af8859de4789f2186ec" },
 
                 // ---- 下面两个**不需要** override：单位自带立绘且图正常 ----
                 // 怒火·首席连射 -> 自带 ArbitratorClayton 1704807cd8944603b71331183ff36a1f

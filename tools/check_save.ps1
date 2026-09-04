@@ -3,7 +3,7 @@ param([string]$SavePath)
 
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 
-$sg = 'C:\Users\kyua805\AppData\LocalLow\Owlcat Games\Warhammer 40000 Rogue Trader\Saved Games'
+$sg = Join-Path $env:USERPROFILE 'AppData\LocalLow\Owlcat Games\Warhammer 40000 Rogue Trader\Saved Games'
 if (-not $SavePath) {
     $SavePath = (Get-ChildItem $sg -Filter '*.zks' | Sort-Object LastWriteTime -Descending | Select-Object -First 1).FullName
 }

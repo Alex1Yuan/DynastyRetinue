@@ -258,6 +258,7 @@ namespace DynastyRetinue
                                 UnitFallback = ReadGuidList(e["unitFallback"]),
                                 DualMelee    = e["dualMelee"] != null && (bool)e["dualMelee"],
                                 BrainId  = (string)e["brain"],   // 可选：不填沿用分型的
+                                RecruitGroup = ReadRecruitGroup(e["recruitGroup"]),
                                 // 借别人的模型、属性仍用 unit 那个（见 EliteDef.AppearanceUnitId）
                                 AppearanceUnitId = (string)e["appearanceUnit"],
                                 DefaultLook      = (string)e["defaultLook"],
@@ -422,6 +423,19 @@ namespace DynastyRetinue
             }
             var one = (string)tok;
             return string.IsNullOrEmpty(one) ? null : new[] { one };
+        }
+
+        /// <summary>
+        /// 招募分组是纯 UI/资格配置。只认两个稳定内部值；拼错或旧配置缺字段时回落 null，
+        /// 不能因为一个展示字段坏了让整份 archetypes.json 回退默认。
+        /// </summary>
+        private static string ReadRecruitGroup(Newtonsoft.Json.Linq.JToken tok)
+        {
+            string s = null;
+            try { s = (string)tok; } catch { return null; }
+            if (string.IsNullOrWhiteSpace(s)) return null;
+            s = s.Trim().ToLowerInvariant();
+            return s == "dogmatic" || s == "heretek" ? s : null;
         }
 
         private static string[] ReadGuidList(Newtonsoft.Json.Linq.JToken tok)
@@ -1127,7 +1141,8 @@ namespace DynastyRetinue
                             else if (!selectable)
                             {
                                 missB.Add(nm + where);
-                                // 打的是**当场**记下来的求值结果，不是现在（55级）重算的
+                                // 打的是**当场**记下来的求值结果；收尾时若原版复合前置已经
+                                // 满足，LateGrant 应在上一步补齐。仍缺就是实际失败，不做白名单豁免。
                                 if (missB.Count <= 6)
                                 {
                                     string why;

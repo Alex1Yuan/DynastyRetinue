@@ -139,12 +139,9 @@ namespace DynastyRetinue
             var names = new List<string>();
             var rejected = new List<string>();
 
-            // 已经穿在身上的蓝图集合 —— 逐件比对用。
-            // v0.3.5 的判据是「有任意一件就整套跳过」，结果精英用的 lv45 预设阿贝拉德
-            // 自带装备里只要撞上一件，整套毕业装备就一件都不发了。改成逐件。
-            var worn = WornGuids(body);
-            // guid -> 中文名，事后核对用（见 using 块结束处）
-            var placedGuids = new Dictionary<string, string>();
+            // 本轮真正插入的物品实例，事后逐件核对是否仍留在装备槽。
+            // 不能按 GUID 去重：锈行猎手等配置明确要求两把同 GUID 武器。
+            var placedItems = new List<KeyValuePair<ItemEntity, string>>();
             var used = new HashSet<ItemSlot>();
 
             // ★★ 全程开 IgnoreLock ★★
@@ -183,13 +180,32 @@ namespace DynastyRetinue
                 //
                 //   按顺序走：排在已穿着那件**前面**的才尝试 —— 那才是真正的升级；
                 //   走到已穿着的那件就说明没有更好的了，停手。
+                // ★每个条目都重新读当前穿戴，并消费一个真实槽位★
+                //   不能用 GUID HashSet：配置里允许同一 GUID 出现两次（双持同款武器），
+                //   一把不能同时满足两条。也不能沿用 Equip 开头的旧快照：前一条可能刚
+                //   把法杖装回套组1，后一条必须看见这个新状态。
                 int stopAt = candidates.Length;
+                string wornGuid = null;
+                ItemSlot wornSlot = null;
                 for (int ci = 0; ci < candidates.Length; ci++)
                 {
                     string c = candidates[ci];
-                    if (!string.IsNullOrEmpty(c) && worn.Contains(c.Trim())) { stopAt = ci; break; }
+                    if (string.IsNullOrEmpty(c)) continue;
+                    ItemSlot slot = FindWornSlot(body, c.Trim(), used);
+                    if (slot != null)
+                    {
+                        stopAt = ci;
+                        wornGuid = c.Trim();
+                        wornSlot = slot;
+                        break;
+                    }
                 }
-                if (stopAt == 0) { already++; continue; }   // 首选就穿着，无事可做
+                if (stopAt == 0)
+                {
+                    used.Add(wornSlot);
+                    already++;
+                    continue;
+                }
 
                 bool placed = false;
                 var tried = new List<string>();
@@ -203,12 +219,14 @@ namespace DynastyRetinue
                     if (bp == null) { tried.Add("(解析不到 …" + Tail(guid) + ")"); continue; }
 
                     string why;
-                    if (TryPlace(g, body, bp, ref ok, names, used, out why))
+                    ItemEntity placedItem;
+                    if (TryPlace(g, body, bp, ref ok, names, used, out why, out placedItem))
                     {
                         // 回退过程要记下来 —— 否则"最后用了哪件、前面为什么不行"全看不见
                         if (tried.Count > 0)
                             Main.Log("    候选回退 -> " + bp.Name + "  (先试过: " + string.Join("; ", tried.ToArray()) + ")");
-                        placedGuids[guid.Trim()] = bp.Name;
+                        if (placedItem != null)
+                            placedItems.Add(new KeyValuePair<ItemEntity, string>(placedItem, bp.Name));
                         placed = true;
                         break;
                     }
@@ -217,7 +235,17 @@ namespace DynastyRetinue
 
                 if (!placed)
                 {
-                    if (tried.Count > 0) { rejected.Add(string.Join("; ", tried.ToArray())); fail++; }
+                    // 前面的升级候选都失败时，当前穿着的后备候选仍是这条配表的有效结果；
+                    // 把这个真实槽位保留下来，属于 already，不应报“装不上”制造假红。
+                    if (wornSlot != null)
+                    {
+                        used.Add(wornSlot);
+                        already++;
+                        if (tried.Count > 0)
+                            Main.Log("    保留当前后备 " + wornGuid + "（升级候选失败: "
+                                   + string.Join("; ", tried.ToArray()) + ")");
+                    }
+                    else if (tried.Count > 0) { rejected.Add(string.Join("; ", tried.ToArray())); fail++; }
                     else miss++;
                 }
             }
@@ -230,10 +258,9 @@ namespace DynastyRetinue
             // 这里在全部发完之后回读一次实际穿戴，把"装上又没了"的单独报出来。
             try
             {
-                var wornAfter = WornGuids(body);
                 var lost = new List<string>();
-                foreach (var kv in placedGuids)
-                    if (!wornAfter.Contains(kv.Key)) lost.Add(kv.Value);
+                foreach (var kv in placedItems)
+                    if (kv.Key == null || kv.Key.HoldingSlot == null) lost.Add(kv.Value);
                 if (lost.Count > 0)
                 {
                     Main.LogError("  ⚠ 装上后又被挤掉 " + lost.Count + " 件: " + string.Join(", ", lost.ToArray())
@@ -280,9 +307,10 @@ namespace DynastyRetinue
         /// </summary>
         private static bool TryPlace(BaseUnitEntity g, PartUnitBody body, BlueprintItem bp,
                                      ref int ok, List<string> names, HashSet<ItemSlot> used,
-                                     out string reason)
+                                     out string reason, out ItemEntity placedItem)
         {
             reason = null;
+            placedItem = null;
             try
             {
                 var aug = bp as BlueprintItemAugment;
@@ -342,16 +370,24 @@ namespace DynastyRetinue
                     }
                     aslot.ApplyInsertion();
                     used.Add(aslot);
+                    placedItem = aslot.MaybeItem;
                     ok++; names.Add(bp.Name);
                     return true;
                 }
 
                 var slots = CandidateSlots(body, bp, used);
                 var why = new List<string>();
+                // 修复既有卫兵时，插回双手主武器会把冲突副手退回它自己的背包。
+                // 优先复用那件原物品到下一套组，找不到才创建，避免每次修复多复制一把武器。
+                ItemEntity reusable = FindLooseInventoryItem(g, bp);
                 foreach (var slot in slots)
                 {
-                    ItemEntity probe = null;
-                    try { probe = bp.CreateEntity(); } catch (Exception e) { why.Add("建实体失败:" + e.GetType().Name); continue; }
+                    ItemEntity probe = reusable;
+                    if (probe == null)
+                    {
+                        try { probe = bp.CreateEntity(); }
+                        catch (Exception e) { why.Add("建实体失败:" + e.GetType().Name); continue; }
+                    }
                     if (probe == null) { why.Add("建实体返回 null"); continue; }
 
                     bool slotOk = false, unitOk = false;
@@ -387,11 +423,13 @@ namespace DynastyRetinue
 
                     // 到这里才动旧装备
                     try { if (slot.MaybeItem != null && slot.IsPossibleRemoveItems()) slot.RemoveItem(false); } catch { }
-                    body.TryInsertItem(bp, slot);
+                    if (reusable != null) slot.InsertItem(reusable);
+                    else body.TryInsertItem(bp, slot);
                     if (slot.MaybeItem == null || slot.MaybeItem.Blueprint != bp)
                     { why.Add("[" + SlotName(body, slot) + "]插入后不是它(被退回背包)"); continue; }
 
                     used.Add(slot);
+                    placedItem = slot.MaybeItem;
                     ok++; names.Add(bp.Name + "@" + SlotName(body, slot));
                     return true;
                 }
@@ -439,22 +477,36 @@ namespace DynastyRetinue
             catch (Exception e) { return "查限制失败:" + e.GetType().Name; }
         }
 
-        /// <summary>当前穿戴/装填在身上的全部蓝图 GUID（含植入物槽）。</summary>
-        private static HashSet<string> WornGuids(PartUnitBody body)
+        /// <summary>找卫兵自己背包里尚未装备的同蓝图物品；只在发装备冷路径使用。</summary>
+        private static ItemEntity FindLooseInventoryItem(BaseUnitEntity unit, BlueprintItem bp)
         {
-            var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            if (unit == null || bp == null || unit.Inventory == null || unit.Inventory.Collection == null) return null;
+            try
+            {
+                foreach (var item in unit.Inventory.Collection.Items)
+                    if (item != null && item.Blueprint == bp && item.HoldingSlot == null) return item;
+            }
+            catch { }
+            return null;
+        }
+
+        /// <summary>找一件尚未被本轮其他配表条目消费的实际穿戴槽。</summary>
+        private static ItemSlot FindWornSlot(PartUnitBody body, string guid, HashSet<ItemSlot> used)
+        {
+            if (body == null || string.IsNullOrEmpty(guid)) return null;
             try
             {
                 foreach (var slot in body.AllSlots)
                 {
-                    if (slot == null) continue;
-                    var it = slot.MaybeItem;
-                    if (it == null || it.Blueprint == null) continue;
-                    set.Add(it.Blueprint.AssetGuid.ToString());
+                    if (slot == null || (used != null && used.Contains(slot))) continue;
+                    var item = slot.MaybeItem;
+                    if (item == null || item.Blueprint == null) continue;
+                    if (string.Equals(item.Blueprint.AssetGuid.ToString(), guid,
+                                      StringComparison.OrdinalIgnoreCase)) return slot;
                 }
             }
             catch { }
-            return set;
+            return null;
         }
 
         /// <summary>
@@ -481,7 +533,7 @@ namespace DynastyRetinue
         private static System.Reflection.FieldInfo _mechField;
         private static bool _mechLooked;
 
-        private static bool HasBallisticMechadendrite(PartUnitBody body)
+        internal static bool HasBallisticMechadendrite(PartUnitBody body)
         {
             try
             {
@@ -556,7 +608,8 @@ namespace DynastyRetinue
                     //   所以判别必须落在**触须**上，回到那条例外本来的因果。
                     bool twoH = false;
                     try { var _w = bp as BlueprintItemWeapon; twoH = _w != null && _w.IsTwoHanded; } catch { }
-                    bool offhandOk = !twoH || HasBallisticMechadendrite(body);
+                    bool ballisticMechadendrite = HasBallisticMechadendrite(body);
+                    bool offhandOk = !twoH || ballisticMechadendrite;
                     for (int k = 0; k < sets.Count; k++)
                     {
                         var set = sets[(cur + k) % sets.Count];
@@ -583,7 +636,10 @@ namespace DynastyRetinue
                         //   后发的才落副手，落位语义不变。
                         //   被拒时 1.5.60 那套诊断会说清是哪道检查挡的，不会静默失败。
                         Add(list, set.PrimaryHand, used);
-                        if (offhandOk) Add(list, set.SecondaryHand, used);
+                        // 普通单位：待装武器是双手，或本组主手已经是双手，副手都必须跳过；
+                        // 后发武器自然落到下一套组主手。弹道机械触须是唯一例外。
+                        if (offhandOk && (ballisticMechadendrite || !MainIsTwoHanded(set)))
+                            Add(list, set.SecondaryHand, used);
                     }
                 }
                 return list;
@@ -697,11 +753,46 @@ namespace DynastyRetinue
         /// <summary>当前在册的、属于该分型的精英数量。</summary>
         public static int EliteCount(int archIndex)
         {
+            return EliteCount(archIndex, null);
+        }
+
+        internal static int EliteCount(int archIndex, System.Collections.Generic.List<BaseUnitEntity> roster)
+        {
+            return EliteCount(archIndex, null, roster);
+        }
+
+        internal static int EliteCount(int archIndex, string recruitGroup,
+                                       System.Collections.Generic.List<BaseUnitEntity> roster)
+        {
             var arch = Archetypes.Get(archIndex);
             if (arch == null || arch.Elites == null) return 0;
+            if (roster == null) roster = RetinueRegistry.All();
             int n = 0;
-            foreach (var g in RetinueRegistry.All())
-                if (RetinueRegistry.ArchetypeOf(g) == archIndex && IsElite(g, arch)) n++;
+            foreach (var g in roster)
+            {
+                if (RetinueRegistry.ArchetypeOf(g) != archIndex) continue;
+                var d = EliteDefOf(g, arch);
+                if (d == null) continue;
+                if (recruitGroup != null && !SameRecruitGroup(d.RecruitGroup, recruitGroup)) continue;
+                n++;
+            }
+            return n;
+        }
+
+        internal static bool SameRecruitGroup(string a, string b)
+        {
+            return string.Equals(a, b, StringComparison.OrdinalIgnoreCase);
+        }
+
+        internal static int RecruitGroupDefinitionCount(ChainProbe.Archetype arch, string recruitGroup)
+        {
+            if (arch == null || arch.Elites == null) return 0;
+            int n = 0;
+            for (int i = 0; i < arch.Elites.Length; i++)
+            {
+                var e = arch.Elites[i];
+                if (e != null && (recruitGroup == null || SameRecruitGroup(e.RecruitGroup, recruitGroup))) n++;
+            }
             return n;
         }
 
@@ -713,12 +804,18 @@ namespace DynastyRetinue
         /// </summary>
         public static bool EliteUnlocked(int archIndex)
         {
+            return EliteUnlocked(archIndex, null);
+        }
+
+        internal static bool EliteUnlocked(int archIndex, System.Collections.Generic.List<BaseUnitEntity> roster)
+        {
             // 走方法而不是直接读字段 —— 面板上那个「全部解除」总开关要能管到这里
             if (Main.Settings != null && Main.Settings.NoEliteUnlockGate()) return true;
             var arch = Archetypes.Get(archIndex);
             if (arch == null || arch.Chain == null || arch.Chain.Length < 3) return false;
+            if (roster == null) roster = RetinueRegistry.All();
             string t3 = arch.Chain[2];
-            foreach (var g in RetinueRegistry.All())
+            foreach (var g in roster)
             {
                 if (RetinueRegistry.ArchetypeOf(g) != archIndex) continue;
                 try
@@ -742,21 +839,36 @@ namespace DynastyRetinue
         /// </summary>
         public static ChainProbe.EliteDef NextElite(int archIndex)
         {
+            return NextElite(archIndex, null, null);
+        }
+
+        internal static ChainProbe.EliteDef NextElite(
+            int archIndex, System.Collections.Generic.List<BaseUnitEntity> roster)
+        {
+            return NextElite(archIndex, null, roster);
+        }
+
+        internal static ChainProbe.EliteDef NextElite(
+            int archIndex, string recruitGroup, System.Collections.Generic.List<BaseUnitEntity> roster)
+        {
             var arch = Archetypes.Get(archIndex);
             if (arch == null || arch.Elites == null || arch.Elites.Length == 0) return null;
             if (Main.Settings == null) return null;
-            if (!EliteUnlocked(archIndex)) return null;
+            if (roster == null) roster = RetinueRegistry.All();
+            if (!EliteUnlocked(archIndex, roster)) return null;
 
+            int defs = RecruitGroupDefinitionCount(arch, recruitGroup);
+            if (defs == 0) return null;
             if (!Main.Settings.NoEliteCountCap())
             {
                 int cap = Main.Settings.EliteLimitPerArchetype;
                 if (cap < 0) cap = 1;
-                // 上限理解为「每种精英各允许 cap 个」，默认 cap=1 即每种一个
-                if (EliteCount(archIndex) >= cap * arch.Elites.Length) return null;
+                // group=null 保持全分型旧公式；有 group 时两条路线各算各的容量。
+                if (EliteCount(archIndex, recruitGroup, roster) >= cap * defs) return null;
             }
 
             var have = new HashSet<int>();
-            foreach (var g in RetinueRegistry.All())
+            foreach (var g in roster)
             {
                 if (RetinueRegistry.ArchetypeOf(g) != archIndex) continue;
                 var d0 = EliteDefOf(g, arch);
@@ -764,7 +876,13 @@ namespace DynastyRetinue
                 if (idx >= 0) have.Add(idx);
             }
             for (int i = 0; i < arch.Elites.Length; i++)
-                if (arch.Elites[i] != null && !have.Contains(i)) return arch.Elites[i];   // 第一个还没生成的
+            {
+                var e = arch.Elites[i];
+                if (e == null || have.Contains(i)) continue;
+                if (recruitGroup != null && !SameRecruitGroup(e.RecruitGroup, recruitGroup)) continue;
+                if (WeaponGate.IsRecruitBlocked(e.UnitId)) continue;
+                return e;      // 原数组顺序；教条自然 0→2，异端自然 1→3
+            }
             return null;
         }
 

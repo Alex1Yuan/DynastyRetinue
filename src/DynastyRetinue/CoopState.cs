@@ -34,17 +34,94 @@ namespace DynastyRetinue
     /// </summary>
     internal static class CoopState
     {
-        /// <summary>联机相关类型能否正常访问。任何一次取值抛异常就永久降级。</summary>
+        /// <summary>
+        /// 联机类型在当前版本是否曾成功初始化。读取异常不再永久置 false：网络状态在
+        /// 进房/退房/加载边沿可能瞬时不可读，永久熔断会形成“必须同步但无人能发”的死锁。
+        /// 每次核心读取都独立 fail-closed，并允许下一次恢复。
+        /// </summary>
         public static bool Available { get; private set; } = true;
+        private static bool _readFailureLogged;
 
         /// <summary>是否处于合作会话中（房间已开局）。</summary>
         public static bool InSession { get { return Get(RawIsActive); } }
 
+        /// <summary>可区分“明确 false”和“本轮读取失败”的会话状态读取。</summary>
+        public static bool TryGetInSession(out bool value)
+        {
+            value = false;
+            try { value = RawIsActive(); Available = true; return true; }
+            catch (Exception e) { Degrade(e); return false; }
+        }
+
+        /// <summary>
+        /// 可区分“明确不需要联机安全模式”和“本轮网络 API 读取失败”。
+        /// 退出清理必须用它，不能只看 IsActive：进房/掉线边沿 PlayersCount 可能仍大于 1。
+        /// </summary>
+        public static bool TryGetSharedGameplayRequired(out bool value)
+        {
+            value = true;
+            try
+            {
+                value = RawIsActive() || RawIsMultiplayer();
+                Available = true;
+                return true;
+            }
+            catch (Exception e) { Degrade(e); return false; }
+        }
+
         /// <summary>是否真的有别人在（1 个人的房间不算）。</summary>
         public static bool IsMultiplayer { get { return Get(RawIsMultiplayer); } }
 
-        /// <summary>本机是不是房主。</summary>
+        /// <summary>
+        /// 影响同步量的玩法补丁该不该按联机安全模式运行。
+        ///
+        /// ★和 IsMultiplayer 的关键区别：失败时返回 true★
+        ///   普通只读诊断取不到状态时可以不报警（IsMultiplayer 的 onFail=false）；
+        ///   但玩法闸不能：一台读失败回落本机设置、另一台读成功强制开，伤害落点/AI
+        ///   当场分叉。这里 fail-closed：拿不准就按联机处理。代价至多是极端异常下
+        ///   单机暂时关不掉近战精英支持；收益是不制造静默不同步。
+        /// </summary>
+        public static bool SharedGameplayRequired
+        {
+            get
+            {
+                try
+                {
+                    // ★看会话，不看瞬时玩家数★ 加入/掉线过程中 PlayersCount 可能在两端
+                    // 不同帧变成 1/2；用 IsMultiplayer 会让同一条同步指令一端放行、一端拦截。
+                    // 只要官方合作会话还活着就保持安全模式，房间真正结束后才解除。
+                    bool value = RawIsActive() || RawIsMultiplayer();
+                    Available = true;
+                    return value;
+                }
+                catch (Exception e) { Degrade(e); return true; }
+            }
+        }
+
+        /// <summary>本机是不是房主。仅用于显示；读取失败时沿用历史行为显示为房主。</summary>
         public static bool IsHost { get { return Get(RawIsGameOwner, true); } }
+
+        /// <summary>
+        /// 本机能否发起自动同步动作。与 IsHost 不同，这里必须 fail-closed：
+        /// 若联机 API 读取失败，让两端都可能自称房主会重复发送 rescue/placeguards。
+        /// 自动动作宁可本轮不触发，也不能有两个发起者。
+        /// </summary>
+        public static bool IsConfirmedHost
+        {
+            get
+            {
+                try { bool value = RawIsGameOwner(); Available = true; return value; }
+                catch (Exception e) { Degrade(e); return false; }
+            }
+        }
+
+        /// <summary>可区分“明确不是房主”和“本轮读取失败”的房主状态读取。</summary>
+        public static bool TryGetConfirmedHost(out bool value)
+        {
+            value = false;
+            try { value = RawIsGameOwner(); Available = true; return true; }
+            catch (Exception e) { Degrade(e); return false; }
+        }
 
         public static int PlayerCount { get { return GetInt(RawPlayerCount, 1); } }
 
@@ -84,7 +161,6 @@ namespace DynastyRetinue
         {
             try
             {
-                if (!Available) return "";
                 if (!InSession) return "";
                 string who = IsHost ? L.T("房主") : L.T("加入方");
                 string s = L.F("合作模式：{0}　{1} 人　设置指纹 {2}", who, PlayerCount, SettingsFingerprint());
@@ -112,17 +188,17 @@ namespace DynastyRetinue
         ///   为一行诊断多加一个引用不划算，而且引用越多、游戏版本一变越容易整体加载失败。
         ///   反射失败就静默跳过 —— 这只是诊断信息，不该影响任何功能。
         /// </summary>
-        public static void DumpLocalMods()
+        public static string LocalModsText()
         {
             try
             {
                 var t = Type.GetType("Kingmaker.Utility.ModsInfo.UserModsData, Utility.ModsInfo");
-                if (t == null) { Main.Log("[合作] 取不到 UserModsData 类型，跳过 mod 清单。"); return; }
+                if (t == null) return "（取不到 UserModsData 类型）";
                 var inst = t.GetProperty("Instance",
                     System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)?.GetValue(null);
-                if (inst == null) return;
+                if (inst == null) return "（UserModsData.Instance 为空）";
                 var list = t.GetField("UsedMods")?.GetValue(inst) as System.Collections.IEnumerable;
-                if (list == null) return;
+                if (list == null) return "（UsedMods 为空）";
 
                 var sb = new System.Text.StringBuilder();
                 int n = 0;
@@ -137,10 +213,15 @@ namespace DynastyRetinue
                     sb.Append(Environment.NewLine).Append("    ").Append(++n).Append(") ")
                       .Append(id).Append("  ").Append(v);
                 }
-                Main.Log("[合作] 本机上报给房间的 mod 清单（共 " + n + " 个）——"
-                       + "两边各导一份诊断包对比这一段，就知道不一致差在哪：" + sb);
+                return "本机上报给房间的 mod 清单（共 " + n + " 个）：" + sb;
             }
-            catch (Exception e) { Main.Log("[合作] 读取 mod 清单失败（不影响功能）：" + e.Message); }
+            catch (Exception e) { return "（读取 mod 清单失败：" + e.Message + "）"; }
+        }
+
+        public static void DumpLocalMods()
+        {
+            Main.Log("[合作] " + LocalModsText()
+                   + "\n    两边各导一份诊断包对比这一段，就知道不一致差在哪。");
         }
 
         /// <summary>
@@ -204,6 +285,26 @@ namespace DynastyRetinue
             "SpawnKeyName",      // 快捷键绑定
             "DespawnKeyName",    // 快捷键绑定
             "RecruitNpcKeys",    // 对话入口匹配的 NPC 关键词，只影响入口出现在哪
+            // 合作会话中 Appearance/Doll 禁止完整 View/AttachView 重建；LookMatrix 仅保留为
+            // 单机外观偏好。HideGearLook 只过滤渲染层 EquipmentEntity，不写实体状态。
+            "LookMatrix", "HideGearLook",
+
+            // 纯开发测试：代码另有 Main.DevMode 硬闸，普通发布环境即使旧设置残留 true 也不生效。
+            // 算进指纹只会让作者开发机和普通玩家永久假红。
+            "AutoEndPlayerTurn",
+
+            // —— 已隐藏/废弃的近战精英旧开关 ——
+            // 运行时已经全部归并到 MeleeEliteSupport；这些字段仅为旧 Settings.xml
+            // 反序列化兼容而保留。两边历史值不同不会改变玩法，算进指纹/逐项对比只会假红。
+            "SwordClassGate", "DeathFromAboveGate", "ReaperUltimateGate",
+            "BladeDanceGate", "DeathWaltzAoeFix", "AnimClipFallback",
+
+            // —— 近战精英主开关：联机时**生效值被 Main 强制为 true** ——
+            //   字段里保存的只是「退出联机后，本机想不想继续开」这个个人偏好。
+            //   两边字段不同不会让规则分叉；算进指纹只会制造假警报。
+            //   ★这里只能排主开关本身★ WoundAbilityHpFloor / MeleeEliteNoEndTurn
+            //   仍然直接影响生命消耗闸和回合结束，必须继续进指纹。
+            "MeleeEliteSupport",
 
             // —— 海战相机：**纯本地视觉**，改的是场景里 CameraZoom 的运行时字段 ——
             //   不进存档、不影响任何判定，联机双方各看各的镜头本来就天经地义。
@@ -236,6 +337,7 @@ namespace DynastyRetinue
             //   加 PreviewAsPlayer，理由写的是"那是实测学到的挂点数据，不是偏好"。
             //   同一个判据：不是偏好 ⇒ 不该参与"双方设置是否一致"的比对。
             "ProwLearned", "ProwLearnedFrom", "ProwDropRatio", "ProwZBackRatio",
+            "ProwRamClearance",   // 只参与武器模型 localPosition；不参与命中/伤害/射程
             "PreviewAsPlayer",
         };
 
@@ -283,7 +385,16 @@ namespace DynastyRetinue
                 {
                     object v = null;
                     try { v = st.GetType().GetField(n).GetValue(st); } catch { }
-                    string line = n + "=" + (v ?? "null");
+                    // ★必须与 CoopSettings 的逐项对比同一口径★ object.ToString() 受系统区域
+                    // 设置影响：同一个 0.5 在中文/德文机器上会变成 0.5 / 0,5，指纹假红，
+                    // 但展开逐项对比又说完全一致。数字统一 InvariantCulture。
+                    string text;
+                    if (v == null)       text = "null";
+                    else if (v is bool)  text = ((bool)v) ? "1" : "0";
+                    else if (v is int)   text = ((int)v).ToString(System.Globalization.CultureInfo.InvariantCulture);
+                    else if (v is float) text = ((float)v).ToString("R", System.Globalization.CultureInfo.InvariantCulture);
+                    else                 text = v.ToString();
+                    string line = n + "=" + text;
                     foreach (char c in line) { h ^= c; h *= 16777619u; }
                 }
                 return h.ToString("x8");
@@ -314,6 +425,122 @@ namespace DynastyRetinue
             }
         }
 
+        /// <summary>
+        /// 常态零分配地核对当前 lockstep 成员是否仍等于一份已排序快照。
+        /// 最多比较 6×6 个短字符串；不构造 List/数组/哈希/字符串。
+        /// </summary>
+        public static bool TryActivePlayersMatch(string[] sortedExpected, out bool matches)
+        {
+            matches = false;
+            try
+            {
+                bool ok = RawActivePlayersMatch(sortedExpected, out matches);
+                Available = true;
+                return ok;
+            }
+            catch (Exception e) { Degrade(e); return false; }
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static bool RawActivePlayersMatch(string[] sortedExpected, out bool matches)
+        {
+            matches = false;
+            if (sortedExpected == null || !NetworkingManager.IsActive
+                || !PhotonManager.Initialized || PhotonManager.Instance == null) return false;
+            var active = PhotonManager.Instance.ActivePlayers;
+            int expectedCount = NetworkingManager.PlayersCount;
+            if (expectedCount < 1 || active.Count != expectedCount) return false;
+            if (active.Count != sortedExpected.Length) { matches = false; return true; }
+
+            for (int i = 0; i < active.Count; i++)
+            {
+                string id = active[i].UserId;
+                if (string.IsNullOrEmpty(id)) return false;
+                bool found = false;
+                for (int j = 0; j < sortedExpected.Length; j++)
+                    if (string.Equals(id, sortedExpected[j], StringComparison.Ordinal))
+                    { found = true; break; }
+                if (!found) { matches = false; return true; }
+            }
+            // 反向再查一次：防御异常的重复 UserId，例如 active=[A,A]、expected=[A,B]。
+            for (int i = 0; i < sortedExpected.Length; i++)
+            {
+                bool found = false;
+                for (int j = 0; j < active.Count; j++)
+                    if (string.Equals(sortedExpected[i], active[j].UserId, StringComparison.Ordinal))
+                    { found = true; break; }
+                if (!found) { matches = false; return true; }
+            }
+            matches = true;
+            return true;
+        }
+
+        /// <summary>
+        /// 只在成员确实变化时读取当前玩家并生成 generation。
+        /// 代号是「排序后的 UserId 长度前缀串」的 UTF-8 Base64；同人数换人也一定变化。
+        /// 读取失败、UserId 为空/重复、ActivePlayers 尚未追上 PlayerCount 时返回 false。
+        /// </summary>
+        public static bool TryGetActivePlayerGeneration(out string generation, out string[] userIds)
+        {
+            generation = "";
+            userIds = new string[0];
+            try
+            {
+                bool ok = RawActivePlayerGeneration(out generation, out userIds);
+                Available = true;
+                return ok;
+            }
+            catch (Exception e)
+            {
+                Degrade(e);
+                generation = "";
+                userIds = new string[0];
+                return false;
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static bool RawActivePlayerGeneration(out string generation, out string[] userIds)
+        {
+            generation = "";
+            userIds = new string[0];
+            if (!NetworkingManager.IsActive || !PhotonManager.Initialized || PhotonManager.Instance == null)
+                return false;
+
+            var active = PhotonManager.Instance.ActivePlayers;
+            int expected = NetworkingManager.PlayersCount;
+            if (expected < 1 || active.Count != expected) return false;
+
+            var ids = new List<string>(active.Count);
+            for (int i = 0; i < active.Count; i++)
+            {
+                string id = active[i].UserId;
+                if (string.IsNullOrEmpty(id)) return false;
+                ids.Add(id);
+            }
+            ids.Sort(StringComparer.Ordinal);
+            for (int i = 1; i < ids.Count; i++)
+                if (string.Equals(ids[i - 1], ids[i], StringComparison.Ordinal)) return false;
+
+            userIds = ids.ToArray();
+            generation = BuildPlayerGeneration(userIds);
+            return !string.IsNullOrEmpty(generation);
+        }
+
+        /// <summary>为已排序且非空的 UserId 列表生成精确 generation；供同步协议验包。</summary>
+        internal static string BuildPlayerGeneration(string[] sortedUserIds)
+        {
+            if (sortedUserIds == null || sortedUserIds.Length == 0) return "";
+            var raw = new System.Text.StringBuilder();
+            raw.Append(sortedUserIds.Length).Append('|');
+            foreach (string id in sortedUserIds)
+            {
+                if (string.IsNullOrEmpty(id)) return "";
+                raw.Append(id.Length).Append(':').Append(id);
+            }
+            return Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(raw.ToString()));
+        }
+
         [MethodImpl(MethodImplOptions.NoInlining)]
         private static string RawLocalUserId() { return PhotonManager.Instance.LocalPlayerUserId; }
 
@@ -334,23 +561,25 @@ namespace DynastyRetinue
 
         private static bool Get(Func<bool> f, bool onFail = false)
         {
-            if (!Available) return onFail;
-            try { return f(); }
-            catch (Exception e) { Degrade(e); return onFail; }
+            try { bool v = f(); Available = true; return v; }
+            catch (Exception e) { NoteReadFailure(e); return onFail; }
         }
 
         private static int GetInt(Func<int> f, int onFail)
         {
-            if (!Available) return onFail;
-            try { return f(); }
-            catch (Exception e) { Degrade(e); return onFail; }
+            try { int v = f(); Available = true; return v; }
+            catch (Exception e) { NoteReadFailure(e); return onFail; }
         }
 
-        /// <summary>永久降级。只喊一次，免得每帧刷屏。</summary>
-        private static void Degrade(Exception e)
+        /// <summary>只记录第一次瞬时失败；不永久熔断，后续读取继续尝试。</summary>
+        private static void Degrade(Exception e) { NoteReadFailure(e); }
+
+        private static void NoteReadFailure(Exception e)
         {
             Available = false;
-            Main.LogError("[合作] 读取联机状态失败，本局不再尝试：" + e.Message);
+            if (_readFailureLogged) return;
+            _readFailureLogged = true;
+            Main.LogError("[合作] 读取联机状态暂时失败；本轮按安全模式处理，后续会重试：" + e.Message);
         }
     }
 }

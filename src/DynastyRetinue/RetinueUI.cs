@@ -407,6 +407,8 @@ namespace DynastyRetinue.UI
         /// <summary>标题下方那条利润因子状态。招募名额由它解锁，每次 Refresh 重画。</summary>
         private static TextMeshProUGUI _pfLabel;
         private static int _selected = -1;
+        /// <summary>机械教右栏当前分支；纯本地 UI 状态，不进设置/存档/联机协议。</summary>
+        private static string _selectedRecruitGroup;
 
         /// <summary>
         /// 左栏分型按钮的底图，用来切换选中高亮。
@@ -486,6 +488,7 @@ namespace DynastyRetinue.UI
                 BuildFrame(_root.transform);
 
                 _selected = -1;
+                _selectedRecruitGroup = null;
                 RefreshProfitFactor();   // ★别漏★ 首次开窗原本只调 Rebuild*，状态条永远是空的
                 RebuildArchetypes();
                 RebuildUnits();
@@ -509,12 +512,26 @@ namespace DynastyRetinue.UI
             catch (Exception e) { Main.LogError("[UI] 关窗异常: " + e.Message); }
             _root = null; _host = null;
             _archContent = null; _unitContent = null; _titleRight = null;
-            _selected = -1;
+            _selected = -1; _selectedRecruitGroup = null;
+        }
+
+        /// <summary>
+        /// 读档/过图专用清账。窗口根虽然 DontDestroyOnLoad，里面克隆的原版 TMP/按钮资源
+        /// 却属于旧场景；不能把这些引用继续带到新区域。关掉旧窗口并失效共享缓存，
+        /// 下次打开时从新场景重摘。只由区域加载事件调用，不进 OnUpdate。
+        /// </summary>
+        internal static void ResetForAreaLoad()
+        {
+            Close();
+            ShipYardUI.Close();
+            VanillaSkin.Reset();
+            VanillaWidgets.Reset();
         }
 
         /// <summary>mod 禁用/卸载：销毁 Canvas 根（所有子物体一并没）、清素材缓存、归还立绘资源句柄。</summary>
         public static void Shutdown()
         {
+            ResetRecruitPending();
             Close();
             VanillaSkin.Reset();
             VanillaWidgets.Reset();      // 销毁 KGD_CloneHolder（DontDestroyOnLoad，否则热重载泄漏）
@@ -1150,7 +1167,7 @@ namespace DynastyRetinue.UI
                 int idx = i;   // 闭包捕获
                 ChainProbe.Archetype a = all[i];
                 Button b = MakeButton(_archContent, a.Name, 0f, 42f,
-                                      () => { _selected = idx; PaintArchSelection(); RebuildUnits(); });
+                                      () => SelectArchetype(idx));
                 LayoutElement le = b.gameObject.AddComponent<LayoutElement>();
                 le.minHeight = 42f; le.preferredHeight = 42f;
                 Image bg = b.GetComponent<Image>();
@@ -1160,6 +1177,53 @@ namespace DynastyRetinue.UI
             PaintArchSelection();
             ReapplyLayer();   // 立即补：我们自己 new 的子物体
             MarkLayerDirty();  // 延迟补：TMP 的 fallback 子网格要等 Canvas 重建才出生
+        }
+
+        private static void SelectArchetype(int index)
+        {
+            if (_selected != index) _selectedRecruitGroup = null;
+            _selected = index;
+            PaintArchSelection();
+            RebuildUnits();
+        }
+
+        private static void SelectRecruitGroup(string group)
+        {
+            _selectedRecruitGroup = group;
+            RebuildUnits();
+        }
+
+        private static bool HasRecruitGroup(ChainProbe.Archetype arch, string group)
+        {
+            if (arch == null || arch.Elites == null) return false;
+            for (int i = 0; i < arch.Elites.Length; i++)
+                if (arch.Elites[i] != null && GearTool.SameRecruitGroup(arch.Elites[i].RecruitGroup, group))
+                    return true;
+            return false;
+        }
+
+        private static bool HasSplitRecruitGroups(ChainProbe.Archetype arch)
+        {
+            return HasRecruitGroup(arch, "dogmatic") && HasRecruitGroup(arch, "heretek");
+        }
+
+        private static void AddRecruitGroupTabs()
+        {
+            Transform row = MakeRow(_unitContent, 46f);
+            Button dogmatic = MakeButton(row, L.T("教条"), 180f, 40f,
+                                          () => SelectRecruitGroup("dogmatic"));
+            Button heretek = MakeButton(row, L.T("异端"), 180f, 40f,
+                                        () => SelectRecruitGroup("heretek"));
+            AddWidth(dogmatic.gameObject, 180f);
+            AddWidth(heretek.gameObject, 180f);
+            Image d = dogmatic.GetComponentInChildren<Image>();
+            Image h = heretek.GetComponentInChildren<Image>();
+            if (d != null) d.color = GearTool.SameRecruitGroup(_selectedRecruitGroup, "dogmatic")
+                ? new Color(VanillaSkin.Gold.r, VanillaSkin.Gold.g, VanillaSkin.Gold.b, 0.75f)
+                : _tabNormal;
+            if (h != null) h.color = GearTool.SameRecruitGroup(_selectedRecruitGroup, "heretek")
+                ? new Color(VanillaSkin.Gold.r, VanillaSkin.Gold.g, VanillaSkin.Gold.b, 0.75f)
+                : _tabNormal;
         }
 
         private static void RebuildUnits()
@@ -1178,7 +1242,12 @@ namespace DynastyRetinue.UI
             ChainProbe.Archetype arch = all[_selected];
             if (_titleRight != null) _titleRight.text = L.F("{0} — 可招募单位", arch.Name);
 
-            // 第一行：普通卫兵
+            bool split = HasSplitRecruitGroups(arch);
+            if (!split) _selectedRecruitGroup = null;
+            else if (!HasRecruitGroup(arch, _selectedRecruitGroup)) _selectedRecruitGroup = "dogmatic";
+
+            // 先选路线，再看共享普通兵和该路线精英；普通卫兵仍只画一次。
+            if (split) AddRecruitGroupTabs();
             AddUnitRow(NormalUnitId(arch), L.T("普通卫兵"), NormalSubtitle(), _selected, null);
 
             // 后续行：该分型下的精英
@@ -1188,6 +1257,10 @@ namespace DynastyRetinue.UI
                 {
                     ChainProbe.EliteDef ed = arch.Elites[i];
                     if (ed == null) continue;
+                    if (split && !GearTool.SameRecruitGroup(ed.RecruitGroup, _selectedRecruitGroup)) continue;
+                    // ★1.7.86★ 主开关关掉时这两个近战精英整行隐藏
+                    //   （作者要求「关闭招募他们的选项」）。联机下 Active 恒真，不会隐藏。
+                    if (WeaponGate.IsRecruitBlocked(ed.UnitId)) continue;
                     string sub = EliteSubtitle(_selected, ed);
                     AddUnitRow(ed.UnitId, ed.Name, sub, _selected, ed);
                 }
@@ -1229,7 +1302,7 @@ namespace DynastyRetinue.UI
         {
             try
             {
-                ChainProbe.EliteDef next = GearTool.NextElite(archIndex);
+                ChainProbe.EliteDef next = GearTool.NextElite(archIndex, ed != null ? ed.RecruitGroup : null, null);
                 if (next != null && ReferenceEquals(next, ed)) return L.T("可招募");
                 if (!GearTool.EliteUnlocked(archIndex))
                     return L.T("未解锁 — 需本路线卫兵练到 T3 职业");
@@ -1296,7 +1369,8 @@ namespace DynastyRetinue.UI
                 bool ok = false;
                 try
                 {
-                    ChainProbe.EliteDef next = GearTool.NextElite(archIndex);
+                    ChainProbe.EliteDef next = GearTool.NextElite(
+                        archIndex, elite != null ? elite.RecruitGroup : null, null);
                     ok = next != null && ReferenceEquals(next, elite);
                 }
                 catch { }
@@ -1309,10 +1383,19 @@ namespace DynastyRetinue.UI
         }
 
         // ------------------------------------------------------------- 交互
-        private static void OnRecruit(int archIndex, ChainProbe.EliteDef elite)
+        internal static void OnRecruit(int archIndex, ChainProbe.EliteDef elite)
         {
             try
             {
+                // ★1.7.93 点击时重验★ RebuildUnits 里隐藏一行不是安全边界：
+                //   面板开关或单机↔联机状态能在 UI 树建立后变化，陈旧按钮仍可能被点。
+                //   点击入口必须再查一次，不能把「看不见按钮」当成「不能执行」。
+                if (elite != null && WeaponGate.IsRecruitBlocked(elite.UnitId))
+                {
+                    Main.Log("[招募] 已取消：近战精英支持当前为关闭状态。");
+                    return;
+                }
+
                 // ★不再直接生成，改成发一条指令★
                 //
                 //   官方合作是 lockstep：两台机器各跑一遍同样的模拟，网上只传指令。
@@ -1379,8 +1462,29 @@ namespace DynastyRetinue.UI
             finally { CoopSettings.Restore(saved); }
         }
 
+        // SpawnUnit 延迟入册窗口的同步保留项。只在同步 kgd.recruit 执行中写入；
+        // 两端生成的 UniqueId 相同，因此集合状态也相同。不使用会倒退/重复的 network tick。
+        private static readonly System.Collections.Generic.HashSet<string> _pendingRecruitIds =
+            new System.Collections.Generic.HashSet<string>(StringComparer.Ordinal);
+
+        internal static void ResetRecruitPending() { _pendingRecruitIds.Clear(); }
+
         private static void ExecuteRecruitCore(int archIndex, int eliteIdx, bool skipCap)
         {
+            // ★先收已入册项★ 只在玩家真的发招募指令时扫一次名册，不是 UI/每帧路径。
+            if (_pendingRecruitIds.Count != 0)
+            {
+                var done = new System.Collections.Generic.List<string>();
+                foreach (string id in _pendingRecruitIds)
+                    if (RetinueRegistry.ByUniqueId(id) != null) done.Add(id);
+                for (int i = 0; i < done.Count; i++) _pendingRecruitIds.Remove(done[i]);
+                if (_pendingRecruitIds.Count != 0)
+                {
+                    Main.Log("[招募] 已取消：上一名卫兵仍在等待引擎入册，请稍后再试（可避免双击越过名额/精英唯一性）。");
+                    return;
+                }
+            }
+
             ChainProbe.EliteDef elite = null;
             if (eliteIdx >= 0)
             {
@@ -1392,9 +1496,36 @@ namespace DynastyRetinue.UI
                     return;
                 }
                 elite = es[eliteIdx];
+                // ★执行侧也重验★ 发出指令到执行之间状态可能变化；更重要的是，
+                //   对端收到的是参数，不是发起方 UI 的可见状态。两端都在同步指令里
+                //   走同一个判据，挡就一起挡，不能只信发起方点按钮时那次检查。
+                if (elite != null && WeaponGate.IsRecruitBlocked(elite.UnitId))
+                {
+                    Main.Log("[招募] 已取消：近战精英支持当前为关闭状态。");
+                    return;
+                }
+
+                // ★执行时重验解锁 / 精英上限 / 每种唯一性★ UI 建树时的结果不是权限：
+                // 指令排队期间名册可能已变。同一份发起方设置快照已由 ExecuteRecruit 套用，
+                // 两端的 NextElite 结论一致。请求的不是“此刻下一个合法精英”就一起拒绝。
+                var next = GearTool.NextElite(archIndex, elite.RecruitGroup, null);
+                if (!ReferenceEquals(next, elite))
+                {
+                    Main.Log("[招募] 已取消：该精英已不再是当前可招募项（可能已招募、未解锁或达到上限）。");
+                    return;
+                }
             }
 
             var g = RetinueTest.SpawnOne(archIndex, elite, skipCap, elite == null);
+            if (g != null)
+            {
+                try
+                {
+                    string uid = g.UniqueId;
+                    if (!string.IsNullOrEmpty(uid)) _pendingRecruitIds.Add(uid);
+                }
+                catch { }
+            }
             Main.Log(g != null
                 ? "[招募] 成功: " + (elite != null ? elite.Name : "普通卫兵")
                 : "[招募] 未生成（数量上限或解锁条件，看日志）");
@@ -2018,7 +2149,14 @@ namespace DynastyRetinue.UI
 
             GameObject viewport = NewUI("Viewport", scroll.transform);
             Stretch(viewport, 0f);
-            viewport.AddComponent<RectMask2D>();   // 不需要 Graphic，比 Mask 省一个 drawcall
+            // ★滚轮必须有射线命中面★ RectMask2D 本身不是 Graphic；空白处没有任何按钮/图片时，
+            // EventSystem 找不到目标，ScrollRect 就收不到 OnScroll。原表现因此是「鼠标必须悬在
+            // 某个选项上才能滚」。透明 Image 不改变画面，只让整个 viewport 都能接住滚轮；
+            // 子按钮命中后事件仍会向父 ScrollRect 冒泡，原交互不变。
+            Image viewportHit = viewport.AddComponent<Image>();
+            viewportHit.color = new Color(0f, 0f, 0f, 0f);
+            viewportHit.raycastTarget = true;
+            viewport.AddComponent<RectMask2D>();
 
             GameObject content = NewUI("Content", viewport.transform);
             RectTransform crt = (RectTransform)content.transform;
@@ -2059,11 +2197,28 @@ namespace DynastyRetinue.UI
         private sealed class UiHost : MonoBehaviour
         {
             private int _frames;
+            private float _nextCoopUiCheck;
+            private bool _lastCoopUi;
+            private bool _coopUiInitialized;
 
             private void Update()
             {
                 if (!Main.Enabled) { RetinueUI.Close(); return; }
                 if (Input.GetKeyDown(KeyCode.Escape)) RetinueUI.Close();
+
+                // 主开关关闭时，近战精英行是否隐藏取决于当前是否处于合作会话。
+                // 每秒只读一次 bool，并且仅在边沿变化时重建；不参与玩法状态、不扫实体。
+                float now = Time.realtimeSinceStartup;
+                if (now >= _nextCoopUiCheck)
+                {
+                    _nextCoopUiCheck = now + 1f;
+                    bool coop;
+                    try { coop = CoopState.SharedGameplayRequired; } catch { coop = true; }
+                    if (_coopUiInitialized && coop != _lastCoopUi && RetinueUI.IsOpen)
+                        RetinueUI.Refresh();
+                    _lastCoopUi = coop;
+                    _coopUiInitialized = true;
+                }
             }
 
             private void LateUpdate()

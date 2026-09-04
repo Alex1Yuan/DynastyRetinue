@@ -845,6 +845,7 @@
       "elites": [
         {
           "unit": "aa02b505be774674ae924f19dc17e6f6",
+          "recruitGroup": "dogmatic",
           "name": "锈蚀 · 斯卡里安追踪者",
           "rank": "锈行猎手",
           "rank_en": "Ruststalker",
@@ -886,6 +887,7 @@
         },
         {
           "unit": "ab131771270542b69fb7a687062b39c0",
+          "recruitGroup": "heretek",
           "name": "电蚀 · 静默电僧",
           "rank": "电僧",
           "rank_en": "Electro-Priest",
@@ -924,6 +926,7 @@
         },
         {
           "unit": "ca936a024b954b188d2bd397e6ea49d3",
+          "recruitGroup": "dogmatic",
           "name": "静默 · 高阶贤者",
           "rank": "高阶贤者",
           "rank_en": "High Magos",
@@ -963,6 +966,7 @@
         },
         {
           "unit": "287d7a4d2bb146998dc450cb3eccee78",
+          "recruitGroup": "heretek",
           "name": "异铸 · 异端贤者",
           "rank": "异端贤者",
           "rank_en": "Heretek Magos",

@@ -384,6 +384,14 @@ namespace DynastyRetinue
         public static void RemoveOne(BaseUnitEntity g)
         {
             if (g == null) return;
+            // 新招募实体尚未正式入册时可能还在 RetinueUI 的 pending 集合里；
+            // 若它立刻死亡/被遣散，ByUniqueId 永远不会再命中，后续招募会被永久挡住。
+            // 离册是同步指令/规则事件，两端一起清账，不需要再引入会倒退的 tick 超时。
+            try { UI.RetinueUI.ResetRecruitPending(); } catch { }
+            // ★先撤事件驱动精英缓存★ 摘牌之后所有相关补丁都不该再管它；
+            //   若这是最后一个，动画全局闸也要当场变 false，不等销毁完成。
+            try { AnimFallback.ForgetMeleeElite(g); } catch { }
+            try { StuckWatch.Forget(g.UniqueId); } catch { }
             try
             {
                 // 先摘掉身份标记 —— 这一步必须**立刻**做：名额当场释放，
@@ -431,16 +439,14 @@ namespace DynastyRetinue
 
         private static void DestroyNow(BaseUnitEntity g)
         {
-            Deferred.NextFrames(2, () =>
+            try
             {
-                try
-                {
-                    g.IsInGame = false;
-                    Game.Instance.EntityDestroyer.Destroy(g);
-                    Game.Instance.EntityDestroyer.Tick();
-                }
-                catch (Exception e) { Main.LogError("[名册] 销毁失败: " + e.Message); }
-            });
+                if (g == null || g.IsDisposed || g.WillBeDestroyed) return;
+                // Destroy 只入 simulation 销毁队列；不要再按本地渲染帧 Deferred，
+                // 也不要在当前调用栈里先写 IsInGame=false 改动 UnitGroup 成员。
+                Game.Instance.EntityDestroyer.Destroy(g);
+            }
+            catch (Exception e) { Main.LogError("[名册] 销毁失败: " + e.Message); }
         }
 
         /// <summary>
@@ -463,6 +469,10 @@ namespace DynastyRetinue
 
         public static int DismissAll()
         {
+            try { UI.RetinueUI.ResetRecruitPending(); } catch { }
+            // 指令两端都会到这里；先清 O(1) 精英缓存，所有补丁立即早退。
+            // 即使后面的实体销毁失败，复查会明确报错；不能为了一个墓碑继续把动画热闸开着。
+            try { AnimFallback.ClearMeleeEliteRoster(); } catch { }
             // 先把排队的遗体收掉，免得它们既不在名册里、又还没被销毁 ——
             // 玩家点遣散的场景通常就是"准备关 mod 了"，这时候不能留尾巴。
             try { FlushPendingDestroy(); } catch { }
@@ -494,13 +504,18 @@ namespace DynastyRetinue
             // 销毁失败但已摘牌的实体会被漏掉，于是打印出「复查在册 0，清理完成」这句
             // 假验收 —— 而 README 正是让玩家拿它当"可以安全关 mod 了"的依据。
             int left = 0;
-            try { left = All(true).Count; } catch { }
+            List<BaseUnitEntity> survivors = null;
+            try { survivors = All(true); left = survivors.Count; } catch { }
             if (left == 0)
             {
                 Main.Log("已遣散 " + attempted + " 名卫兵，复查在册 0，清理完成。");
             }
             else
             {
+                // 清理失败时不能继续保持“名册为空”的缓存结论。用刚刚复查到的幸存实体
+                // 重建一次；这是异常冷路径，不会进入每帧/每秒热路径。
+                try { AnimFallback.RebuildMeleeEliteRoster(survivors, RetinueLifecycle.InPartyArea()); }
+                catch { }
                 Main.LogError("遣散不完整：尝试 " + attempted + " 名，仍有 " + left + " 名在册。"
                               + "\n    若游戏日志里出现 \"Cancel unit's destruction\" 或 "
                               + "\"Trying to destroy ... who is a companion\"，说明 UnitPartCompanion 没摘干净。"

@@ -76,9 +76,16 @@ namespace DynastyRetinue
                 _next = now + 1f;                      // 每秒一次
 
                 var game = Game.Instance;
-                // 只在战斗里查 —— 非战斗的卡住由 StuckWatch 管
+                // Player.IsInCombat 不包含 ExCompanion 卫兵，可能先变 false；
+                // #49 正是这个窗口。Player 或 TurnController 任一仍在战斗就继续拍现场。
                 bool inCombat = false;
-                try { inCombat = game != null && game.Player != null && game.Player.IsInCombat; } catch { }
+                try
+                {
+                    var tc = game != null ? game.TurnController : null;
+                    inCombat = game != null && game.Player != null
+                            && (game.Player.IsInCombat || (tc != null && tc.InCombat));
+                }
+                catch { }
                 if (!inCombat) { _reported.Clear(); return; }
 
                 var list = RetinueRegistry.All();

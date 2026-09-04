@@ -39,6 +39,21 @@ namespace DynastyRetinue
 
         private static void Step(string s) { _log.Add(s); Main.Log("  " + s); }
 
+        internal static void CancelForDisable()
+        {
+            if (!_running) return;
+            _running = false;
+            Main.Log("[全测] mod 停用，取消本轮全测并清理测试实体。");
+            try { RetinueRegistry.DismissAll(); }
+            catch (Exception e) { Main.LogError("[全测] 停用清场失败: " + e.Message); }
+            try
+            {
+                int left = RetinueRegistry.All(true).Count;
+                if (left != 0) Main.LogError("[全测] 停用清场后仍残留 " + left + " 个卫兵/墓碑实体。请勿存档。");
+            }
+            catch (Exception e) { Main.LogError("[全测] 停用复查失败: " + e.Message); }
+        }
+
         // ------------------------------------------------------------ 只读
 
         /// <summary>
@@ -142,17 +157,37 @@ namespace DynastyRetinue
                 SelfCheck.ForceRun();
                 Assertions();
 
-                // 装备矩阵放在这里而不是只读那个里 —— 它开头就 DismissAll（AutoTest.cs:129）
-                Step("装备矩阵：开始（★会先清场★）");
-                AutoTest.RunGearMatrix();
+                // 真正的全路线矩阵是异步逐样本：每条普通路线 T1/T2/T3 + 全部精英，
+                // 每个样本都验等级、职业链、能力、装备、武器槽和 brain，并清理复查为 0。
+                // 必须等它回调成功后再继续，不能像旧版那样同帧生成/遣散后直接往下跑。
+                Step("卫队矩阵：开始（★会先清场★）");
+                GuardMatrixTest.Run(delegate(bool ok)
+                {
+                    if (!ok)
+                    {
+                        Main.LogError("[全测] 卫队矩阵未通过，已停止后续死亡规则测试。");
+                        Teardown();
+                        return;
+                    }
+                    BeginDeathRules();
+                });
+            }
+            catch (Exception e) { Main.LogError("[全测] 异常: " + e); _running = false; }
+        }
 
+        private static void BeginDeathRules()
+        {
+            try
+            {
                 // 生成两名测试卫兵：一名普通、一名精英（精英要能解锁才生成得出来）
                 Step("死亡规则：生成测试卫兵……");
                 RetinueTest.SpawnOne(0, null, true, true);            // 强制普通
-                var eliteDef = GearTool.NextElite(0);
+                var arch = Archetypes.Get(0);
+                var eliteDef = arch != null && arch.Elites != null && arch.Elites.Length > 0
+                             ? arch.Elites[0] : null;
                 if (eliteDef != null) RetinueTest.SpawnOne(0, eliteDef, true);
 
-                // SpawnUnit 延迟入册，等两帧再打
+                // SpawnUnit 延迟入册，等三帧再打
                 Deferred.NextFrames(3, delegate
                 {
                     try
@@ -173,7 +208,7 @@ namespace DynastyRetinue
                     catch (Exception e) { Main.LogError("[全测] 普通卫兵测试: " + e); Teardown(); }
                 });
             }
-            catch (Exception e) { Main.LogError("[全测] 异常: " + e); _running = false; }
+            catch (Exception e) { Main.LogError("[全测] 死亡规则初始化: " + e); Teardown(); }
         }
 
         /// <summary>收尾：遣散 + 还原船模 + 复查。这两步同时也是**卸载流程的前两步**。</summary>
@@ -188,7 +223,7 @@ namespace DynastyRetinue
                 {
                     try
                     {
-                        int left = RetinueRegistry.Count;
+                        int left = RetinueRegistry.All(true).Count;
                         if (left == 0) Step("卸载流程：复查在册 0 ✓");
                         else Main.LogError("  ✗ 卸载流程：仍有 " + left + " 名在册 —— "
                                          + "★此时请勿存档★，先看上面的遣散日志");

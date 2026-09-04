@@ -300,11 +300,27 @@ namespace DynastyRetinue
         private static bool OnToggle(UnityModManager.ModEntry modEntry, bool value)
         {
             Enabled = value;
-            if (value) { RetinueLifecycle.Subscribe(); DeathRules.Subscribe(); }
+            if (value)
+            {
+                RetinueLifecycle.Subscribe();
+                DeathRules.Subscribe();
+                // ★事件驱动缓存的启用恢复入口★ 若 mod 在已加载区域内从关→开，
+                //   本次 OnAreaDidLoad 早已过去，不会再播种。这里只在用户切开关的低频操作
+                //   扫一次名册；绝不能把 All() 放进 OnUpdate 或补丁热路径。
+                try { RetinueLifecycle.RestoreCurrentArea(true); }
+                catch (Exception e) { LogError("[生命周期] 启用时恢复当前区域失败: " + e.Message); }
+            }
             else
             {
+                // 全路线矩阵会临时改设置并生成持久实体；必须先同步收尾，再销毁 Deferred 协程。
+                try { GuardMatrixTest.CancelAndCleanup("mod 被禁用/卸载"); }
+                catch (Exception e) { LogError("[卫队矩阵] 停用收尾失败: " + e.Message); }
+                try { FullTest.CancelForDisable(); } catch { }
                 RetinueLifecycle.Unsubscribe();
                 DeathRules.Unsubscribe();
+                // OnUpdate 停止后不会再有任何自愈轮询；事件驱动集合必须主动清。
+                // 在册实体本身不删，重新启用时上面的低频扫描会重建。
+                try { AnimFallback.ClearMeleeEliteRoster(); } catch { }
                 RecruitWindow.Shutdown();   // 连宿主 GameObject 一起销毁，不留残留
                 UI.RetinueUI.Shutdown();    // 新的 uGUI 窗口：销毁 Canvas 根
                 ShipYardWindow.Shutdown();  // 船坞窗口(IMGUI 退路)：连宿主 GameObject 一起销毁
@@ -335,6 +351,68 @@ namespace DynastyRetinue
         }
 
         public static bool Enabled { get; private set; }
+
+        /// <summary>
+        /// 近战精英支持的**生效值** —— 一切与这两个精英有关的补丁都走这里，
+        /// 不要直接读 Settings.MeleeEliteSupport。
+        ///
+        /// ★为什么必须有这一层：联机★
+        ///   这批补丁**不是纯表现**，它们会改同步量：
+        ///     · ActReentryGate  改 OnAction 返回值 ⇒ 父指令是否被强制结束 ⇒ 伤害落点
+        ///     · SupplyJumpAction 改 Strike 借哪个句柄 ⇒ 结算时刻 ⇒ 伤害落点
+        ///     · CastStyleFallback 换施法片段 ⇒ Act 事件数 ⇒ 结算时刻（本轮伤害锚点那条因果链的源头）
+        ///     · DeathWaltzAoePatch 写 AI 的 pattern/effectiveRange ⇒ **AI 选技能和选目标**
+        ///   官方合作是 lockstep，两台机器各跑一遍同样的模拟。
+        ///   ⇒ 一台开一台关 = 两台算出不同的伤害位置和不同的 AI 决策 = 不同步。
+        ///
+        /// ★为什么不能靠「装载期开关 + 进房校验」解决★
+        ///   补丁装不装载在**游戏启动时**就定了，而校验只能在进房之后做 —— 那时已经晚了，
+        ///   能做的只有提示玩家「对齐设置后重启」。更死的一个结：你开我关，你在联机里
+        ///   招募了电僧，指令同步过来我这边也生成了这个单位，但我机器上补丁根本没装载，
+        ///   从这一刻起必然分叉，而「在册时置灰开关」救不了 —— 装载期早过了。
+        ///   ⇒ 所以做成**运行时**闸，并在联机时强制取同一个值。两台机器无论各自怎么设都一致。
+        ///
+        /// ★代价，知情选择★ 联机时关不掉。仓库自己的红线是
+        ///   「宁可留一个动画毛刺，也不能制造不同步」（见 JumpWatchdog 的联机分支）。
+        ///
+        /// ★关掉时的性能★ 走 WeaponGate.InList 那一处总闸，所有相关补丁第一时间早退。
+        ///   补丁仍然装载（Harmony 调度开销省不掉），但补丁体不再跑。
+        ///   ★没有实测支持「装载期比运行时省得多」★ —— 恰恰相反，本项目两次实测都把
+        ///   卡顿归给了别的东西（走路掉帧＝星图船模每秒全场景反射扫描；
+        ///   回合卡顿＝原版 AI 固有代价，敌人决策比卫兵还慢），帧率实测 305–349 无回归。
+        /// </summary>
+        public static bool MeleeEliteSupportActive
+        {
+            get
+            {
+                // ★最热的快路径先看本机开关★ 默认开用户只付一次字段读取，
+                //   不要像旧版那样每个动画/武器判定先读 Time.realtimeSinceStartup。
+                var s = Settings;
+                if (s == null || s.MeleeEliteSupport) return true;
+
+                // ★旧存档边界 + O(1)★ 玩家可能先关开关，再读取一个已有精英的旧档。
+                //   在册单位必须继续得到修复，但绝不能在热路径每秒 RetinueRegistry.All()。
+                //   生成/读档/摘牌/遣散事件维护静态 UID 集合，这里只读 bool。
+                if (AnimFallback.RosterHasMeleeElite) return true;
+
+                // 面板联机强制开，实际值也必须强制开。只在「本机偏好关 + 名册为空」
+                // 的冷状态走到这里；读取失败时 SharedGameplayRequired 保守返回 true。
+                try { return CoopState.SharedGameplayRequired; }
+                catch { return true; }
+            }
+        }
+
+        /// <summary>
+        /// 面板/招募用：联机时主开关不能改。玩法热路径**不读这个属性**；
+        /// 联机同步生成精英后，事件驱动在册集合会先变 true，再触发任何动画回调。
+        /// 读取网络失败时 SharedGameplayRequired 保守返回 true。
+        /// </summary>
+        public static bool MeleeEliteSupportLockedByCoop
+        {
+            get { try { return CoopState.SharedGameplayRequired; } catch { return true; } }
+        }
+
+        public static bool RosterHasMeleeElite { get { return AnimFallback.RosterHasMeleeElite; } }
 
         /// <summary>
         /// 开发模式。mod 目录下有 dynasty_dev.flag 才为 true。
@@ -389,10 +467,12 @@ namespace DynastyRetinue
             // ═══════════════════════════════════════════════════════════════
             // 帧时间监视：每帧一次浮点比较，只在有尖峰的窗口记一行。
             FrameWatch.Tick();
-            AnimFallback.RefreshPresence();
             MixerWeightProbe.Tick();
-            JumpAndActFix.JumpWatchdog.Tick();   // 未武装时一次 int 比较就走          // 每 2 秒、只在诊断日志开着时、只看我们的卫兵   // 每 2 秒刷一次「场上有没有近战精英」的全局闸
+            JumpAndActFix.JumpWatchdog.Tick();   // 未武装时一次 int 比较就走
             CommandStallWatch.Tick();      // 每秒最多一次，只在战斗中查我们的卫兵
+            CoopSettings.TickReply();      // 常态一次 bool；收到设置核对请求后下一帧回送
+            CoopAutoTransaction.Tick();    // 常态四个空集合 Count + 空字符串；仅事务期间交换回执
+            ServitorSummon.TickCapabilities(); // 合作会话首次交换 9 位资源能力，稳定后仅 int 闸
             // 舰船帧级采样：只在「详细日志」开着时工作，且一次会话最多记 60 条。
             // 放在最前面是因为它自己就有节流，不需要等后面那些判定。
             ShipFrameProbe.Tick();
@@ -413,7 +493,7 @@ namespace DynastyRetinue
                 // 「效果对所有人生效、开关只有作者看得见」是最坏的组合，两边取一边即可。
                 // 这里选择关掉效果而不是暴露开关：招募窗口才是玩家该走的入口，
                 // 热键只是作者反复测试时的快捷方式。
-                if (DevMode)
+                if (DevMode && !CoopState.SharedGameplayRequired)
                 {
                     bool _mod = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)
                              || Input.GetKey(KeyCode.LeftAlt)     || Input.GetKey(KeyCode.RightAlt)
@@ -505,7 +585,8 @@ namespace DynastyRetinue
                 if (Btn(L.T("还原"), 60f))
                 {
                     // 清掉自定义名再让 mod 按规则重推 —— 相当于对单个人做【重新命名全部】
-                    CoopCommand.Send("rename", id, "");   // 空串 = 交回 mod 自动推导
+                    CoopCommand.Send("rename", id, "",
+                        L.Current.ToString(System.Globalization.CultureInfo.InvariantCulture)); // 空串 = 按发起方明确语言自动推导
                     _renameBuf.Remove(id);
                 }
                 GUILayout.EndHorizontal();
@@ -808,8 +889,11 @@ namespace DynastyRetinue
                 {
                     GUILayout.Label("<color=#7ec8ff>" + _co + "</color>");
                     if (!CoopState.ModsMatch)
-                        GUILayout.Label(L.T("<color=#ff8080>双方的 mod 列表或版本不一致（这是游戏自带的握手结果）。"
-                                          + "请确保两边装的是同一个版本的本 mod。</color>"));
+                    {
+                        GUILayout.Label(L.T("<color=#ff8080>双方的完整 mod 清单或版本不一致（这是游戏自带的握手结果，不只比较本 mod）。"
+                                          + "两边各导一份诊断包，对比其中的「mod 清单」即可看到多了/少了哪一项。</color>"));
+                        GUILayout.Label("<color=#aaaaaa>" + CoopState.LocalModsText() + "</color>");
+                    }
                     // ★链路自检必须放在**玩家看得见**的地方★
                     //   发布包不带 dynasty_dev.flag，开发区在玩家那边永远是隐藏的 ——
                     //   放开发区等于只有我自己能点，而这个测试恰恰**必须两台机器一起做**。
@@ -822,7 +906,7 @@ namespace DynastyRetinue
                     // 用已经验证可用的指令通道把设置对发一次，直接列差异。
                     if (Btn(L.T("核对双方设置"), 140f))
                     {
-                        var _c = new List<string> { CoopState.LocalUserId };
+                        var _c = new List<string> { CoopState.LocalUserId, "@request" };
                         _c.AddRange(CoopSettings.CaptureAll());
                         CoopCommand.Send("cfg", _c.ToArray());
                     }
@@ -845,7 +929,7 @@ namespace DynastyRetinue
                                           + _d + "</color>");
                     }
 
-                    if (CoopState.IsMultiplayer)
+                    if (CoopState.SharedGameplayRequired)
                     {
                         GUILayout.Label(L.T("<color=#7ec87e>招募 / 换船 / 改名 / 遣散 已走官方指令通道，两台机器会一起执行。"
                                           + "这些操作使用<b>发起方</b>的设置（谁点的算谁的），"
@@ -854,6 +938,9 @@ namespace DynastyRetinue
                         GUILayout.Label(L.T("<color=#d0a050>但战斗中的<b>被动规则</b>不走指令：士气隔离、卫兵经验缩放、"
                                           + "舰船多打一发 / 护盾护甲加成等，是补丁在战斗中持续读各自设置算的。"
                                           + "两边不一致就等于用不同规则跑同一场战斗 —— 请先对一下上面那个<b>设置指纹</b>。</color>"));
+                        GUILayout.Label(L.T("<color=#aaaaaa>合作模式中暂不执行卫兵的完整模型/拼件替换，两端使用单位原版 View；"
+                                          + "招募立绘和装备外观显隐仍可各自本地显示。原因：当前模型替换会 AttachView，"
+                                          + "重绑移动/动画部件并写入同步状态，曾导致招募后不同步。</color>"));
                     }
                 }
             }
@@ -1414,7 +1501,8 @@ namespace DynastyRetinue
             GUILayout.Space(8);
             GUILayout.BeginHorizontal();
             GUILayout.Label(L.T("<b>命名</b>　<color=#aaaaaa>「军衔·人名」，军衔随本人等级三档自动晋升，人名跟他一辈子</color>"), GUILayout.Width(520));
-            if (Btn(L.T("重新命名全部"), 120f)) CoopCommand.Send("renameall");
+            if (Btn(L.T("重新命名全部"), 120f))
+                CoopCommand.Send("renameall", L.Current.ToString(System.Globalization.CultureInfo.InvariantCulture));
             GUILayout.EndHorizontal();
             GUILayout.Label(L.T("<i>军衔取自 archetypes.json 的 guardNames（每条线三档），人名取自根级 guardNamePool；"
                               + "精英用自己的专属军衔。你手改过的名字不会被覆盖 —— 想让 mod 重新接管就点【重新命名全部】。</i>"));
@@ -1430,27 +1518,63 @@ namespace DynastyRetinue
             GUILayout.Label(L.T("<b>解除限制</b>　<color=#aaaaaa>互不相干的几件事，分开控制</color>"));
 
             // ---------- 近战精英 ----------
-            // ★1.7.31 把 7 个控件砍成 3 个★ 作者反馈面板选项太多 —— 是我一天之内塞进来的。
-            //   四个技能闸合并成 ReaperSkillGate（实测从来一起开关）；
-            //   动画片段兜底改成常开（它只在原版必定出问题时介入，没有「关掉更好」的情形，
-            //   留个开关只是让人多做一次无意义的决定）；
-            //   三类诊断日志合并到 DiagVerbose，默认关，玩家一行都看不到。
-            GUILayout.BeginHorizontal();
-            Settings.ReaperSkillGate = GUILayout.Toggle(Settings.ReaperSkillGate,
-                L.T("解锁近战精英的收割者技能"), GUILayout.Width(230));
-            GUILayout.Label(L.T("烧血技能血量下限%"), GUILayout.Width(130));
-            Settings.WoundAbilityHpFloor = (int)GUILayout.HorizontalSlider(
-                Settings.WoundAbilityHpFloor, 0f, 90f, GUILayout.Width(120));
-            GUILayout.Label(Settings.WoundAbilityHpFloor.ToString(), GUILayout.Width(30));
-            GUILayout.EndHorizontal();
-            GUILayout.BeginHorizontal();
-            Settings.MeleeEliteNoEndTurn = GUILayout.Toggle(Settings.MeleeEliteNoEndTurn,
-                L.T("森罗刃网不结束回合"), GUILayout.Width(190));
+            // ★1.7.86 收拢成一个主开关★ 作者要求：「那些技能动作替换开关都隐藏起来，
+            //   归拢到是否打开这两个精英的开关」。原来的 ReaperSkillGate 已并入。
+            {
+                bool lockedByCoop   = MeleeEliteSupportLockedByCoop;
+                bool hasRoster = RosterHasMeleeElite;
+                // 在册时只禁止「已开→关」。若旧档保存偏好为关，复选框仍可点开；
+                // 不能把它锁在一个永远无法改成 true 的死状态。
+                bool lockedByRoster = !lockedByCoop && hasRoster && Settings.MeleeEliteSupport;
+                bool locked = lockedByCoop || lockedByRoster;
 
-            GUILayout.EndHorizontal();
-            GUILayout.Label(L.T("<color=#ffaa66>收割者技能：这两个单位的武器分类不是长剑，原版会把整条线的技能挡在 AI 视野外。"
-                + "打开后放行判定并给死从天降补上落点选择。★动作可能对不上（T-pose），开了先打一场看看★。"
-                + "烧血下限：鲜血誓言/森罗刃网的消耗是生命值而 AI 不会收手，低于这个百分比就暂停它们，0=关闭。</color>"));
+                GUILayout.BeginHorizontal();
+                bool wasEnabled = GUI.enabled;
+                if (locked) GUI.enabled = false;
+                bool before = Settings.MeleeEliteSupport;
+                bool want = GUILayout.Toggle(
+                    lockedByCoop ? true : Settings.MeleeEliteSupport,
+                    L.T("<b>启用近战精英（锈行猎手 / 电僧）</b>"), GUILayout.Width(300));
+                if (!locked) Settings.MeleeEliteSupport = want;
+                GUI.enabled = wasEnabled;
+                // uGUI 招募行是建树时生成的；主开关改了必须立刻重建，避免隐藏/可见状态陈旧。
+                if (before != Settings.MeleeEliteSupport)
+                {
+                    try { if (UI.RetinueUI.IsOpen) UI.RetinueUI.Refresh(); } catch { }
+                }
+
+                GUILayout.Label(L.T("烧血技能血量下限%"), GUILayout.Width(130));
+                Settings.WoundAbilityHpFloor = (int)GUILayout.HorizontalSlider(
+                    Settings.WoundAbilityHpFloor, 0f, 90f, GUILayout.Width(120));
+                GUILayout.Label(Settings.WoundAbilityHpFloor.ToString(), GUILayout.Width(30));
+                GUILayout.EndHorizontal();
+
+                GUILayout.BeginHorizontal();
+                Settings.MeleeEliteNoEndTurn = GUILayout.Toggle(Settings.MeleeEliteNoEndTurn,
+                    L.T("森罗刃网不结束回合"), GUILayout.Width(190));
+                GUILayout.EndHorizontal();
+
+                if (lockedByCoop)
+                    GUILayout.Label(L.T("<color=#66ccff>联机中：这一项被强制启用，不能改。</color>"
+                        + "<color=#aaaaaa>　这批补丁会改伤害落点和 AI 决策，而官方合作是两台机器各跑一遍同样的模拟。"
+                        + "两边设置不一致就会算出不同结果 ⇒ 不同步。退出联机后可以改。</color>"));
+                else if (lockedByRoster)
+                    GUILayout.Label(L.T("<color=#66ccff>队伍里有这两个精英，暂时不能关。</color>"
+                        + "<color=#aaaaaa>　关掉会让在册的精英失去武器还原和动画修复，当场变成 T-pose / 平移。"
+                        + "先遣散他们再关。</color>"));
+                else if (hasRoster && !Settings.MeleeEliteSupport)
+                    GUILayout.Label(L.T("<color=#66ccff>旧存档保护：已有精英仍临时获得必要修复，但新的近战精英保持不可招募。</color>"
+                        + "<color=#aaaaaa>　你的保存偏好仍是关闭；想恢复招募就勾上本项，想彻底关闭修复就先遣散已有精英。</color>"));
+                else
+                    GUILayout.Label(L.T("<color=#ffaa66>关掉之后：这两个精英从招募列表隐藏，相关补丁全部早退。</color>"
+                        + "<color=#aaaaaa>　这一项管的是他们的武器还原、收割者线技能放行、以及一批动画修复"
+                        + "（施法动作、跳跃位移、伤害落点）。原版对这两个单位有几处缺陷"
+                        + "——武器分类不是长剑导致整条技能线被 AI 忽略、没有 Jump 动作导致位移时平移，"
+                        + "这些补丁就是在补那些洞。★如果你觉得这两个精英拖性能、宁可不要，就关掉它★。</color>"));
+
+                GUILayout.Label(L.T("<color=#aaaaaa>烧血下限：鲜血誓言/森罗刃网的消耗是生命值而 AI 不会收手，"
+                    + "低于这个百分比就暂停它们，0=关闭。</color>"));
+            }
             GUILayout.Space(6);
 
             // ★「全部解除」放在单独一行、且排在最前★
@@ -1641,7 +1765,8 @@ namespace DynastyRetinue
             GUILayout.EndHorizontal();
             GUILayout.BeginHorizontal();
             if (Btn("一键全测（会清空卫兵）", 180f)) FullTest.RunDestructive();
-            GUILayout.Label("<color=#ff8080>自检 + 装备矩阵 + 死亡规则 + 卸载流程。"
+            GUILayout.Label("<color=#ff8080>每条路线 T1/T2/T3 + 全部精英：检查等级、职业链、能力、"
+                          + "装备/武器槽、brain，再测死亡与卸载流程。"
                           + "<b>会清空全部卫兵、把座舰还原成原样</b>，跑完别存盘。</color>");
             GUILayout.EndHorizontal();
             GUILayout.Space(8);
@@ -1876,7 +2001,12 @@ namespace DynastyRetinue
             else LogError("无法识别的按键名: " + Settings.DespawnKeyName);
         }
 
-        private static void OnSaveGUI(UnityModManager.ModEntry modEntry) => Settings.Save(modEntry);
+        private static void OnSaveGUI(UnityModManager.ModEntry modEntry)
+        {
+            // 矩阵测试会临时改阶位/装备/解锁开关；测试中开关 UMM 面板不能把临时值写进 Settings.xml。
+            if (GuardMatrixTest.IsRunning) { Log("[卫队矩阵] 运行中，跳过本次临时设置保存。"); return; }
+            Settings.Save(modEntry);
+        }
 
         // UMM 的 Logger 只进面板 Logs 标签页、不落盘，退游戏就没了。
         // 这里同时写一份到 mod 目录，便于事后排查。
@@ -2246,19 +2376,29 @@ namespace DynastyRetinue
         public bool AnimClipFallback = true;
 
         /// <summary>
-        /// 收割者线技能的总闸（原来是四个开关）。★默认关，需要肉眼验动画★
+        /// 【默认开】近战精英（锈行猎手 / 电僧）支持总开关。
         ///
-        /// ★为什么合并★ 作者反馈「整个设置盘面的开关和选项有点太多了」—— 是我的问题，
-        ///   一天之内往同一栏塞了 7 个。而这四个（收割者终极/绝境、森罗刃网/利刃之舞、
-        ///   双持长剑判定、死从天降的目标选择修复）**实测从来都是一起开一起关**，
-        ///   拆开只增加负担、不增加控制力。合成一个。
-        /// ★它管什么★ 近战精英的收割者线技能能不能被 AI 考虑并正常施放：
-        ///   · 放行「手上得有长剑」的施法限制（这两个单位的武器分类是 None）
-        ///   · 放行「要两把长剑」的双持判定
-        ///   · 给死从天降补 AoE 图案，否则 AI 的目标选择器选不出落点（详见 DeathWaltzAoePatch）
-        /// ★为什么默认关★ 放行 ≠ 动作对得上。历史上三次 T-pose 前科。
+        /// ★不要直接读这个字段★ 一律走 <see cref="Main.MeleeEliteSupportActive"/> ——
+        ///   那里有联机强制值，直接读字段会绕过它，重新制造不同步。
+        ///
+        /// ★它合并了原来的哪些开关★（作者要求：「那些技能动作替换开关都隐藏起来，
+        ///   归拢到是否打开这两个精英的开关」）
+        ///   · ReaperSkillGate（原默认关）—— 收割者线技能的放行 + 死从天降的落点补丁
+        ///   · 一批动画兜底/片段替换/跳跃补齐补丁的作用域
+        ///   ★迁移影响★ 原来 ReaperSkillGate 默认**关**，现在并进一个默认**开**的开关，
+        ///   等于老玩家升级后收割者技能会被放行。这是本轮动画工作（伤害锚点、平移、
+        ///   施法重入）的目的所在 —— 那三次 T-pose 前科对应的问题已经定位并修掉。
+        ///
+        /// ★关掉之后会怎样★
+        ///   · 这两个精英从招募列表隐藏（已在册的不会被删，但开关会被置灰不让关）
+        ///   · 所有相关补丁在 WeaponGate.InList 那一处总闸早退，它们退回原版行为
+        ///   ⇒ 原版行为意味着：收割者线技能 AI 看不见、跳跃期平移、施法动作可能对不上。
+        ///     这正是「接受表现力有问题、换取不跑这些补丁」的那个取舍。
+        ///
+        /// ★联机★ 见 Main.MeleeEliteSupportActive 的注释：联机时强制开、面板置灰。
+        ///   原因是这批补丁会改伤害落点和 AI 决策，两台机器设置不一致就是不同步。
         /// </summary>
-        public bool ReaperSkillGate = false;
+        public bool MeleeEliteSupport = true;
 
         /// <summary>
         /// 诊断日志总开关。★默认关★

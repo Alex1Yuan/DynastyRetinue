@@ -35,6 +35,8 @@ namespace DynastyRetinue
     [HarmonyPatch(typeof(UIDesyncHandler), nameof(UIDesyncHandler.RaiseDesync))]
     internal static class DesyncLogPatch
     {
+        public static string LastDesync { get; private set; } = "（本会话未检测到不同步）";
+
         private static void Postfix(object meta)
         {
             try
@@ -61,6 +63,9 @@ namespace DynastyRetinue
                 int now = -1;
                 try { now = Game.Instance.RealTimeController.CurrentNetworkTick; } catch { }
 
+                LastDesync = "desync tick=" + tick + " 当前 tick=" + now
+                           + " 本机=" + (CoopState.IsHost ? "房主" : "加入方")
+                           + " 在册卫兵=" + SafeCount();
                 Main.LogError("[合作] ★★ 游戏检测到不同步 ★★  desync tick=" + tick
                             + "  当前 tick=" + now
                             + "  本机=" + (CoopState.IsHost ? "房主" : "加入方")

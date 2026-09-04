@@ -68,6 +68,9 @@ namespace DynastyRetinue
             try
             {
                 if (!Main.Enabled) return;
+                // ★合作模式统一原版 View★ 替换完整 UnitEntityView 会重绑 parts/facts/Agent/AnimationManager，
+                //   不是可以各看各的纯材质。联机两端一律不做外观 prefab 替换，避免本机矩阵分叉。
+                if (CoopState.SharedGameplayRequired) return;
                 // 第一道闸：配表里没人用 appearanceUnit **且** 分配表是空的，整条路径零开销
                 if (!AnyConfigured() &&
                     (Main.Settings == null || string.IsNullOrEmpty(Main.Settings.LookMatrix))) return;

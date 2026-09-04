@@ -43,6 +43,8 @@ namespace DynastyRetinue
             try
             {
                 if (!Main.Enabled) return true;
+                // 这里只过滤现有 View 上的 EquipmentEntity 渲染，不重建/AttachView，
+                // 不写实体状态；它仍是可由双方各自选择的纯本地视觉。
                 var s = Main.Settings;
                 if (s == null || !s.HideGearLook) return true;
 

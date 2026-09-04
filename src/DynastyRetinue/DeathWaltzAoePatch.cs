@@ -271,17 +271,18 @@ namespace DynastyRetinue
             return null;
         }
 
-        private static void Set(object o, string name, object v)
+        private static bool Set(object o, string name, object v)
         {
-            if (o == null || v == null) return;
+            if (o == null || v == null) return false;
             try
             {
                 var f = o.GetType().GetField(name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-                if (f != null) { f.SetValue(o, v); return; }
+                if (f != null) { f.SetValue(o, v); return true; }
                 var p = o.GetType().GetProperty(name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-                if (p != null && p.CanWrite) p.SetValue(o, v, null);
+                if (p != null && p.CanWrite) { p.SetValue(o, v, null); return true; }
             }
             catch { }
+            return false;
         }
 
         private static int AsInt(object o) { try { return o == null ? 0 : Convert.ToInt32(o); } catch { return 0; } }
@@ -303,8 +304,14 @@ namespace DynastyRetinue
             try
             {
                 if (!Main.Enabled) return;
-                var s = Main.Settings;
-                if (s == null || !s.ReaperSkillGate) return;
+                // ★主开关必须在 Resolve 前★ 关态不能先做蓝图查找/组件反射再在末尾早退，
+                //   更不能打印“AI 会改走 AOE 分支”的假成功日志。
+                if (!Main.MeleeEliteSupportActive) return;
+                // ★1.7.86★ 原来这里是 `!s.ReaperSkillGate` —— 一个**本机设置**，
+                //   而这个补丁写的 pattern / effectiveRange / isGrenadeTypeAOE 是
+                //   **AI 挑技能和挑目标的输入**。联机下 A 开 B 关 ⇒ 两台机器的 AI
+                //   做出不同决策 ⇒ 必然不同步。现在闸并进下面的 IsBladeAnimTarget
+                //   （内部走 Main.MeleeEliteSupportActive，联机强制同值）。
                 if (__instance == null || ability == null) return;
 
                 Resolve();
@@ -317,16 +324,18 @@ namespace DynastyRetinue
                 // 1.7.18 实测电僧放这招会 T-pose 并卡住（它的动作集是照拳套做的）。
                 if (!WeaponGate.IsBladeAnimTarget(ability.Caster)) return;
 
-                Set(__instance, "patternProvider",    _provider);
-                Set(__instance, "pattern",            _pattern);
-                if (_targets != null) Set(__instance, "aoeIntendedTargets", _targets);
-                Set(__instance, "isGrenadeTypeAOE",   true);
-                Set(__instance, "patternBounds",      _bounds);
+                bool ok = Set(__instance, "patternProvider",  _provider)
+                       && Set(__instance, "pattern",           _pattern)
+                       && Set(__instance, "isGrenadeTypeAOE", true)
+                       && Set(__instance, "patternBounds",     _bounds);
+                if (_targets != null)
+                    ok = Set(__instance, "aoeIntendedTargets", _targets) && ok;
 
                 int minR = AsInt(Get(__instance, "minRange"));
                 int maxR = AsInt(Get(__instance, "maxRange"));
-                Set(__instance, "effectiveRange", Math.Max(minR, maxR - _ext));
-                Applied++;
+                ok = Set(__instance, "effectiveRange", Math.Max(minR, maxR - _ext)) && ok;
+                if (ok) Applied++;
+                else Warn("关键字段写入不完整；本次不计 Applied，避免假成功。");
             }
             catch (Exception e) { Warn("Postfix " + e.GetType().Name + ": " + e.Message); }
         }

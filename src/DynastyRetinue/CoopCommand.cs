@@ -49,6 +49,10 @@ namespace DynastyRetinue
         private static readonly Dictionary<string, Action<string[]>> _handlers =
             new Dictionary<string, Action<string[]>>(StringComparer.Ordinal);
 
+        /// <summary>诊断包用；仅记录，不参与任何判定。</summary>
+        public static string LastSent { get; private set; } = "（本会话未发出 kgd 指令）";
+        public static string LastDispatched { get; private set; } = "（本会话未执行 kgd 指令）";
+
         public static void Register(string verb, Action<string[]> handler)
         {
             if (string.IsNullOrEmpty(verb) || handler == null) return;
@@ -60,7 +64,7 @@ namespace DynastyRetinue
         ///
         /// 调用方要保证 args 里已经包含全部输入 —— 执行侧不许再读本机设置。
         /// </summary>
-        public static void Send(string verb, params string[] args)
+        public static bool Send(string verb, params string[] args)
         {
             string cmd = Prefix + verb;
             try
@@ -68,16 +72,29 @@ namespace DynastyRetinue
                 if (!_handlers.ContainsKey(cmd))
                 {
                     Main.LogError("[合作] 未注册的动作：" + cmd);
-                    return;
+                    return false;
                 }
+                LastSent = Stamp(cmd, args);
                 Main.Log("[合作] 发出 " + cmd + " " + string.Join(" ", args ?? new string[0]));
                 RunCheatCommandGameCommand.Create(cmd, args ?? new string[0]);
+                return true;
             }
             catch (Exception e)
             {
-                // 发不出去就地执行，至少单机不受影响；联机下会不同步，但那时已经有别的问题了
-                Main.LogError("[合作] 入队失败，退回本地执行：" + e.Message);
+                // ★联机绝不能退回本地执行★ 招募/遣散/改名/换船都会改变同步状态；
+                // 只有点击者本机执行，比「这次操作没成功」严重得多，会让实体表和 Uuid 随机流
+                // 永久分叉。联机入队失败就明确取消；单机才允许就地回退。
+                bool shared;
+                try { shared = CoopState.SharedGameplayRequired; } catch { shared = true; }
+                if (shared)
+                {
+                    Main.LogError("[合作] 同步指令入队失败，已取消操作（不会退回本地执行，以免不同步）："
+                                + cmd + "　" + e.Message);
+                    return false;
+                }
+                Main.LogError("[合作] 单机指令入队失败，退回本地执行：" + e.Message);
                 Dispatch(cmd, args);
+                return true;
             }
         }
 
@@ -93,9 +110,19 @@ namespace DynastyRetinue
                 Main.LogError("[合作] 收到不认识的动作 " + cmd + "（对方 mod 版本可能不同）");
                 return true;
             }
+            LastDispatched = Stamp(cmd, args);
             try { h(args ?? new string[0]); }
             catch (Exception e) { Main.LogError("[合作] 执行 " + cmd + " 失败：" + e.Message); }
             return true;
+        }
+
+        private static string Stamp(string cmd, string[] args)
+        {
+            int tick = -1;
+            try { tick = Kingmaker.Game.Instance.RealTimeController.CurrentNetworkTick; } catch { }
+            string payload = string.Join(" ", args ?? new string[0]);
+            if (payload.Length > 500) payload = payload.Substring(0, 500) + "…";
+            return "tick=" + tick + " " + cmd + (payload.Length > 0 ? " " + payload : "");
         }
 
         // ------------------------------------------------------------------
@@ -133,7 +160,29 @@ namespace DynastyRetinue
             // 遣散：删实体。和生成一样，只有一台做就会把随机流和实体表推歪。
             Register("dismissall", a => RetinueRegistry.DismissAll());
 
-            Register("renameall", a => RetinueTest.RenameAll());
+            Register("renameall", a =>
+            {
+                if (a == null || a.Length < 1) { Main.LogError("[合作] renameall 参数不足"); return; }
+                int language;
+                if (!int.TryParse(a[0], System.Globalization.NumberStyles.Integer,
+                                  System.Globalization.CultureInfo.InvariantCulture, out language)
+                    || (language != L.ZhCN && language != L.EnGB))
+                { Main.LogError("[合作] renameall 语言无效"); return; }
+                int saved = Main.Settings != null ? Main.Settings.Language : L.Auto;
+                try { if (Main.Settings != null) Main.Settings.Language = language; RetinueTest.RenameAll(); }
+                finally { if (Main.Settings != null) Main.Settings.Language = saved; }
+            });
+
+            // 自动传送走两阶段事务：prepare 只读预检，所有当前成员 ready 后才 commit。
+            // 旧版直接提交后再 rearm 的做法救不了已经发生的那一个 desync tick。
+            Register("autoprepare", a => CoopAutoTransaction.ReceivePrepare(a));
+            Register("autoready", a => CoopAutoTransaction.ReceiveReady(a));
+            Register("autocommit", a => CoopAutoTransaction.ReceiveCommit(a));
+            Register("autoabort", a => CoopAutoTransaction.ReceiveAbort(a));
+            Register("servitorpause", a => ServitorSummon.ReceivePause(a));
+            Register("servitorreset", a => ServitorSummon.ReceiveGeneration(a));
+            Register("servitorcaps", a => ServitorSummon.ReceiveCapabilities(a));
+            Register("servitorpool", a => ServitorSummon.ReceiveSharedPool(a));
 
             // 遣散单个。★必须走指令通道★ 它删的是实体，只在发起方执行 = 双方卫队人数
             // 不一致，当场失步。对象不能跨机器传，所以传 UniqueId —— 那个值本身是
@@ -160,8 +209,23 @@ namespace DynastyRetinue
                 try
                 {
                     var d = g.GetOrCreate<Kingmaker.UnitLogic.Parts.PartUnitDescription>();
-                    if (string.IsNullOrEmpty(want)) { d.SetName(null); RetinueTest.ApplyName(g); }
-                    else                            { d.SetName(want); }
+                    if (string.IsNullOrEmpty(want))
+                    {
+                        int language;
+                        if (a.Length < 3 || !int.TryParse(a[2], System.Globalization.NumberStyles.Integer,
+                                System.Globalization.CultureInfo.InvariantCulture, out language)
+                            || (language != L.ZhCN && language != L.EnGB))
+                        { Main.LogError("[合作] rename 自动命名缺少明确语言"); return; }
+                        int saved = Main.Settings != null ? Main.Settings.Language : L.Auto;
+                        try
+                        {
+                            if (Main.Settings != null) Main.Settings.Language = language;
+                            d.SetName(null);
+                            RetinueTest.ApplyName(g);
+                        }
+                        finally { if (Main.Settings != null) Main.Settings.Language = saved; }
+                    }
+                    else d.SetName(want);
                     Main.Log("[合作] 改名 " + uid + " -> " + (string.IsNullOrEmpty(want) ? "(自动)" : want));
                 }
                 catch (Exception e) { Main.LogError("[合作] 改名失败：" + e.Message); }

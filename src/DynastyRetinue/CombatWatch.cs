@@ -107,9 +107,8 @@ namespace DynastyRetinue
             else if (!now && _wasInCombat)
             {
                 Dump("战斗结束");
-                // 战斗中阵亡的卫兵只摘了牌、尸体留在地上（见 RetinueRegistry.RemoveOne），
-                // 到这里才真正销毁 —— 战斗结束是唯一不会让玩家看到"尸体凭空消失"的时机。
-                try { RetinueRegistry.FlushPendingDestroy(); } catch { }
+                // 这里只写日志。尸体属于同步实体，不能由各机本地观察到的 Player.IsInCombat
+                // 下降沿删除；实际清理由 ServitorSummon.CleanupAfterCombat 的 ExitTb Postfix 统一执行。
             }
             _wasInCombat = now;
 
@@ -289,6 +288,9 @@ namespace DynastyRetinue
             try
             {
                 if (!Main.DevMode || Main.Settings == null || !Main.Settings.AutoEndPlayerTurn) return;
+                // 测试便利功能直接写 EndTurnRequested，不走原版同步 EndTurnManually 命令；
+                // 合作中必须完全禁用，不能让开发机单边跳过玩家回合。
+                if (CoopState.SharedGameplayRequired) return;
                 var tc = Game.Instance != null ? Game.Instance.TurnController : null;
                 if (tc == null || !tc.TurnBasedModeActive || !tc.InCombat) return;
                 if (!tc.IsPlayerTurn || !tc.CanEndTurn) return;

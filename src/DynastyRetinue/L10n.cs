@@ -199,13 +199,22 @@ namespace DynastyRetinue
                 Reset();
 
                 int n = 0;
-                try { n = RetinueTest.RenameAll(); } catch (Exception e) { Main.LogError("[本地化] 重命名失败: " + e.Message); }
+                try
+                {
+                    int resolved = Current;
+                    if (CoopState.SharedGameplayRequired)
+                        CoopCommand.Send("renameall", resolved.ToString(System.Globalization.CultureInfo.InvariantCulture));
+                    else n = RetinueTest.RenameAll();
+                }
+                catch (Exception e) { Main.LogError("[本地化] 重命名失败: " + e.Message); }
 
                 try { if (UI.RetinueUI.IsOpen)  UI.RetinueUI.Refresh();  } catch { }
                 try { if (UI.ShipYardUI.IsOpen) UI.ShipYardUI.Refresh(); } catch { }
 
                 Main.Log("[本地化] 已切到 " + (Current == ZhCN ? "中文" : "English")
-                       + "　卫兵改名 " + n + " 名　（面板和对话选项下一帧自动跟上，不用重启）");
+                       + (CoopState.SharedGameplayRequired
+                          ? "　已发送同步重命名（面板和对话选项下一帧自动跟上）"
+                          : "　卫兵改名 " + n + " 名　（面板和对话选项下一帧自动跟上，不用重启）"));
             }
             catch (Exception e) { Main.LogError("[本地化] 切换失败: " + e); }
         }

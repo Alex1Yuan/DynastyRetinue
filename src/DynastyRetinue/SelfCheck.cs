@@ -136,6 +136,29 @@ namespace DynastyRetinue
                     Warn("人名池", "只有 " + (Archetypes.GuardNamePool == null ? 0 : Archetypes.GuardNamePool.Length)
                                + " 个，卫兵会重名或退回编号");
                 else Ok("人名池", Archetypes.GuardNamePool.Length + " 个");
+
+                // ★机械教下标是存档/联机协议★ kgd.e:arch:elite 写的是原始下标，
+                // 不能为了 UI 分组重排数组。逐项验证，任何一个漂移都必须红灯。
+                ChainProbe.Archetype mech = null;
+                for (int i = 0; i < all.Length; i++)
+                    if (all[i] != null && all[i].Name != null
+                        && all[i].Name.IndexOf("Mechanicus", StringComparison.OrdinalIgnoreCase) >= 0)
+                    { mech = all[i]; break; }
+                string[] ids = {
+                    "aa02b505be774674ae924f19dc17e6f6",
+                    "ab131771270542b69fb7a687062b39c0",
+                    "ca936a024b954b188d2bd397e6ea49d3",
+                    "287d7a4d2bb146998dc450cb3eccee78"
+                };
+                string[] groups = { "dogmatic", "heretek", "dogmatic", "heretek" };
+                bool mapOk = mech != null && mech.Elites != null && mech.Elites.Length >= 4;
+                if (mapOk)
+                    for (int i = 0; i < 4; i++)
+                        mapOk &= mech.Elites[i] != null
+                              && string.Equals(mech.Elites[i].UnitId, ids[i], StringComparison.OrdinalIgnoreCase)
+                              && GearTool.SameRecruitGroup(mech.Elites[i].RecruitGroup, groups[i]);
+                if (mapOk) Ok("机械教招募分组", "原下标 0教条 / 1异端 / 2教条 / 3异端，存档映射未漂移");
+                else Bad("机械教招募分组", "配置缺失或 elites 顺序被改过；会破坏 kgd.e 存档身份与联机 eliteIndex");
             }
             catch (Exception e) { Bad("分型模板", "异常: " + e.Message); }
         }

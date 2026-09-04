@@ -38,6 +38,7 @@ namespace DynastyRetinue
                 Integrity(sb, dir);
                 SettingsDump(sb);
                 RuntimeState(sb);
+                DiagnosticSnapshot.Append(sb);
                 LogTail(sb, dir);
 
                 string name = "dynasty_report_" + Ver() + "_"
@@ -47,7 +48,7 @@ namespace DynastyRetinue
                 LastPath = path;
 
                 Main.Log("[诊断包] 已导出: " + path
-                       + "\n  内容 = 版本/设置/在册情况/舰船状态 + 日志最后 " + (TailBytes / 1024) + " KB，"
+                       + "\n  内容 = 版本/设置/在册/舰船 + 联机mod/DLC + TurnController/busy快照 + 日志最后 " + (TailBytes / 1024) + " KB，"
                        + "用户名已替换成 <USER>。反馈时带上这一个文件就够了。");
                 return path;
             }
@@ -170,6 +171,22 @@ namespace DynastyRetinue
                     n++;
                 }
                 if (n == 0) sb.AppendLine("  (全是默认值)");
+
+                sb.AppendLine("  ---- 其中会影响联机玩法/指纹的非默认项 ----");
+                int gameplay = 0;
+                foreach (var f in typeof(Settings).GetFields(
+                             System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public))
+                {
+                    if (!CoopState.CountsForFingerprint(f.Name)) continue;
+                    object a = null, b = null;
+                    try { a = f.GetValue(cur); b = f.GetValue(def); } catch { continue; }
+                    string sa = a == null ? "null" : a.ToString();
+                    string sbv = b == null ? "null" : b.ToString();
+                    if (sa == sbv) continue;
+                    sb.AppendLine("  ! " + f.Name.PadRight(24) + " = " + sa + "   (默认 " + sbv + ")");
+                    gameplay++;
+                }
+                if (gameplay == 0) sb.AppendLine("  (无；上面的差异均为界面/日志/本地视觉项)");
             }
             catch (Exception e) { sb.AppendLine("  读取失败: " + e.Message); }
             sb.AppendLine();

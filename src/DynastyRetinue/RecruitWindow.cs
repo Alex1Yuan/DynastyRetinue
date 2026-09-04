@@ -80,8 +80,12 @@ namespace DynastyRetinue
                     }
                     else
                     {
-                        int cur = 0;
-                        try { cur = RetinueRegistry.Count; } catch { }
+                        // ★每次 IMGUI 事件只扫一次名册★ Body 每帧有 Layout+Repaint 两轮；
+                        // 原来 Count + 每分型 NextElite/EliteUnlocked/EliteCount 各自 All()，
+                        // 六分型可到 26~38 次全实体快照/帧。共享这一份 roster 后每轮只一次。
+                        System.Collections.Generic.List<BaseUnitEntity> roster = null;
+                        try { roster = RetinueRegistry.All(); } catch { roster = new System.Collections.Generic.List<BaseUnitEntity>(); }
+                        int cur = roster.Count;
                         GUILayout.Label(L.F("在册卫兵 {0} 名。选择要招募的分型：", cur));
                         GUILayout.Space(6);
 
@@ -89,32 +93,28 @@ namespace DynastyRetinue
                         for (int i = 0; i < archs.Length; i++)
                         {
                             var a = archs[i];
-                            GUILayout.BeginHorizontal("box");
-                            GUILayout.BeginVertical();
+                            GUILayout.BeginVertical("box");
                             GUILayout.Label("<b>" + a.Name + "</b>");
-                            var ed = GearTool.NextElite(i);
-                            // ★ 灰按钮必须给理由 ★ 之前只置灰不解释，看起来像坏了
-                            // 灰色标签整条（含 <color> 标签）交给译者，别把标签拆出来拼 —— 拆了就成片段
-                            string why = null;
-                            if (ed == null)
-                            {
-                                if (a.Elites == null || a.Elites.Length == 0)
-                                    why = L.T("<color=#aaaaaa>本分型没有配精英</color>");
-                                else if (!GearTool.EliteUnlocked(i))
-                                    why = L.T("<color=#aaaaaa>精英未解锁 —— 需先有本路线的卫兵练到 T3 职业（面板可勾「无视 T3 解锁条件」）</color>");
-                                else
-                                    why = L.T("<color=#aaaaaa>本分型精英已招满（面板可勾「解除精英数量上限」）</color>");
-                            }
-                            GUILayout.Label(ed != null ? L.F("下一个精英: {0}", ed.Name) : why);
-                            GUILayout.EndVertical();
 
+                            // 普通卫兵是教条/异端共用入口，只显示一次。
+                            GUILayout.BeginHorizontal();
+                            GUILayout.Label(L.T("普通卫兵"));
                             if (GUILayout.Button(L.T("招募 普通"), GUILayout.Width(90)))
                                 Recruit(i, null);
-                            GUI.enabled = ed != null;
-                            if (GUILayout.Button(L.T("招募 精英"), GUILayout.Width(90)))
-                                Recruit(i, ed);
-                            GUI.enabled = true;
                             GUILayout.EndHorizontal();
+
+                            bool split = GearTool.RecruitGroupDefinitionCount(a, "dogmatic") > 0
+                                      && GearTool.RecruitGroupDefinitionCount(a, "heretek") > 0;
+                            if (split)
+                            {
+                                DrawEliteGroup(i, a, "dogmatic", L.T("教条"), roster);
+                                DrawEliteGroup(i, a, "heretek", L.T("异端"), roster);
+                            }
+                            else
+                            {
+                                DrawEliteGroup(i, a, null, null, roster);
+                            }
+                            GUILayout.EndVertical();
                         }
                         GUILayout.EndScrollView();
                     }
@@ -123,7 +123,8 @@ namespace DynastyRetinue
                     GUILayout.BeginHorizontal();
                     if (GUILayout.Button(L.T("遣散全部"), GUILayout.Width(100)))
                     {
-                        try { RetinueRegistry.DismissAll(); } catch (Exception e) { Main.LogError(e.Message); }
+                        // fallback UI 也必须走同步指令；直接 DismissAll 在联机里只删点击者本机。
+                        try { CoopCommand.Send("dismissall"); } catch (Exception e) { Main.LogError(e.Message); }
                     }
                     GUILayout.FlexibleSpace();
                     if (GUILayout.Button(L.T("关闭"), GUILayout.Width(80))) Show = false;
@@ -133,14 +134,38 @@ namespace DynastyRetinue
                 GUI.DragWindow(new Rect(0, 0, 10000, 20));
             }
 
+            private void DrawEliteGroup(int archIndex, ChainProbe.Archetype arch, string group,
+                                        string label, System.Collections.Generic.List<BaseUnitEntity> roster)
+            {
+                GUILayout.BeginHorizontal();
+                if (!string.IsNullOrEmpty(label)) GUILayout.Label("<b>" + label + "</b>", GUILayout.Width(80));
+                var ed = GearTool.NextElite(archIndex, group, roster);
+                string text;
+                if (ed != null) text = L.F("下一个精英: {0}", ed.Name);
+                else if (arch.Elites == null || arch.Elites.Length == 0)
+                    text = L.T("<color=#aaaaaa>本分型没有配精英</color>");
+                else if (WeaponGate.HasMissingRecruitBlockedElite(archIndex, arch, roster, group))
+                    text = L.T("<color=#aaaaaa>近战精英支持已关闭 —— 在面板「解除限制」里重新打开即可招募</color>");
+                else if (!GearTool.EliteUnlocked(archIndex, roster))
+                    text = L.T("<color=#aaaaaa>精英未解锁 —— 需先有本路线的卫兵练到 T3 职业（面板可勾「无视 T3 解锁条件」）</color>");
+                else
+                    text = L.T("<color=#aaaaaa>本路线精英已招满（面板可勾「解除精英数量上限」）</color>");
+                GUILayout.Label(text);
+                GUI.enabled = ed != null;
+                if (GUILayout.Button(L.T("招募 精英"), GUILayout.Width(90))) Recruit(archIndex, ed);
+                GUI.enabled = true;
+                GUILayout.EndHorizontal();
+            }
+
             private void Recruit(int archIndex, ChainProbe.EliteDef elite)
             {
                 try
                 {
-                    var g = RetinueTest.SpawnOne(archIndex, elite, false, elite == null);
-                    Main.Log(g != null
-                        ? "[招募] 成功: " + (elite != null ? elite.Name : "普通卫兵")
-                        : "[招募] 未生成（可能受数量上限或解锁条件限制，看日志）");
+                    // ★1.7.93★ 这是 uGUI 构建失败时的旧 IMGUI 退路，但联机规则不能因此退化：
+                    //   以前这里直接 SpawnOne，合作模式下只有点击者本机生成，UniqueId 随机流
+                    //   当场错位 ⇒ 必然 desync。统一复用 uGUI 的 OnRecruit，单机也走同一条
+                    //   `kgd.recruit` 同步指令路径，不保留第二套生成实现。
+                    UI.RetinueUI.OnRecruit(archIndex, elite);
                 }
                 catch (Exception e) { Main.LogError("[招募] 失败: " + e.Message); }
             }

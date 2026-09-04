@@ -106,8 +106,16 @@ namespace DynastyRetinue
                 try
                 {
                     if (!Main.Enabled) return true;
-                    if (!AnimFallback.AnyMeleeEliteActive) return true;   // ★O(1) 静态 bool★
                     if (__instance == null) return true;
+                    // ★1.7.85 撤掉 AnyMeleeEliteActive★ 那个闸是
+                    //   `realtimeSinceStartup - _lastSeen < 30f` —— **本机墙钟**。
+                    //   而这个补丁改的是 OnAction 的返回值 ⇒ 父指令是否被强制结束
+                    //   ⇒ Strike 何时结算 ⇒ **伤害落点**，是同步量。
+                    //   联机下两台机器帧率不同，30 秒宽限窗口的开头和结尾必然错开，
+                    //   边界上一台闸住一台没闸 ⇒ 伤害落在不同位置 ⇒ 不同步。
+                    //   ★这不是性能退化★ 下面的 IsGateTarget 本来就要跑，
+                    //   它的第一道是 Main.Enabled、第二道是 CombatGroup.Id 前缀比较（O(1)），
+                    //   而 OnAction 挂在 act 事件上，不是每帧路径。
 
                     // 只管我们的卫兵 —— 原版爆发武器理论上走不到这条分支，但不该赌
                     var u = __instance.Executor as BaseUnitEntity;
@@ -185,10 +193,15 @@ namespace DynastyRetinue
             {
                 try
                 {
-                    if (!Main.Enabled) return;
-                    if (!AnimFallback.AnyMeleeEliteActive) return;       // ★O(1)★
+                    // ★1.7.85 调整闸序，并撤掉墙钟闸★
+                    //   原来第一道是 AnyMeleeEliteActive（realtimeSinceStartup 宽限窗口）。
+                    //   但本补丁会改 Strike 借到哪个句柄（Jump 句柄 Act 计数 0 ⇒ hasNewAct 恒假）
+                    //   ⇒ 结算时刻变 ⇒ **伤害落点变**，那是同步量，不能由本机墙钟决定。
+                    //   ★换成 type 比较当第一道，反而更便宜★ 一次 int 比较，
+                    //   而 GetAction 的绝大多数调用 type 都不是 38。
                     if (type != UnitAnimationType.Jump) return;          // 38
                     if (__result != null) return;                        // 原版有，别插手
+                    if (!Main.Enabled) return;
 
                     var view = __instance.View as Kingmaker.View.Mechanics.Entities.AbstractUnitEntityView;
                     var u = view != null ? view.EntityData as BaseUnitEntity : null;
@@ -230,9 +243,16 @@ namespace DynastyRetinue
         /// </summary>
         internal static class JumpWatchdog
         {
-            private static readonly System.Collections.Generic.Dictionary<BaseUnitEntity, float> _armed =
-                new System.Collections.Generic.Dictionary<BaseUnitEntity, float>();
+            private static readonly System.Collections.Generic.HashSet<BaseUnitEntity> _armed =
+                new System.Collections.Generic.HashSet<BaseUnitEntity>();
+            // 联机发现异常后放这里：不再每帧反射扫 m_ActiveActions；每秒只看一次会话状态。
+            private static readonly System.Collections.Generic.HashSet<BaseUnitEntity> _pendingCoop =
+                new System.Collections.Generic.HashSet<BaseUnitEntity>();
+            private static float _nextCoopPendingCheck;
             internal static int Rescued;
+
+            /// <summary>联机跳过强制释放：只提示一次，不刷屏。</summary>
+            private static bool _coopSkipLogged;
 
             private static System.Reflection.FieldInfo _fActive;
             private static bool _lookedActive, _warnedActive;
@@ -288,7 +308,7 @@ namespace DynastyRetinue
                 {
                     if (u == null) return;
                     if (_armed.Count > 16) _armed.Clear();
-                    _armed[u] = UnityEngine.Time.realtimeSinceStartup;
+                    _armed.Add(u);
                 }
                 catch { }
             }
@@ -297,13 +317,26 @@ namespace DynastyRetinue
             {
                 try
                 {
+                    // 联机 pending：每秒只看一次会话状态；会话结束才放回 _armed 清理。
+                    if (_pendingCoop.Count != 0)
+                    {
+                        float t = UnityEngine.Time.realtimeSinceStartup;
+                        if (t >= _nextCoopPendingCheck)
+                        {
+                            _nextCoopPendingCheck = t + 1f;
+                            if (!CoopState.SharedGameplayRequired)
+                            {
+                                foreach (var p in _pendingCoop) if (p != null) _armed.Add(p);
+                                _pendingCoop.Clear();
+                            }
+                        }
+                    }
+
                     if (_armed.Count == 0) return;                       // ★O(1) 早退闸★
-                    float now = UnityEngine.Time.realtimeSinceStartup;
                     System.Collections.Generic.List<BaseUnitEntity> drop = null;
 
-                    foreach (var kv in _armed)
+                    foreach (var u in _armed)
                     {
-                        var u = kv.Key;
                         bool jumping = false;
                         try
                         {
@@ -312,12 +345,13 @@ namespace DynastyRetinue
                             jumping = jp != null && jp.Active != null;
                         }
                         catch { }
-                        // 还在跳、且没超时 ⇒ 继续等
-                        if (jumping && now - kv.Value < 3f) continue;
+                        // ★飞行中一律不碰★ 旧代码允许「飞行超过 3 秒」穿过这里 Release，
+                        //   与下面自己的承诺相反。合法长跳可以超过 3 秒；动画指令提前完成后，
+                        //   UnitJumpMoveController 仍会继续位移，结算/位移再次脱耦。
+                        //   墙钟超时不是同步量，也没有资格决定命令完成。
+                        if (jumping) continue;
 
-                        (drop ?? (drop = new System.Collections.Generic.List<BaseUnitEntity>())).Add(u);
-
-                        // 落地（或超时）后循环还挂着 ⇒ 强制放行，别让它无限跑
+                        // 落地后循环还挂着 ⇒ 单机强制放行；联机移到退避队列，别让它每帧重扫。
                         try
                         {
                             var view = u != null
@@ -337,15 +371,43 @@ namespace DynastyRetinue
                             var cur = FindOurJumpHandle(mgr);
                             if (cur != null && !cur.IsReleased)
                             {
-                                cur.Release();
-                                Rescued++;
-                                Main.Log("[跳跃动作] 看门狗：落地后飞行循环还挂着，已强制释放（"
-                                       + (u.CharacterName ?? "?") + "）。"
-                                       + "★这一行出现说明引擎的 FinishJumpFlyAnimation 没收上尾"
-                                       + "——多半是飞行中 CurrentAction 被别的动作抢走了。★");
+                                // ★1.7.85 联机保护★ Release 会让 AbstractUnitCommand.Tick
+                                //   看到 Animation.IsFinished ⇒ 指令提前完成 ⇒ 同步量。
+                                //   而**触发这次 Release 的两个条件都不是同步量**：
+                                //     · 「已落地」虽然本身是同步状态，但**哪一帧发现**取决于本机帧率
+                                //     · 3 秒超时是纯 realtimeSinceStartup
+                                //   ⇒ 一台救场、另一台没救 = 指令完成时刻分叉 = 不同步。
+                                if (CoopState.SharedGameplayRequired)
+                                {
+                                    // ★不能从 _armed 删除★ 当前能走到这里，就说明原版 Finish 已经漏收尾；
+                                    //   若跳过 Release 后同时遗忘武装，这个循环会永久无人管，离房后也救不了。
+                                    //   保持武装，联机期间只重查不改同步量；退出联机后下一次 Tick 再释放。
+                                    // 移出每帧集合，进入有退避的 pending；房间结束再移回。
+                                    _pendingCoop.Add(u);
+                                    if (!_coopSkipLogged)
+                                    {
+                                        _coopSkipLogged = true;
+                                        Main.Log("[跳跃动作] 联机中，跳过看门狗的强制释放（"
+                                               + (u != null ? (u.CharacterName ?? "?") : "?") + "）。"
+                                               + "★理由：Release 影响指令完成时刻＝同步量，"
+                                               + "而触发它的「哪一帧发现落地」和「3 秒超时」都是本机墙钟。"
+                                               + "会保持武装，退出联机后再处理，不会把异常句柄永久遗忘。★");
+                                    }
+                                }
+                                else
+                                {
+                                    cur.Release();
+                                    Rescued++;
+                                    Main.Log("[跳跃动作] 看门狗：落地后飞行循环还挂着，已强制释放（"
+                                           + (u.CharacterName ?? "?") + "）。"
+                                           + "★这一行出现说明引擎的 FinishJumpFlyAnimation 没收上尾"
+                                           + "——多半是飞行中 CurrentAction 被别的动作抢走了。★");
+                                }
                             }
                         }
                         catch { }
+
+                        (drop ?? (drop = new System.Collections.Generic.List<BaseUnitEntity>())).Add(u);
                     }
                     if (drop != null) foreach (var u in drop) _armed.Remove(u);
                 }
@@ -361,7 +423,10 @@ namespace DynastyRetinue
             {
                 try
                 {
-                    if (!Main.Enabled || !AnimFallback.AnyMeleeEliteActive) return;
+                    // ★1.7.85★ 同样撤掉墙钟闸：武装与否决定看门狗会不会去 Release 句柄，
+                    //   而 Release 会影响指令完成时刻。UnitPartJump.Jump 是低频入口，
+                    //   直接走 IsGateTarget（O(1) 前缀比较打头）就够便宜。
+                    if (!Main.Enabled) return;
                     var u = __instance.Owner as BaseUnitEntity;
                     if (u == null || !WeaponGate.IsGateTarget(u)) return;
                     JumpWatchdog.Arm(u);

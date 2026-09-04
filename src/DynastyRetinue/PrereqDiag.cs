@@ -5,6 +5,7 @@ using Kingmaker.Blueprints;
 using Kingmaker.Blueprints.Facts;
 using Kingmaker.EntitySystem.Entities;
 using Kingmaker.UnitLogic.Progression.Features;
+using Kingmaker.UnitLogic.Progression.Prerequisites;
 
 namespace DynastyRetinue
 {
@@ -39,10 +40,13 @@ namespace DynastyRetinue
                         any = true;
                         if (!Ok(guard, c)) return false;
                     }
-                foreach (var p in Flatten(Member(bp, "Prerequisites")))
+                // 新式 PrerequisitesList 必须让原版自己求值。里面允许 Composite 的
+                // AND / OR / Not；摊平后逐项要求全部通过会把 OR 错算成 AND。
+                var list = bp.Prerequisites;
+                if (list != null && list.Any)
                 {
                     any = true;
-                    if (!Ok(guard, p)) return false;
+                    if (!list.Meet(guard)) return false;
                 }
                 return any;   // 一条前置都没有的，不走补选（那类多半另有门控）
             }

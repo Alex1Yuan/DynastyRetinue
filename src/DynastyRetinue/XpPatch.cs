@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using HarmonyLib;
 using Kingmaker.EntitySystem.Entities;
 using Kingmaker.UnitLogic;
@@ -88,7 +89,7 @@ namespace DynastyRetinue
         private static float ParseF(string s, float dflt)
         {
             float v;
-            return float.TryParse(s, out v) ? v : dflt;
+            return float.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out v) ? v : dflt;
         }
     }
 

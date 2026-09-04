@@ -60,6 +60,13 @@ namespace DynastyRetinue
             /// </summary>
             public string BrainId;
 
+            /// <summary>
+            /// 招募界面的可选分组。当前只认 dogmatic / heretek；纯配置、纯展示/资格维度，
+            /// 不写入存档。精英身份仍由 kgd.e:&lt;archIndex&gt;:&lt;eliteIndex&gt; 的原始下标决定，
+            /// 所以加分组绝不能重排 Elites 数组。
+            /// </summary>
+            public string RecruitGroup;
+
             /// <summary>精英专用单位蓝图 —— 兼作"是不是这个精英"的持久判据。</summary>
             public string UnitId;
             /// <summary>

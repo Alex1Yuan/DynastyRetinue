@@ -133,52 +133,96 @@ namespace DynastyRetinue
         ///   多判只是多跑几帧补丁体（无害）。
         /// </summary>
         /// <summary>
-        /// ★1.7.54 改成「见过就锁存」★
+        /// ★1.7.93：事件驱动的 O(1) 存在性闸★
         ///
-        /// 1.7.51 的写法是每 2 秒重算一次布尔值、算出 false 就立刻关掉所有动画补丁。
-        /// 实测代价：作者反馈「电僧也出问题了」—— 而电僧的不卡死**全靠** F1′/K 那条主修。
-        /// 只要 RetinueRegistry.All() 有**一次**没把它们列进来（过场、实体重建、缓存边界），
-        /// 所有动画补丁就会整整两秒全部失效，主修跟着失效，卡死就回来了。
-        /// ⇒ 我把性能优化排在了功能正确性前面，这是排错了优先级。
+        /// 前两版先用 realtimeSinceStartup、再用 network tick 轮询名册，都不够好：
+        ///   · 墙钟不是同步量；
+        ///   · network tick 虽同步，但「每 10 个渲染帧才采样」仍让两端在不同 tick 建基准；
+        ///   · RetinueRegistry.All() 根本没有缓存，每 2 秒会 ToList/HashSet 全场实体并分配。
         ///
-        /// 现在改成单调的「最后一次见到」时间戳 + 宽限窗口：
-        ///   · 见到过 ⇒ 之后 GraceSec 内一律认为在场，中间漏几次不影响
-        ///   · 真的离场（换区/战斗结束很久）⇒ 超过宽限期自然关掉，性能收益仍在
-        /// ★宁可误报 true★ 漏判会让功能静默失效（这一轮已经栽过好几次，最难查）；
-        ///   多判只是多跑几帧补丁体，无害。
+        /// 现在只在四类明确事件更新：生成、读档/过图、单个摘牌、遣散全部。
+        /// 热路径只读两个 bool，不碰 Game.Instance、不碰网络状态、不扫描实体。
         /// </summary>
-        internal static bool AnyMeleeEliteActive
+        internal static bool AnyMeleeEliteActive { get { return _activeMeleeEliteIds.Count != 0; } }
+        internal static bool RosterHasMeleeElite  { get { return _rosterMeleeEliteIds.Count != 0; } }
+
+        /// <summary>
+        /// 热路径身份查询：按 UID 查事件驱动集合，不再每次解析 EliteTag。
+        /// GetEliteTag 内部会 Substring + Split 分配字符串和数组，只允许在生成/加载事件调用。
+        /// </summary>
+        internal static bool IsKnownMeleeElite(BaseUnitEntity u)
         {
-            get
-            {
-                if (_lastSeen <= 0f) return false;
-                try { return UnityEngine.Time.realtimeSinceStartup - _lastSeen < PresenceGraceSec; }
-                catch { return true; }        // 读不到时间就当在场，别误关功能
-            }
+            string id = StableId(u);
+            return !string.IsNullOrEmpty(id) && _rosterMeleeEliteIds.Contains(id);
         }
 
-        private const float PresenceGraceSec = 30f;
-        private static float _lastSeen, _presenceNext;
+        private static readonly System.Collections.Generic.HashSet<string> _rosterMeleeEliteIds =
+            new System.Collections.Generic.HashSet<string>(StringComparer.Ordinal);
+        private static readonly System.Collections.Generic.HashSet<string> _activeMeleeEliteIds =
+            new System.Collections.Generic.HashSet<string>(StringComparer.Ordinal);
 
-        internal static void RefreshPresence()
+        private static string StableId(BaseUnitEntity u)
+        {
+            try { return u != null ? u.UniqueId : null; }
+            catch { return null; }
+        }
+
+        /// <summary>
+        /// 生成入口：身份标记写好后立即登记。这里故意不要求 IsInGame —— SpawnUnit
+        /// 还在 m_ToSpawn，下一模拟 tick 才入册；等它入册会错过 Faction.Set/ApplyRuntimeState
+        /// 期间同步触发的动画回调。生成失败的回滚会配对调用 ForgetMeleeElite。
+        /// </summary>
+        internal static void ObserveMeleeElite(BaseUnitEntity u)
         {
             try
             {
-                float now = UnityEngine.Time.realtimeSinceStartup;
-                if (now < _presenceNext) return;
-                _presenceNext = now + 2f;
-
-                if (!Main.Enabled) { _lastSeen = 0f; return; }
-                var list = RetinueRegistry.All();
-                if (list == null) return;                 // 拿不到就保持原值，别误关
-                for (int i = 0; i < list.Count; i++)
-                {
-                    var u = list[i];
-                    if (u != null && WeaponGate.IsGateTarget(u)) { _lastSeen = now; return; }
-                }
-                // 没找到：不立刻关，靠上面的宽限期自然过期
+                if (u == null || !WeaponGate.IsMeleeEliteForRegistration(u)) return;
+                string id = StableId(u);
+                if (string.IsNullOrEmpty(id)) return;
+                _rosterMeleeEliteIds.Add(id);
+                _activeMeleeEliteIds.Add(id);
             }
             catch { }
+        }
+
+        /// <summary>
+        /// 读档/过图入口：复用 RetinueLifecycle 已经拿到的名册快照，一次重建两个集合。
+        /// activeArea=false（星图/太空战/全局地图）时保留在册身份，但清空动画热路径闸。
+        /// 必须在 ApplyRuntimeState 之前调用：后者设置 IsInGame 时会同步触发 View/EventBus。
+        /// </summary>
+        internal static void RebuildMeleeEliteRoster(
+            System.Collections.Generic.IEnumerable<BaseUnitEntity> units, bool activeArea)
+        {
+            _rosterMeleeEliteIds.Clear();
+            _activeMeleeEliteIds.Clear();
+            if (units == null) return;
+            try
+            {
+                foreach (var u in units)
+                {
+                    if (u == null || !WeaponGate.IsMeleeEliteForRegistration(u)) continue;
+                    string id = StableId(u);
+                    if (string.IsNullOrEmpty(id)) continue;
+                    _rosterMeleeEliteIds.Add(id);
+                    if (activeArea) _activeMeleeEliteIds.Add(id);
+                }
+            }
+            catch { }
+        }
+
+        internal static void ForgetMeleeElite(BaseUnitEntity u)
+        {
+            string id = StableId(u);
+            if (string.IsNullOrEmpty(id)) return;
+            _rosterMeleeEliteIds.Remove(id);
+            _activeMeleeEliteIds.Remove(id);
+        }
+
+        internal static void ClearActiveMeleeElites() { _activeMeleeEliteIds.Clear(); }
+        internal static void ClearMeleeEliteRoster()
+        {
+            _rosterMeleeEliteIds.Clear();
+            _activeMeleeEliteIds.Clear();
         }
 
         internal static bool Applies(UnitAnimationActionHandle handle)
@@ -1137,12 +1181,17 @@ namespace DynastyRetinue
             {
                 if (!AnimFallback.AnyMeleeEliteActive) return;   // ★全局闸：一次静态 bool★
                 if (__instance == null) return;
+                // ★便宜/常见判据必须先走★ 这是每个动画句柄每帧的 Postfix；绝大多数正常句柄
+                //   都会在这里返回，不能先去读 NetworkingManager。
                 if (!__instance.IsStarted || __instance.IsFinished || __instance.IsReleased) return;
                 if (__instance.ActiveAnimation != null) return;  // 正常在播，别碰
 
                 var h = __instance as UnitAnimationActionHandle;
                 if (h == null || !AnimFallback.Applies(h)) return;
 
+                // ★联机禁用本机动画状态救场★ 只在真正命中异常目标、紧邻 Release 前才读。
+                // ActiveAnimation 属于本机表现状态；Release 会改变指令完成时刻。
+                if (CoopState.SharedGameplayRequired) return;
                 AnimFallback.NoteDeadlock();
                 __instance.Release();
             }

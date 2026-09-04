@@ -47,8 +47,13 @@ namespace DynastyRetinue
         private static readonly string[] Keys =
         {
             // —— 生成与跟随
-            "UnitAssetId", "ArchetypeIndex", "AttachFollow", "IsolateMomentum",
-            "GuardsCanShootInMelee", "GuardNamePrefix",
+            // Language 必须同步的是已经解析后的 L.Current(1/2)，不能发原始 Auto=0；
+            // 否则中英文游戏两端仍会在 ApplyName 中写出不同 CustomName。
+            "Language", "UnitAssetId", "ArchetypeIndex", "AttachFollow", "IsolateMomentum",
+            "GuardsCanShootInMelee",
+            // 外观会决定异步创建/重建哪个完整 UnitEntityView（含 AnimationManager），
+            // 不是纯颜色；必须随招募命令同步，不能命令返回后再读各自本机矩阵。
+            "LookMatrix", "HideGearLook",
             // —— 等级与经验（今天翻车的就在这一组）
             "AlignExperience", "AutoLevelUp", "ScaleGuardXp", "XpRatio",
             "XpCatchUp", "XpCatchUpMax", "XpCatchUpSpan",
@@ -75,7 +80,7 @@ namespace DynastyRetinue
                     var f = t.GetField(k, BindingFlags.Public | BindingFlags.Instance);
                     if (f == null) continue;                 // 字段改名/删除 —— 跳过，不要崩
                     object v = null;
-                    try { v = f.GetValue(st); } catch { continue; }
+                    try { v = k == "Language" ? (object)L.Current : f.GetValue(st); } catch { continue; }
                     outp.Add(k + "=" + ToText(v));
                 }
             }
@@ -118,6 +123,56 @@ namespace DynastyRetinue
             return saved;
         }
 
+        /// <summary>
+        /// 两阶段自动恢复专用的严格套用：所有协议字段必须恰好出现一次且成功写入。
+        /// 普通 Apply 为兼容旧协议会静默跳过坏字段，不能拿它判断“本机已 ready”。
+        /// </summary>
+        public static bool TryApplyExact(string[] args, int from,
+                                         out Dictionary<string, object> saved, out string failure)
+        {
+            saved = new Dictionary<string, object>(StringComparer.Ordinal);
+            failure = "";
+            try
+            {
+                var st = Main.Settings;
+                if (st == null || args == null) { failure = "Settings 或载荷为空"; return false; }
+                if (from < 0 || args.Length - from != Keys.Length)
+                { failure = "设置字段数量不符"; return false; }
+
+                var t = st.GetType();
+                var seen = new HashSet<string>(StringComparer.Ordinal);
+                for (int i = from; i < args.Length; i++)
+                {
+                    string kv = args[i];
+                    int eq = !string.IsNullOrEmpty(kv) ? kv.IndexOf('=') : -1;
+                    if (eq <= 0) { failure = "设置项格式无效"; Restore(saved); return false; }
+                    string k = kv.Substring(0, eq);
+                    string v = kv.Substring(eq + 1);
+                    if (Array.IndexOf(Keys, k) < 0 || !seen.Add(k))
+                    { failure = "未知或重复设置字段 " + k; Restore(saved); return false; }
+                    var f = t.GetField(k, BindingFlags.Public | BindingFlags.Instance);
+                    if (f == null) { failure = "本机缺少设置字段 " + k; Restore(saved); return false; }
+                    object parsed;
+                    if (!FromText(f.FieldType, v, out parsed))
+                    { failure = "设置字段解析失败 " + k; Restore(saved); return false; }
+                    object cur = f.GetValue(st);
+                    saved[k] = cur;
+                    try { f.SetValue(st, parsed); }
+                    catch (Exception e)
+                    { failure = "设置字段写入失败 " + k + "：" + e.Message; Restore(saved); return false; }
+                }
+                if (seen.Count != Keys.Length)
+                { failure = "设置字段不完整"; Restore(saved); return false; }
+                return true;
+            }
+            catch (Exception e)
+            {
+                failure = "严格套用设置失败：" + e.Message;
+                Restore(saved);
+                return false;
+            }
+        }
+
         /// <summary>还原 Apply 之前的值。任何情况下都要调到。</summary>
         public static void Restore(Dictionary<string, object> saved)
         {
@@ -158,6 +213,9 @@ namespace DynastyRetinue
         /// <summary>对端发来的设置（字段名 -> 值）。空 = 还没核对过。</summary>
         private static Dictionary<string, string> _remote;
         private static string _remoteWho = "";
+        // 收到别人主动发来的 cfg 后，在下一帧回送本机设置。
+        // 不能在同步 GameCommand 执行栈里当场 Send（引擎禁止 effect context 嵌套同步命令）。
+        private static bool _replyPending;
 
         /// <summary>本机全部参与比对的设置（口径和指纹完全一致）。</summary>
         public static List<string> CaptureAll()
@@ -183,6 +241,10 @@ namespace DynastyRetinue
         /// <summary>收下对端发来的设置。</summary>
         public static void ReceiveRemote(string who, string[] args, int from)
         {
+            bool request = args != null && args.Length > from && args[from] == "@request";
+            bool response = args != null && args.Length > from && args[from] == "@response";
+            if (request || response) from++;
+
             // ★自己发的那份要丢掉★ 指令在两台机器上都执行，发起方也会收到自己那份；
             //   拿自己和自己比永远是"完全一致"，真正的差异只有对端看得到。
             string me = CoopState.LocalUserId;
@@ -199,7 +261,22 @@ namespace DynastyRetinue
                 if (eq > 0) d[args[i].Substring(0, eq)] = args[i].Substring(eq + 1);
             }
             _remote = d; _remoteWho = string.IsNullOrEmpty(who) ? "?" : who;
+            if (request) _replyPending = true;     // 响应不再回送，避免无限乒乓
             Main.Log("[合作] 收到对端设置 " + d.Count + " 项，来自 " + _remoteWho + "。" + DiffText());
+        }
+
+        /// <summary>由 Main.OnUpdate 调；常态一次 bool 读取，只有收到 request 才发一条 response。</summary>
+        public static void TickReply()
+        {
+            if (!_replyPending) return;
+            _replyPending = false;
+            try
+            {
+                var args = new List<string> { CoopState.LocalUserId, "@response" };
+                args.AddRange(CaptureAll());
+                CoopCommand.Send("cfg", args.ToArray());
+            }
+            catch (Exception e) { Main.LogError("[合作] 回送设置失败：" + e.Message); }
         }
 
         /// <summary>本机和对端的差异，给面板和日志用。没核对过返回空串。</summary>
@@ -226,15 +303,106 @@ namespace DynastyRetinue
                     if (a == b) continue;
                     n++;
                     if (n <= 12)
-                        sb.Append(Environment.NewLine).Append("    ").Append(k)
-                          .Append("：你=").Append(a ?? "(无)")
-                          .Append("　对方=").Append(b ?? "(无)");
+                        sb.Append(Environment.NewLine).Append("    ").Append(SettingLabel(k))
+                          .Append("（").Append(k).Append("）")
+                          .Append(L.Current == L.ZhCN ? "：你=" : ": You=")
+                          .Append(DisplayValue(k, a))
+                          .Append(L.Current == L.ZhCN ? "　对方=" : "  Remote=")
+                          .Append(DisplayValue(k, b));
                 }
                 if (n == 0) return L.T("　—— 双方设置完全一致。");
                 string more = (n > 12) ? L.F("（另有 {0} 项未列出）", n - 12) : "";
                 return L.F("　★{0} 项不一致{1}：", n, more) + sb;
             }
             catch { return ""; }
+        }
+
+        private static string SettingLabel(string k)
+        {
+            bool zh = L.Current == L.ZhCN;
+            switch (k)
+            {
+                case "UnitAssetId": return zh ? "全局兜底单位" : "Fallback unit";
+                case "ArchetypeIndex": return zh ? "面板默认招募分型" : "Default recruit archetype";
+                case "DialogRecruitEntry": return zh ? "NPC 对话招募入口" : "Recruit option in NPC dialog";
+                case "NpcRecruitEntry": return zh ? "点击 NPC 招募入口" : "Clickable NPC recruit entry";
+                case "HideGearLook": return zh ? "隐藏卫兵装备外观" : "Hide guard gear visuals";
+                case "LookMatrix": return zh ? "卫兵外观分配表" : "Guard appearance matrix";
+                case "AttachFollow": return zh ? "跟随队长" : "Follow leader";
+                case "AlignExperience": return zh ? "招募时对齐经验" : "Align experience on recruit";
+                case "IsolateMomentum": return zh ? "士气隔离" : "Isolate momentum";
+                case "UnlockTierLimits": return zh ? "全部解除限制" : "Remove all limits";
+                case "UnlockPfGate": return zh ? "解除利润因子限制" : "Ignore profit-factor gate";
+                case "UnlockCountCap": return zh ? "解除数量上限" : "Remove guard cap";
+                case "UnlockLevelCap": return zh ? "解除等级上限" : "Remove level cap";
+                case "MeleeEliteNoEndTurn": return zh ? "森罗刃网不结束回合" : "Blade Shroud does not end turn";
+                case "WoundAbilityHpFloor": return zh ? "烧血技能血量下限" : "HP floor for wound-cost abilities";
+                case "CommandStallWatch": return zh ? "指令卡顿探针" : "Command stall probe";
+                case "StuckRescue": return zh ? "非战斗卡住自动传送" : "Out-of-combat stuck rescue";
+                case "GuardAutoHeal": return zh ? "非战斗自动回血" : "Out-of-combat auto-heal";
+                case "TraumaMode": return zh ? "卫兵创伤模式" : "Guard trauma mode";
+                case "ScaleGuardXp": return zh ? "卫兵经验缩放" : "Scale guard XP";
+                case "XpRatio": return zh ? "卫兵经验倍率" : "Guard XP ratio";
+                case "XpCatchUp": return zh ? "经验追赶" : "XP catch-up";
+                case "XpCatchUpMax": return zh ? "经验追赶倍率上限" : "XP catch-up maximum";
+                case "XpCatchUpSpan": return zh ? "经验追赶等级差" : "XP catch-up level span";
+                case "SeparateMomentumPool": return zh ? "卫队独立士气池" : "Separate guard momentum pool";
+                case "GuardKillFeedsOwnPool": return zh ? "卫兵击杀给卫队池加分" : "Guard kills feed guard pool";
+                case "NoCameraFollowGuards": return zh ? "卫兵行动时镜头不跟随" : "Do not follow guards with camera";
+                case "GuardPsykerNoVeil": return zh ? "卫兵灵能不推高帷幕" : "Guard psykers do not raise veil";
+                case "GuardsCanShootInMelee": return zh ? "卫兵缠斗中可开火" : "Guards can shoot in melee";
+                case "RecruitUsePfGate": return zh ? "用利润因子解锁名额" : "Use profit factor for slots";
+                case "RecruitPfPerGuard": return zh ? "每名卫兵所需利润因子" : "Profit factor per guard";
+                case "RecruitMaxGuards": return zh ? "卫兵硬上限" : "Maximum guards";
+                case "AutoLevelUp": return zh ? "过图自动补升级" : "Auto level-up on area load";
+                case "EquipGraduationGear": return zh ? "发放配表装备" : "Equip configured gear";
+                case "GearTierOverride": return zh ? "装备档位覆盖" : "Gear tier override";
+                case "EliteLimitPerArchetype": return zh ? "每种精英数量上限" : "Elite limit per definition";
+                case "UnlockEliteLimit": return zh ? "解除精英数量上限" : "Remove elite cap";
+                case "EliteIgnoreUnlock": return zh ? "无视精英 T3 解锁" : "Ignore elite T3 unlock";
+                case "EliteCanBeDowned": return zh ? "精英可倒地救援" : "Elites can be downed";
+                case "ShipArtPreferLance": return zh ? "同挂点优先显示光矛" : "Prefer lance art on shared mount";
+                case "ShipDialogEntry": return zh ? "NPC 对话船坞入口" : "Shipyard option in NPC dialog";
+                case "ShipDollResnap": return zh ? "改装界面自动重拍船模" : "Refresh ship-doll after refit";
+                case "ShipDollScale": return zh ? "改装界面船模缩放" : "Ship-doll scale";
+                case "ShipMountFallback": return zh ? "合成缺失舰船武器挂点" : "Synthesize missing ship mounts";
+                case "ShipPriceCruiser": return zh ? "巡洋舰改装价格" : "Cruiser refit price";
+                case "ShipPriceGrand": return zh ? "大巡洋舰改装价格" : "Grand-cruiser refit price";
+                case "ShipProwOffsetPct": return zh ? "舰首挂点前后微调" : "Prow mount longitudinal offset";
+                case "ShipProwUpPct": return zh ? "舰首挂点高度微调" : "Prow mount vertical offset";
+                case "ShipProwUseLearned": return zh ? "使用学到的舰首挂点" : "Use learned prow mount";
+                case "ShipStretchModel": return zh ? "船模按分档等比放大" : "Scale ship model to size tier";
+                case "ShipSynthKeel": return zh ? "合成船底挂点" : "Synthesize keel mount";
+                case "ShipYardUnlockAll": return zh ? "解除船体更换限制" : "Unlock all ship hulls";
+                case "StarMapShipModelSectorMat": return zh ? "扇区图替换船模材质" : "Replace sector-map ship material";
+                case "ShipExtraShots": return zh ? "舰船额外开火次数" : "Extra ship shots";
+                case "ShipCruiserBroadside": return zh ? "巡洋舰舷炮额外次数" : "Cruiser broadside extra shots";
+                case "ShipGrandBroadside": return zh ? "大巡舷炮额外次数" : "Grand-cruiser broadside extra shots";
+                case "ShipGrandProw": return zh ? "大巡舰首额外次数" : "Grand-cruiser prow extra shots";
+                case "ShipCruiserRange": return zh ? "巡洋舰舰首射程加成" : "Cruiser prow range bonus";
+                case "ShipGrandRangeBroadside": return zh ? "大巡舷炮射程加成" : "Grand-cruiser broadside range bonus";
+                case "ShipGrandRangeProw": return zh ? "大巡舰首射程加成" : "Grand-cruiser prow range bonus";
+                case "ShipCruiserShieldPct": return zh ? "巡洋舰护盾加成" : "Cruiser shield bonus";
+                case "ShipGrandShieldPct": return zh ? "大巡护盾加成" : "Grand-cruiser shield bonus";
+                case "ShipCruiserArmourPct": return zh ? "巡洋舰装甲加成" : "Cruiser armour bonus";
+                case "ShipGrandArmourPct": return zh ? "大巡装甲加成" : "Grand-cruiser armour bonus";
+                case "ShipCruiserRamPct": return zh ? "巡洋舰撞角行程加成" : "Cruiser ram range bonus";
+                case "ShipGrandRamPct": return zh ? "大巡撞角行程加成" : "Grand-cruiser ram range bonus";
+                case "ShipSwitchInCombat": return zh ? "战斗中允许换船档" : "Allow ship refit in combat";
+                case "ShipArcFix": return zh ? "舰炮射界按真实占位" : "Use true footprint for firing arcs";
+                default: return k;
+            }
+        }
+
+        private static string DisplayValue(string key, string v)
+        {
+            if (v == null) return L.Current == L.ZhCN ? "（无）" : "(missing)";
+            var f = typeof(Settings).GetField(key, BindingFlags.Public | BindingFlags.Instance);
+            if (f != null && f.FieldType == typeof(bool))
+                return v == "1" || v.Equals("true", StringComparison.OrdinalIgnoreCase)
+                    ? (L.Current == L.ZhCN ? "开" : "On")
+                    : (L.Current == L.ZhCN ? "关" : "Off");
+            return v;
         }
 
         // ------------------------------------------------------------------

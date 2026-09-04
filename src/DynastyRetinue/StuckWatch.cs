@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
+using System.Security.Cryptography;
 using Kingmaker;
 using Kingmaker.EntitySystem.Entities;
 using Kingmaker.UnitLogic;          // SnapToGrid 扩展方法
@@ -17,10 +19,10 @@ namespace DynastyRetinue
     ///   走廊、门框、狭窄楼梯很可能过不去。这个机制不是为了掩盖问题，
     ///   而是让"过不去"从"卫兵永远留在上一个房间"降级成"晚几秒自己跟上"。
     ///
-    /// ★积木是现成的★
-    ///   过图/读档后的摆位（RetinueLifecycle.TickPending）已经在用
-    ///   `Position = leader.Position; SnapToGrid();`，这里复用同一套。
-    ///   区别只是触发条件：那边是"区域刚加载"，这边是"卡了一段时间"。
+    /// ★合作模式如何保留体验★
+    ///   仍然自动检测、自动救援，但只有确认房主判定；房主先只读规划最终 navmesh 节点，
+    ///   再通过 kgd.rescue 把 area + uid + 最终坐标广播。两端同一 simulation tick 直接落到
+    ///   同一坐标，副机不自行判定、也不再运行本地 SnapToGrid。
     ///
     /// ★三个条件必须同时成立才传送★
     ///   ① 不在战斗中 —— 战斗里位移本身就是战术资源，瞬移是作弊；
@@ -123,6 +125,12 @@ namespace DynastyRetinue
                 if (++_frameSkip < FrameSkip) return;
                 _frameSkip = 0;
 
+                // ★合作模式只允许房主做检测★ 但房主也不直接写 Position；命中后发送
+                // 两阶段 rescue 事务，同一提交命令让两端落到房主规划的最终坐标。
+                // 加入方立即早退，它的帧率、Anchor 和跟随进度不参与判定。
+                bool shared = CoopState.SharedGameplayRequired;
+                if (shared && !CoopState.IsConfirmedHost) return;
+
                 var game = Game.Instance;
                 if (game == null || game.Player == null) return;
 
@@ -154,9 +162,17 @@ namespace DynastyRetinue
                 if (elapsed < ScanTicks) return;
                 _lastScanTick = now;
 
-                // ① 战斗中一概不动
+                // ① Player 或 TurnController 任一仍在战斗都不动。
+                // ExCompanion 卫兵不在 PartyAndPets；Player.IsInCombat 可能先变 false，
+                // 而 TurnController 仍在 EndingTurn/处理卫兵。旧版就在这个窗口把两名卫兵
+                // 传送回队长，干扰了真实卡住现场，联机还可能直接造成位置分叉。
                 bool inCombat;
-                try { inCombat = game.Player.IsInCombat; } catch { return; }
+                try
+                {
+                    var tc = game.TurnController;
+                    inCombat = game.Player.IsInCombat || (tc != null && tc.InCombat);
+                }
+                catch { return; }
                 if (inCombat) { _rows.Clear(); return; }
 
                 var leader = game.Player.MainCharacterEntity;
@@ -213,15 +229,40 @@ namespace DynastyRetinue
 
                     try
                     {
-                        // 跟过图摆位同一套：先停下寻路，再落到队长脚下吸附
-                        try { if (g.View != null && g.View.AgentASP != null) g.View.AgentASP.Stop(); } catch { }
-                        g.Position = leader.Position;
-                        g.SnapToGrid();
-                        Main.Log($"[卡住] {NameOf(g)} 静止 {r.StillTicks / TicksPerSecond} 秒且距队长 {dist:F0} 米，已挪回队长身边。");
+                        // 无论单机还是联机都先只读规划最终节点；联机把这个精确结果广播，
+                        // 单机则直接使用。执行侧不再二次寻路。
+                        Vector3 target;
+                        if (!RetinueLifecycle.TryPlanPosition(g, leader.Position, out target))
+                        {
+                            Main.LogError("[卡住] 无法为 " + NameOf(g) + " 规划落点，本轮不传送。");
+                            r.StillTicks = 0;
+                            continue;
+                        }
+                        if (shared)
+                        {
+                            // 房主把 node.Vector3Position 原样写进载荷；副机不重新读取主角位置。
+                            bool sent = CoopAutoTransaction.Begin("rescue", new[]
+                            {
+                                id, RetinueLifecycle.CurrentAreaId(),
+                                F(target.x), F(target.y), F(target.z)
+                            });
+                            if (!sent)
+                            {
+                                r.StillTicks = 0;
+                                r.CooldownLeft = 0;
+                                continue;
+                            }
+                            Main.Log($"[卡住] {NameOf(g)} 静止 {r.StillTicks / TicksPerSecond} 秒且距队长 {dist:F0} 米，房主已发同步救援。");
+                        }
+                        else
+                        {
+                            PlaceAt(g, target);
+                            Main.Log($"[卡住] {NameOf(g)} 静止 {r.StillTicks / TicksPerSecond} 秒且距队长 {dist:F0} 米，已挪回队长身边。");
+                        }
                     }
                     catch (Exception e) { Main.LogError("[卡住] 传送失败: " + e.Message); }
 
-                    r.Anchor = g.Position;
+                    r.Anchor = shared ? leader.Position : g.Position;
                     r.StillTicks = 0;
                     r.NearReported = false;
                     r.CooldownLeft = CooldownTicks;
@@ -229,6 +270,141 @@ namespace DynastyRetinue
             }
             catch (Exception e) { Main.LogError("[卡住] Tick: " + e.Message); }
         }
+
+        private static string F(float value)
+        {
+            return value.ToString("R", CultureInfo.InvariantCulture);
+        }
+
+        private static bool TryAnchor(string[] args, int offset, out Vector3 anchor)
+        {
+            anchor = default(Vector3);
+            if (args == null || args.Length < offset + 3) return false;
+            float x, y, z;
+            if (!float.TryParse(args[offset], NumberStyles.Float, CultureInfo.InvariantCulture, out x)
+                || !float.TryParse(args[offset + 1], NumberStyles.Float, CultureInfo.InvariantCulture, out y)
+                || !float.TryParse(args[offset + 2], NumberStyles.Float, CultureInfo.InvariantCulture, out z))
+                return false;
+            if (float.IsNaN(x) || float.IsNaN(y) || float.IsNaN(z)
+                || float.IsInfinity(x) || float.IsInfinity(y) || float.IsInfinity(z)) return false;
+            anchor = new Vector3(x, y, z);
+            return true;
+        }
+
+        internal static void PlaceAt(BaseUnitEntity unit, Vector3 exactPosition)
+        {
+            if (unit == null) return;
+            try { unit.Commands.InterruptAiCommands(); } catch { }
+            try
+            {
+                try { if (unit.View != null && unit.View.AgentASP != null) unit.View.AgentASP.Blocker.Unblock(); } catch { }
+                try { unit.Position = exactPosition; }
+                catch (Exception e)
+                {
+                    // setter 先写持久 m_Position，再跑 View/节点回调；目标值已落地就不回滚。
+                    if ((unit.Position - exactPosition).sqrMagnitude > 0.0001f) throw;
+                    Main.LogError("[合作事务] rescue 坐标已写入，但本地后续回调异常：" + e.Message);
+                }
+                if ((unit.Position - exactPosition).sqrMagnitude > 0.0001f)
+                    throw new InvalidOperationException("位置写入后读回不一致：" + unit.UniqueId);
+            }
+            finally
+            {
+                try { if (unit.View != null && unit.View.AgentASP != null) unit.View.AgentASP.UpdateBlocker(); } catch { }
+            }
+        }
+
+        private sealed class RescueTransactionPlan
+        {
+            public BaseUnitEntity Unit;
+            public string Uid;
+            public string Area;
+            public Vector3 Position;
+            public Vector3 LeaderPosition;
+        }
+
+        internal static bool TryPrepareSynchronizedRescue(
+            string[] args, out object opaquePlan, out string signature, out string failure)
+        {
+            opaquePlan = null; signature = ""; failure = "";
+            if (args == null || args.Length != 5) { failure = "rescue 参数无效"; return false; }
+            string uid = args[0], area = args[1];
+            if (string.IsNullOrEmpty(uid) || string.IsNullOrEmpty(area)
+                || !string.Equals(area, RetinueLifecycle.CurrentAreaId(), StringComparison.Ordinal))
+            { failure = "rescue 区域或 UID 无效"; return false; }
+
+            var game = Game.Instance;
+            var tc = game != null ? game.TurnController : null;
+            if (game == null || game.Player == null || game.Player.IsInCombat || (tc != null && tc.InCombat))
+            { failure = "游戏未就绪或仍在战斗"; return false; }
+
+            Vector3 exactPosition;
+            if (!TryAnchor(args, 2, out exactPosition)) { failure = "rescue 坐标解析失败"; return false; }
+            BaseUnitEntity unit = null;
+            int now = 0;
+            try { now = game.RealTimeController.CurrentNetworkTick; } catch { }
+            var guards = Guards(now);
+            if (guards != null)
+                for (int i = 0; i < guards.Count; i++)
+                    if (guards[i] != null && string.Equals(guards[i].UniqueId, uid, StringComparison.Ordinal))
+                    { unit = guards[i]; break; }
+            if (unit == null) { failure = "rescue 找不到卫兵 " + uid; return false; }
+            var bp = unit.OriginalBlueprint ?? unit.Blueprint;
+            if (bp == null) { failure = "rescue 卫兵蓝图为空 " + uid; return false; }
+
+            var leader = game.Player.MainCharacterEntity;
+            if (leader == null) { failure = "rescue 主角未就绪"; return false; }
+            string raw = "rescue|" + uid.Length + ":" + uid
+                       + area.Length + ":" + area
+                       + bp.AssetGuid.ToString()
+                       + "|" + args[2] + "|" + args[3] + "|" + args[4]
+                       + "|" + leader.Position.x.ToString("R", CultureInfo.InvariantCulture)
+                       + "|" + leader.Position.y.ToString("R", CultureInfo.InvariantCulture)
+                       + "|" + leader.Position.z.ToString("R", CultureInfo.InvariantCulture)
+                       + "|" + (unit.Commands != null ? "commands" : "no-commands");
+            byte[] bytes = System.Text.Encoding.UTF8.GetBytes(raw);
+            using (var sha = SHA256.Create()) signature = Convert.ToBase64String(sha.ComputeHash(bytes));
+            opaquePlan = new RescueTransactionPlan
+            {
+                Unit = unit, Uid = uid, Area = area, Position = exactPosition,
+                LeaderPosition = leader.Position
+            };
+            return true;
+        }
+
+        internal static bool CanCommitSynchronizedRescue(object opaquePlan, out string failure)
+        {
+            failure = "";
+            var plan = opaquePlan as RescueTransactionPlan;
+            if (plan == null) { failure = "rescue 计划类型无效"; return false; }
+            try
+            {
+                var game = Game.Instance;
+                var tc = game != null ? game.TurnController : null;
+                if (game == null || game.Player == null || game.Player.IsInCombat || (tc != null && tc.InCombat))
+                { failure = "游戏未就绪或已进入战斗"; return false; }
+                if (!string.Equals(plan.Area, RetinueLifecycle.CurrentAreaId(), StringComparison.Ordinal))
+                { failure = "区域已变化"; return false; }
+                if (plan.Unit == null || plan.Unit.IsDisposed || !RetinueRegistry.IsGuard(plan.Unit)
+                    || !string.Equals(plan.Unit.UniqueId, plan.Uid, StringComparison.Ordinal))
+                { failure = "卫兵已不在册"; return false; }
+                var leader = game.Player.MainCharacterEntity;
+                if (leader == null || (leader.Position - plan.LeaderPosition).sqrMagnitude > 0.01f)
+                { failure = "主角在 prepare 后又发生位移"; return false; }
+                return true;
+            }
+            catch (Exception e) { failure = "rescue 提交前校验失败：" + e.Message; return false; }
+        }
+
+        internal static void CommitSynchronizedRescue(object opaquePlan)
+        {
+            var plan = opaquePlan as RescueTransactionPlan;
+            if (plan == null) throw new InvalidOperationException("rescue 提交计划类型无效");
+            var before = plan.Unit.Position;
+            PlaceAt(plan.Unit, plan.Position);
+            Main.Log("[合作事务] 同步救援 " + NameOf(plan.Unit) + " " + before + " -> " + plan.Unit.Position);
+        }
+
 
         /// <summary>日志用的显示名。取不到就退回蓝图名，不让日志里出现空串。</summary>
         private static string NameOf(BaseUnitEntity u)
@@ -242,8 +418,26 @@ namespace DynastyRetinue
             try { return u.Blueprint != null ? u.Blueprint.name : "?"; } catch { return "?"; }
         }
 
+        /// <summary>单个离册事件清账；不等下一次全量扫描，也不留下历史 Row。</summary>
+        internal static void Forget(string uid)
+        {
+            if (string.IsNullOrEmpty(uid)) return;
+            _rows.Remove(uid);
+            if (_guards != null)
+                for (int i = _guards.Count - 1; i >= 0; i--)
+                    if (_guards[i] == null || string.Equals(_guards[i].UniqueId, uid, StringComparison.Ordinal))
+                        _guards.RemoveAt(i);
+        }
+
         /// <summary>遣散/读档后清账，免得旧 id 一直留在表里。</summary>
-        public static void Reset() { _rows.Clear(); _lastScanTick = 0; _frameSkip = 0; _guards = null; _guardsAt = int.MinValue; }
+        public static void Reset()
+        {
+            _rows.Clear();
+            _lastScanTick = 0;
+            _frameSkip = 0;
+            _guards = null;
+            _guardsAt = int.MinValue;
+        }
 
         /// <summary>
         /// 卫兵名单，带缓存。
