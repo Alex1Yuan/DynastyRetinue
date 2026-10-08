@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+using System;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
@@ -31,17 +30,18 @@ namespace DynastyRetinue.UI
 
         private static GameObject _root;
         private static Transform _content;
-        private static TextMeshProUGUI _header, _reply;
+        private static TextMeshProUGUI _title, _header, _reply;
         private static Button _revertBtn;
         private static string _replyText = "";
 
         public static bool IsOpen { get { return _root != null; } }
 
-        /// <summary>对话入口开窗。曾经想"对话结束自动关"，行不通 —— 见 RetinueUI.OpenFromDialog 的注释。</summary>
+        /// <summary>对话入口关闭后延迟开窗；也可由 UMM 的“打开船坞”直接调用。</summary>
         public static void OpenFromDialog() { Open(); }
 
         public static void Open()
         {
+            RetinueUI.Close();
             if (IsOpen) { Refresh(); return; }
             try
             {
@@ -73,7 +73,8 @@ namespace DynastyRetinue.UI
         {
             try { if (_root != null) UnityEngine.Object.Destroy(_root); }
             catch (Exception e) { Main.LogError("[船坞UI] 关窗异常: " + e.Message); }
-            _root = null; _content = null; _header = null; _reply = null; _revertBtn = null;
+            _root = null; _content = null; _title = null; _header = null; _reply = null;
+            _revertBtn = null;
         }
 
         public static void Shutdown()
@@ -99,23 +100,24 @@ namespace DynastyRetinue.UI
             prt.anchorMin = new Vector2(0.5f, 0.5f);
             prt.anchorMax = new Vector2(0.5f, 0.5f);
             prt.pivot     = new Vector2(0.5f, 0.5f);
-            prt.sizeDelta = new Vector2(980f, 720f);
+            prt.sizeDelta = new Vector2(1180f, 820f);
             prt.anchoredPosition = Vector2.zero;
 
-            var title = RetinueUI.MakeLabelPublic(panel.transform, L.T("船坞 · 座舰改装"), 30f,
-                                                  VanillaSkin.Gold, TextAlignmentOptions.Left);
-            var trt = (RectTransform)title.transform;
+            _title = RetinueUI.MakeLabelPublic(panel.transform, L.T("船坞"), 30f,
+                                                VanillaSkin.Gold, TextAlignmentOptions.Left);
+            _title.overflowMode = TextOverflowModes.Overflow;
+            var trt = (RectTransform)_title.transform;
             trt.anchorMin = new Vector2(0f, 1f); trt.anchorMax = new Vector2(1f, 1f);
             trt.pivot = new Vector2(0.5f, 1f);
-            trt.offsetMin = new Vector2(32f, -70f); trt.offsetMax = new Vector2(-40f, -24f);
+            trt.offsetMin = new Vector2(32f, -64f); trt.offsetMax = new Vector2(-40f, -20f);
 
             _header = RetinueUI.MakeLabelPublic(panel.transform, "", 18f,
                                                 VanillaSkin.Text, TextAlignmentOptions.Left);
             var hrt = (RectTransform)_header.transform;
             hrt.anchorMin = new Vector2(0f, 1f); hrt.anchorMax = new Vector2(1f, 1f);
             hrt.pivot = new Vector2(0.5f, 1f);
-            hrt.offsetMin = new Vector2(32f, -104f); hrt.offsetMax = new Vector2(-40f, -72f);
-            _header.overflowMode = TextOverflowModes.Overflow;   // 见 RetinueUI 里同款说明
+            hrt.offsetMin = new Vector2(32f, -104f); hrt.offsetMax = new Vector2(-40f, -68f);
+            _header.overflowMode = TextOverflowModes.Overflow;
 
             _content = RetinueUI.MakeScrollArea(panel.transform, 112f);
             // ★给底部留位★ MakeScrollArea 默认把滚动区拉到面板底边上方 10px，
@@ -158,10 +160,10 @@ namespace DynastyRetinue.UI
             try
             {
                 Size cur = ShipDialog.Current(), orig = ShipDialog.OriginalSize();
-
+                if (_title != null) _title.text = L.T("船坞");
                 if (_header != null)
-                    _header.text = L.F("当前座舰　<color=#c6a24e>{0}</color>　　原本　{1}　　废料　<color=#c6a24e>{2}</color>　　<size=15>升级只补差价，还原全额退还</size>",
-                                       ShipDialog.SizeName(cur), ShipDialog.SizeName(orig), ShipDialog.Scrap());
+                    _header.text = L.F("当前座舰　<color=#c6a24e>{0}</color>　　原本　{1}　　废料　<color=#c6a24e>{2}</color>　　<size=15>座舰改装实际消耗废料；升级补差价，还原全额退还</size>",
+                        ShipDialog.SizeName(cur), ShipDialog.SizeName(orig), ShipDialog.Scrap());
 
                 if (_revertBtn != null)
                 {
@@ -180,6 +182,7 @@ namespace DynastyRetinue.UI
                         : L.F("<color=#c6a24e>高阶顾问：</color>{0}", _replyText);
 
                 RebuildRows();
+                RetinueUI.ReapplyLayer(_root.transform);
             }
             catch (Exception e) { Main.LogError("[船坞UI] 刷新失败: " + e); }
         }

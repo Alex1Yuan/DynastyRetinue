@@ -4,6 +4,9 @@ using System.IO;
 using System.Text;
 using Kingmaker;
 using Kingmaker.Blueprints;
+using Kingmaker.Enums;
+using Warhammer.SpaceCombat.Blueprints;
+using Warhammer.SpaceCombat.Blueprints.Slots;
 
 namespace DynastyRetinue
 {
@@ -79,6 +82,11 @@ namespace DynastyRetinue
             GearGuids();
             GearCoverage();
             SettingsSanity();
+            SpaceEscortBlueprint();
+            FleetBudget_();
+            SpaceFleetRefits();
+            SpaceFleetComponents();
+            SpaceFleetSaveSnapshots();
             ShipState();
             Report();
 
@@ -300,6 +308,13 @@ namespace DynastyRetinue
                 Warn("招募上限", "为 " + st.RecruitMaxGuards + "，一个都招不了");
             else Ok("招募上限", st.RecruitMaxGuards + " 名，每名 " + st.RecruitPfPerGuard + " 利润因子");
 
+            if (st.FleetPfFrigate < 0 || st.FleetPfCruiser < 0 || st.FleetPfGrandCruiser < 0
+                || st.FleetPfRefitPerSlot < 0 || st.FleetPfPerShot < 0 || st.FleetPfPerRange < 0)
+                Warn("舰队 PF 费率", "含负数；运行时按 0 夹取，请在面板恢复为非负值");
+            else Ok("舰队 PF 费率", st.FleetPfFrigate + "/" + st.FleetPfCruiser + "/"
+                + st.FleetPfGrandCruiser + "，换装/开火/射程 " + st.FleetPfRefitPerSlot
+                + "/" + st.FleetPfPerShot + "/" + st.FleetPfPerRange);
+
             // 这五个都是"作弊"性质的开关，发布默认应当全关。
             // ★精英那两个原来漏在这里★ 它们本来待在开发区，于是写这条检查时没想到；
             // 挪进玩家区之后，带着它们发包和带着前三个发包是同一类错误。
@@ -308,6 +323,536 @@ namespace DynastyRetinue
             if (unlocked) Warn("解除限制", "有开关处于打开状态 —— 发布默认应当全关，"
                                         + "别把本机配置当成玩家的默认体验");
             else Ok("解除限制", "全关（发布默认形态）");
+        }
+
+        // ---------------------------------------------------------------- 海战卫队蓝图
+
+        private static void SpaceEscortBlueprint()
+        {
+            try
+            {
+                int passed, total;
+                string detail = SpaceEscortService.ValidateAllBlueprints(out passed, out total);
+                if (passed == total)
+                    Ok("海战卫队蓝图", passed + "/" + total + " 项通过：原版舰尺寸 / brain / prefab / 武器及 PlayerFaction；" + detail);
+                else Bad("海战卫队蓝图", passed + "/" + total + " 通过；" + detail);
+            }
+            catch (Exception e) { Bad("海战卫队蓝图", "异常: " + e.Message); }
+        }
+
+        // ---------------------------------------------------------------- 舰队预算（纯内存，不读场景/蓝图）
+
+        private static void FleetBudget_()
+        {
+            try
+            {
+                var hulls = SpaceFleetCatalog.All();
+                var legacySlots = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
+                {
+                    { SpaceFleetCatalog.FrigateGuid, 6 },
+                    { SpaceFleetCatalog.ProwLanceFrigateGuid, 6 },
+                    { SpaceFleetCatalog.CruiserGuid, 9 },
+                    { SpaceFleetCatalog.GrandCruiserGuid, 8 }
+                };
+                bool slotsOk = hulls.Length >= legacySlots.Count;
+                int legacyFound = 0;
+                var hullIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                var allKeys = new HashSet<string>(StringComparer.Ordinal);
+                for (int i = 0; i < hulls.Length; i++)
+                {
+                    var hull = hulls[i];
+                    if (hull == null || hull.Slots == null || hull.Slots.Length <= 4
+                        || string.IsNullOrEmpty(hull.BlueprintGuid) || !hullIds.Add(hull.BlueprintGuid)
+                        || hull.Class < 0 || hull.Class > 2 || hull.Capacity != hull.Class + 1)
+                    { slotsOk = false; continue; }
+                    int legacyCount;
+                    if (legacySlots.TryGetValue(hull.BlueprintGuid, out legacyCount))
+                    {
+                        legacyFound++;
+                        if (hull.Slots.Length != legacyCount) slotsOk = false;
+                    }
+                    int components = 0, broadside = 0, other = 0;
+                    var local = new HashSet<string>(StringComparer.Ordinal);
+                    foreach (var slot in hull.Slots)
+                    {
+                        if (slot == null || string.IsNullOrEmpty(slot.Key) || !local.Add(slot.Key)
+                            || !allKeys.Add(hull.BlueprintGuid + ":" + slot.Key))
+                        { slotsOk = false; continue; }
+                        if (!slot.IsWeapon) components++;
+                        else if (slot.WeaponType == WeaponSlotType.Port
+                            || slot.WeaponType == WeaponSlotType.Starboard) broadside++;
+                        else other++;
+                    }
+                    slotsOk &= components == 4 && broadside == hull.BroadsideWeaponSlots
+                        && other == hull.NonBroadsideWeaponSlots;
+                }
+                slotsOk &= legacyFound == legacySlots.Count;
+                if (slotsOk) Ok("舰队槽位目录", hulls.Length + " 种舰型；旧舰槽位不变，身份/SlotKey 唯一，主组件与炮数匹配");
+                else Bad("舰队槽位目录", "旧舰槽位、舰型身份、组件/炮数或 SlotKey 不一致");
+
+                var rates = FleetBudget.DefaultRates();
+                long sixF = FullFleet(rates, SpaceFleetCatalog.FrigateGuid, 6, 0, 0, 0, 0);
+                long threeC = FullFleet(rates, SpaceFleetCatalog.CruiserGuid, 3, 1, 0, 0, 3);
+                long twoG = FullFleet(rates, SpaceFleetCatalog.GrandCruiserGuid, 2, 2, 1, 3, 5);
+                long mixed = FullShip(rates, SpaceFleetCatalog.FrigateGuid, 0, 0, 0, 0)
+                    + FullShip(rates, SpaceFleetCatalog.CruiserGuid, 1, 0, 0, 3)
+                    + FullShip(rates, SpaceFleetCatalog.GrandCruiserGuid, 2, 1, 3, 5);
+                if (sixF == 132 && threeC == 147 && twoG == 148 && mixed == 145)
+                    Ok("舰队 PF 默认样例", "6F=132 / 3C=147 / 2G=148 / F+C+G=145");
+                else Bad("舰队 PF 默认样例", "实际 " + sixF + "/" + threeC + "/" + twoG + "/" + mixed);
+            }
+            catch (Exception e) { Bad("舰队预算", "异常: " + e.Message); }
+        }
+
+        private static void SpaceFleetRefits()
+        {
+            try
+            {
+                int passed = 0;
+                var failed = new List<string>();
+                var verified = new List<string>();
+                foreach (var weapon in SpaceFleetCatalog.RefitWeapons)
+                {
+                    string failure;
+                    if (SpaceFleetCatalog.ValidateRefitWeapon(weapon, out failure))
+                    {
+                        passed++;
+                        verified.Add(SpaceEscortService.ItemDisplayName(weapon.ItemGuid)
+                            + " [" + weapon.Role + "]");
+                    }
+                    else failed.Add((weapon != null ? weapon.ItemGuid : "<null>") + "：" + failure);
+                }
+                if (passed == SpaceFleetCatalog.RefitWeapons.Length)
+                    Ok("舰队换装 AI", passed + "/" + SpaceFleetCatalog.RefitWeapons.Length
+                        + " 项通过：槽位 / target ability / donor overlay");
+                else Bad("舰队换装 AI", passed + "/" + SpaceFleetCatalog.RefitWeapons.Length
+                    + " 项通过；" + string.Join("；", failed.ToArray()));
+                Main.Log("    已验证舰炮：" + string.Join("；", verified.ToArray()));
+            }
+            catch (Exception e) { Bad("舰队换装 AI", "异常: " + e.Message); }
+        }
+
+        private static void SpaceFleetComponents()
+        {
+            try
+            {
+                var hulls = SpaceFleetCatalog.All();
+                var acquired = new List<string>();
+                foreach (var hull in hulls)
+                    foreach (var slot in hull.Slots)
+                        if (!slot.IsWeapon && !string.IsNullOrEmpty(slot.OriginalItemGuid))
+                            acquired.Add(slot.OriginalItemGuid);
+                bool typesOk = true, optionsOk = true;
+                int components = 0;
+                foreach (var hull in hulls)
+                {
+                    string failure;
+                    var bp = ResourcesLibrary.TryGetBlueprint<BlueprintStarship>(hull.BlueprintGuid);
+                    typesOk &= SpaceFleetCatalog.ValidateOriginalComponents(bp, hull, out failure);
+                    foreach (var slot in hull.Slots)
+                    {
+                        if (slot.IsWeapon) continue;
+                        components++;
+                        var type = SpaceFleetCatalog.ComponentBlueprintType(slot);
+                        var field = typeof(Warhammer.SpaceCombat.StarshipLogic.Equipment.HullSlots)
+                            .GetField(slot.Key.Substring("component:".Length));
+                        typesOk &= type != null && field != null && field.FieldType.IsGenericType
+                            && field.FieldType.GetGenericArguments()[0] == type;
+                        var stockOnly = SpaceEscortService.ItemOptions(hull, slot.Key, new string[0]);
+                        optionsOk &= stockOnly.Count == 1 && stockOnly[0] == (slot.OriginalItemGuid ?? "");
+                        var options = SpaceEscortService.ItemOptions(hull, slot.Key, acquired);
+                        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                        foreach (var guid in options)
+                        {
+                            BlueprintStarshipItem item;
+                            SpaceFleetWeaponDef weapon;
+                            optionsOk &= seen.Add(guid) && SpaceFleetCatalog.TryResolveItem(
+                                hull, slot.Key, guid, out item, out weapon);
+                        }
+                        BlueprintStarshipItem rejected;
+                        SpaceFleetWeaponDef ignored;
+                        optionsOk &= !SpaceFleetCatalog.TryResolveItem(hull, slot.Key,
+                            SpaceFleetCatalog.RefitWeapons[0].ItemGuid, out rejected, out ignored);
+                        if (!string.IsNullOrEmpty(slot.OriginalItemGuid))
+                            optionsOk &= !SpaceFleetCatalog.TryResolveItem(hull, slot.Key, "",
+                                out rejected, out ignored);
+                    }
+                }
+                if (typesOk && optionsOk && components == hulls.Length * 4)
+                    Ok("舰队主组件", hulls.Length + " 舰型 × 4 槽：原装 / Code.dll 泛型槽类型 / 获得筛选 / 跨类型与非法卸空拒绝");
+                else Bad("舰队主组件", "主组件原装、类型、候选或槽数不一致");
+
+                var frigate = SpaceFleetCatalog.Find(SpaceFleetCatalog.FrigateGuid);
+                var plasma = SpaceFleetCatalog.FindSlot(frigate, "component:PlasmaDrives");
+                var donor = SpaceFleetCatalog.Find(SpaceFleetCatalog.CruiserGuid);
+                string replacement = SpaceFleetCatalog.FindSlot(donor, plasma.Key).OriginalItemGuid;
+                var entry = new SpaceFleetEntry { Id = "component-selfcheck", BlueprintGuid = frigate.BlueprintGuid };
+                entry.Loadout.Add(new SpaceFleetLoadoutChoice { SlotKey = plasma.Key, ItemGuid = replacement });
+                var rows = new List<string>();
+                string reason;
+                bool payloadOk = !SpaceEscortService.AppendCanonicalLoadout(entry, frigate, rows,
+                    new string[0], out reason) && rows.Count == 0;
+                payloadOk &= SpaceEscortService.AppendCanonicalLoadout(entry, frigate, rows,
+                    acquired, out reason) && rows.Count == 3 && rows[0] == "1";
+                List<SpaceFleetLoadoutChoice> parsed;
+                payloadOk &= SpaceEscortService.TryParseLoadout(frigate, rows.ToArray(), 1, 1,
+                    out parsed, out reason) && parsed.Count == 1
+                    && parsed[0].SlotKey == plasma.Key && parsed[0].ItemGuid == replacement;
+                payloadOk &= !SpaceEscortService.TryParseLoadout(frigate,
+                    new[] { plasma.Key, replacement, plasma.Key, replacement }, 0, 2, out parsed, out reason);
+                payloadOk &= !SpaceEscortService.TryParseLoadout(frigate,
+                    new[] { "component:WarpDrives", replacement }, 0, 1, out parsed, out reason);
+                payloadOk &= !SpaceEscortService.TryParseLoadout(frigate,
+                    new[] { plasma.Key, SpaceFleetCatalog.RefitWeapons[0].ItemGuid }, 0, 1, out parsed, out reason);
+                payloadOk &= !SpaceEscortService.TryParseLoadout(frigate,
+                    new[] { plasma.Key }, 0, 1, out parsed, out reason);
+                payloadOk &= SpaceEscortService.TryParseLoadout(frigate,
+                    new[] { "component:ArmorPlating", "" }, 0, 1, out parsed, out reason) && parsed.Count == 0;
+                var serializer = new System.Xml.Serialization.XmlSerializer(typeof(SpaceFleetEntry));
+                using (var writer = new StringWriter())
+                {
+                    serializer.Serialize(writer, entry);
+                    using (var reader = new StringReader(writer.ToString()))
+                    {
+                        var saved = (SpaceFleetEntry)serializer.Deserialize(reader);
+                        payloadOk &= saved.Loadout.Count == 1 && saved.Loadout[0].SlotKey == plasma.Key
+                            && saved.Loadout[0].ItemGuid == replacement;
+                    }
+                }
+                if (payloadOk) Ok("舰队组件 payload", "往返 / 未获得拒绝 / 重复与隐藏槽拒绝 / 错型与截断拒绝 / 原装空槽 / XML 往返");
+                else Bad("舰队组件 payload", "组件 loadout 序列化或拒绝规则异常");
+
+                var before = entry.Loadout;
+                var proposed = new List<SpaceFleetLoadoutChoice>();
+                bool rollbackOk = !SpaceEscortService.SaveLoadoutChange(entry, proposed, () => false)
+                    && ReferenceEquals(entry.Loadout, before) && entry.Loadout.Count == 1;
+                try { SpaceEscortService.SaveLoadoutChange(entry, proposed, () => { throw new IOException("selfcheck"); }); }
+                catch (IOException) { }
+                rollbackOk &= ReferenceEquals(entry.Loadout, before) && entry.Loadout[0].ItemGuid == replacement;
+                rollbackOk &= SpaceEscortService.SaveLoadoutChange(entry, proposed, () => true)
+                    && ReferenceEquals(entry.Loadout, proposed);
+                entry.Loadout = null;
+                rollbackOk &= !SpaceEscortService.SaveLoadoutChange(entry, proposed, () => false) && entry.Loadout == null;
+
+                // 预算只计槽数；这些仅为内存价格探针，不是蓝图或新增 AssetId。
+                entry.Loadout = new List<SpaceFleetLoadoutChoice>();
+                foreach (var slot in frigate.Slots)
+                    if (!slot.IsWeapon)
+                        entry.Loadout.Add(new SpaceFleetLoadoutChoice { SlotKey = slot.Key, ItemGuid = "cost-only-a" });
+                var rates = FleetBudget.DefaultRates();
+                long first = FleetBudget.Cost(entry, rates).Refit;
+                foreach (var choice in entry.Loadout) choice.ItemGuid = "cost-only-b";
+                long second = FleetBudget.Cost(entry, rates).Refit;
+                foreach (var choice in entry.Loadout)
+                    choice.ItemGuid = SpaceFleetCatalog.FindSlot(frigate, choice.SlotKey).OriginalItemGuid;
+                long restored = FleetBudget.Cost(entry, rates).Refit;
+                bool budgetOk = first == 4 * rates.RefitPerSlot && first == second && restored == 0
+                    && FleetBudget.CanApply(100, 100, out reason) && FleetBudget.CanApply(100, 99, out reason);
+                if (rollbackOk && budgetOk) Ok("舰队组件预算/回滚", "四槽同价 / 同价替换 / 原装归零 / false 与异常恢复原引用；仅内存");
+                else Bad("舰队组件预算/回滚", "槽价、还原或保存失败回滚异常");
+            }
+            catch (Exception e) { Bad("舰队主组件", "异常: " + e.Message); }
+        }
+
+        /// <summary>
+        /// 真正经过原版 settings.json 序列化边界的 A/B 快照检查。
+        /// 所有容器和名册均为独立内存对象；不取 Game.Instance.State.InGameSettings，
+        /// 不替换 Main.Settings，不调用保存管理器，也不创建任何磁盘存档。
+        /// </summary>
+        private static void SpaceFleetSaveSnapshots()
+        {
+            try
+            {
+                string gameId = Guid.NewGuid().ToString("N");
+                var source = FleetSnapshotNativeSettings();
+                RequireFleetSnapshot(SpaceFleetSaveStore.StorageKey == "dynastyretinue.space_fleet.v1",
+                    "StorageKey 与约定不一致");
+                var live = SpaceFleetSaveStore.Get(source, gameId, true);
+                RequireFleetSnapshot(FleetSnapshotIsEmpty(live, gameId),
+                    "独立新容器没有得到 DVer3 空名册");
+                RequireFleetSnapshot(FleetSnapshotNativeKeysIntact(source),
+                    "Get(create=true) 改动了其他 native key");
+
+                // 两个真实舷炮 GUID 仅作为序列化数据；这里不解析蓝图、不造实体。
+                live.Initialized = true;
+                live.NextId = 2;
+                live.Entries.Add(new SpaceFleetEntry
+                {
+                    Id = "fleet-1",
+                    BlueprintGuid = SpaceFleetCatalog.GrandCruiserGuid,
+                    Name = "快照 A · 原名舰",
+                    BroadsideExtraShots = 1,
+                    NonBroadsideExtraShots = 0,
+                    BroadsideExtraRange = 1,
+                    NonBroadsideExtraRange = 0,
+                    Loadout = new List<SpaceFleetLoadoutChoice>
+                    {
+                        new SpaceFleetLoadoutChoice
+                        {
+                            SlotKey = "weapon:Starboard:0",
+                            ItemGuid = FleetSnapshotWeaponA
+                        }
+                    }
+                });
+                live.KnownShipItemGuids.Add(FleetSnapshotWeaponA);
+                RequireFleetSnapshot(SpaceFleetSaveStore.TryWrite(source, live),
+                    "所属容器写入快照 A 被拒绝");
+                RequireFleetSnapshot(source.List.ContainsKey(SpaceFleetSaveStore.StorageKey)
+                    && FleetSnapshotNativeKeysIntact(source), "A 未写入 native key 或覆盖了其他 key");
+                string jsonA = FleetSnapshotSerialize(source);
+
+                // 必须原地改同一份名册及嵌套对象，再保存 B；不能分别造两份预期结果冒充隔离。
+                live.NextId = 3;
+                live.Entries[0].Name = "快照 B · 改名舰";
+                live.Entries[0].Loadout[0].ItemGuid = FleetSnapshotWeaponB;
+                live.Entries[0].BroadsideExtraShots = 2;
+                live.Entries[0].NonBroadsideExtraShots = 1;
+                live.Entries[0].BroadsideExtraRange = 3;
+                live.Entries[0].NonBroadsideExtraRange = 2;
+                live.KnownShipItemGuids.Add(FleetSnapshotWeaponB);
+                RequireFleetSnapshot(SpaceFleetSaveStore.TryWrite(source, live),
+                    "所属容器写入快照 B 被拒绝");
+                RequireFleetSnapshot(FleetSnapshotNativeKeysIntact(source), "B 覆盖了其他 native key");
+                string jsonB = FleetSnapshotSerialize(source);
+                RequireFleetSnapshot(!string.Equals(jsonA, jsonB, StringComparison.Ordinal)
+                    && FleetSnapshotHasNoTypeMetadata(jsonA) && FleetSnapshotHasNoTypeMetadata(jsonB),
+                    "A/B 未形成不同快照，或 JSON 泄漏 $type/mod 类型元数据");
+
+                var nativeA = FleetSnapshotDeserialize(jsonA);
+                var nativeB = FleetSnapshotDeserialize(jsonB);
+                RequireFleetSnapshot(!ReferenceEquals(nativeA, nativeB)
+                    && !ReferenceEquals(nativeA.List, nativeB.List)
+                    && !ReferenceEquals(source.List, nativeA.List)
+                    && !ReferenceEquals(source.List, nativeB.List), "native 容器或 List 共用引用");
+                var rosterA = SpaceFleetSaveStore.Get(nativeA, gameId, false);
+                var rosterB = SpaceFleetSaveStore.Get(nativeB, gameId, false);
+                RequireFleetSnapshot(FleetSnapshotMatches(rosterA, gameId, false)
+                    && FleetSnapshotMatches(rosterB, gameId, true)
+                    && FleetSnapshotMatches(live, gameId, true), "原版往返后 A/B 内容混淆或字段丢失");
+                RequireFleetSnapshot(FleetSnapshotReferencesDisjoint(rosterA, rosterB)
+                    && FleetSnapshotReferencesDisjoint(rosterA, live)
+                    && FleetSnapshotReferencesDisjoint(rosterB, live),
+                    "A/B/source 名册、Entries、Loadout、choice 或 knownitems 共用可变引用");
+                RequireFleetSnapshot(FleetSnapshotNativeKeysIntact(nativeA)
+                    && FleetSnapshotNativeKeysIntact(nativeB), "原版往返丢失其他 native key");
+
+                // 同 GameId、没有 StorageKey 的旧档，不能借用 source/A/B 的缓存或名册。
+                var oldNative = FleetSnapshotNativeSettings();
+                RequireFleetSnapshot(!oldNative.List.ContainsKey(SpaceFleetSaveStore.StorageKey),
+                    "旧档探针不应自带 StorageKey");
+                var oldRoster = SpaceFleetSaveStore.Get(oldNative, gameId, true);
+                RequireFleetSnapshot(FleetSnapshotIsEmpty(oldRoster, gameId)
+                    && FleetSnapshotReferencesDisjoint(oldRoster, rosterA)
+                    && FleetSnapshotReferencesDisjoint(oldRoster, rosterB)
+                    && FleetSnapshotReferencesDisjoint(oldRoster, live),
+                    "同 GameId 的无 key 旧档复用了已有名册/可变集合");
+                RequireFleetSnapshot(FleetSnapshotNativeKeysIntact(oldNative),
+                    "旧档创建空名册时覆盖其他 native key");
+                // 交错访问后再读，专门检查仅以 GameId 为键的错误缓存。
+                rosterB = SpaceFleetSaveStore.Get(nativeB, gameId, false);
+                rosterA = SpaceFleetSaveStore.Get(nativeA, gameId, false);
+                RequireFleetSnapshot(FleetSnapshotMatches(rosterA, gameId, false)
+                    && FleetSnapshotMatches(rosterB, gameId, true)
+                    && FleetSnapshotIsEmpty(SpaceFleetSaveStore.Get(oldNative, gameId, true), gameId)
+                    && FleetSnapshotMatches(SpaceFleetSaveStore.Get(source, gameId, false), gameId, true),
+                    "交错 Get 将同 GameId 的不同 native 容器串档");
+                Ok("舰队存档 A/B 快照", "原版 settings.json 往返：改名/换装/四项强化/knownitems 各自保留，无类型元数据");
+
+                string beforeWrongWriteA = FleetSnapshotSerialize(nativeA);
+                string beforeWrongWriteB = FleetSnapshotSerialize(nativeB);
+                RequireFleetSnapshot(!SpaceFleetSaveStore.TryWrite(nativeB, rosterA),
+                    "错误地允许把 A 容器取得的 roster 写进 B");
+                RequireFleetSnapshot(FleetSnapshotSerialize(nativeA) == beforeWrongWriteA
+                    && FleetSnapshotSerialize(nativeB) == beforeWrongWriteB
+                    && FleetSnapshotMatches(SpaceFleetSaveStore.Get(nativeB, gameId, false), gameId, true)
+                    && FleetSnapshotMatches(rosterA, gameId, false)
+                    && FleetSnapshotNativeKeysIntact(nativeA) && FleetSnapshotNativeKeysIntact(nativeB),
+                    "跨容器写入虽被拒绝，却已改动 native 内容/缓存/源名册");
+                Ok("舰队存档容器归属", "无 key 旧档为空；同 GameId 分容器隔离；A roster 写 B 拒绝且无副作用");
+
+                // 深层修改仅落在还原出来的 A；既检查引用，也检查实际可观察状态。
+                rosterA.Entries[0].Name = "快照 A · 局部内存修改";
+                rosterA.Entries[0].Loadout[0].ItemGuid = FleetSnapshotWeaponB;
+                rosterA.Entries[0].BroadsideExtraShots = 2;
+                rosterA.KnownShipItemGuids.Add(FleetSnapshotWeaponB);
+                RequireFleetSnapshot(FleetSnapshotMatches(rosterB, gameId, true)
+                    && FleetSnapshotMatches(live, gameId, true)
+                    && FleetSnapshotIsEmpty(oldRoster, gameId)
+                    && FleetSnapshotSerialize(nativeB) == beforeWrongWriteB,
+                    "修改 A 的嵌套对象污染了 B/source/旧档");
+                RequireFleetSnapshot(SpaceFleetSaveStore.TryWrite(nativeA, rosterA),
+                    "从 A 容器 Get 取得的 roster 不能写回 A");
+                string editedJsonA = FleetSnapshotSerialize(nativeA);
+                var editedNativeA = FleetSnapshotDeserialize(editedJsonA);
+                var editedA = SpaceFleetSaveStore.Get(editedNativeA, gameId, false);
+                RequireFleetSnapshot(editedJsonA != beforeWrongWriteA
+                    && editedA != null && editedA.Entries != null && editedA.Entries.Count == 1
+                    && editedA.Entries[0] != null
+                    && editedA.Entries[0].Name == "快照 A · 局部内存修改"
+                    && editedA.Entries[0].BroadsideExtraShots == 2
+                    && editedA.Entries[0].Loadout != null && editedA.Entries[0].Loadout.Count == 1
+                    && editedA.Entries[0].Loadout[0] != null
+                    && editedA.Entries[0].Loadout[0].ItemGuid == FleetSnapshotWeaponB
+                    && editedA.KnownShipItemGuids != null && editedA.KnownShipItemGuids.Count == 2
+                    && editedA.KnownShipItemGuids.Contains(FleetSnapshotWeaponA)
+                    && editedA.KnownShipItemGuids.Contains(FleetSnapshotWeaponB)
+                    && FleetSnapshotReferencesDisjoint(editedA, rosterA)
+                    && FleetSnapshotNativeKeysIntact(editedNativeA),
+                    "本容器 TryWrite 成功后，原版再往返未保留局部修改或仍共用引用");
+                var againNativeA = FleetSnapshotDeserialize(jsonA);
+                var againA = SpaceFleetSaveStore.Get(againNativeA, gameId, false);
+                RequireFleetSnapshot(FleetSnapshotMatches(againA, gameId, false)
+                    && FleetSnapshotReferencesDisjoint(againA, rosterA)
+                    && FleetSnapshotReferencesDisjoint(againA, rosterB)
+                    && FleetSnapshotMatches(SpaceFleetSaveStore.Get(nativeB, gameId, false), gameId, true)
+                    && FleetSnapshotNativeKeysIntact(nativeA) && FleetSnapshotNativeKeysIntact(againNativeA),
+                    "再次读取原 A 字符串受后续内存修改影响，或其他 native key 丢失");
+                Ok("舰队存档深层隔离", "名册/条目/loadout choice/knownitems 不共享；局部修改写回后，原 A 字符串仍还原 A");
+            }
+            catch (Exception e) { Bad("舰队存档快照隔离", "异常: " + e.Message); }
+        }
+
+        private const string FleetSnapshotWeaponA = "7bdc12cf63124a86b41cc7ca929d015d";
+        private const string FleetSnapshotWeaponB = "4f1fc55e29314ddcbc3ee34b459db589";
+        private const string FleetSnapshotUnknownKey = "selfcheck.native.unknown";
+
+        private static InGameSettings FleetSnapshotNativeSettings()
+        {
+            var settings = new InGameSettings();
+            settings.List[FleetSnapshotUnknownKey] = "保留 native key\n\"A/B\"";
+            settings.List[FleetSnapshotUnknownKey + ".integer"] = 37;
+            settings.List[FleetSnapshotUnknownKey + ".boolean"] = true;
+            return settings;
+        }
+
+        private static bool FleetSnapshotNativeKeysIntact(InGameSettings settings)
+        {
+            object text, number, flag;
+            return settings != null && settings.List != null
+                && settings.List.TryGetValue(FleetSnapshotUnknownKey, out text)
+                && Equals(text, "保留 native key\n\"A/B\"")
+                && settings.List.TryGetValue(FleetSnapshotUnknownKey + ".integer", out number)
+                && Equals(number, 37)
+                && settings.List.TryGetValue(FleetSnapshotUnknownKey + ".boolean", out flag)
+                && Equals(flag, true);
+        }
+
+        private static string FleetSnapshotSerialize(InGameSettings settings)
+        {
+            using (var text = new StringWriter(System.Globalization.CultureInfo.InvariantCulture))
+            using (var writer = new Newtonsoft.Json.JsonTextWriter(text))
+            {
+                // 与 SaveManager.SerializeInGameSettings 同一个原版序列化器；
+                // 不依赖可能不可见的 SerializeObject 扩展，也不修改 Serializer 配置。
+                Kingmaker.Settings.SettingsJsonSerializer.Serializer.Serialize(
+                    writer, settings, typeof(InGameSettings));
+                writer.Flush();
+                return text.ToString();
+            }
+        }
+
+        private static InGameSettings FleetSnapshotDeserialize(string json)
+        {
+            using (var text = new StringReader(json))
+            using (var reader = new Newtonsoft.Json.JsonTextReader(text))
+            {
+                var settings = Kingmaker.Settings.SettingsJsonSerializer.Serializer
+                    .Deserialize<InGameSettings>(reader);
+                RequireFleetSnapshot(settings != null && settings.List != null,
+                    "原版反序列化未还原 InGameSettings.List");
+                return settings;
+            }
+        }
+
+        private static bool FleetSnapshotHasNoTypeMetadata(string json)
+        {
+            // 也覆盖 StorageKey 保存 JSON 字符串时其中被转义的 $type。
+            return json.IndexOf("$type", StringComparison.OrdinalIgnoreCase) < 0
+                && json.IndexOf(typeof(SpaceFleetRosterState).FullName, StringComparison.Ordinal) < 0
+                && json.IndexOf(typeof(SpaceFleetEntry).FullName, StringComparison.Ordinal) < 0
+                && json.IndexOf(typeof(SpaceFleetLoadoutChoice).FullName, StringComparison.Ordinal) < 0;
+        }
+
+        private static bool FleetSnapshotIsEmpty(SpaceFleetRosterState roster, string gameId)
+        {
+            return roster != null && roster.DataVersion == 3 && roster.GameId == gameId
+                && roster.Entries != null && roster.Entries.Count == 0
+                && roster.KnownShipItemGuids != null && roster.KnownShipItemGuids.Count == 0;
+        }
+
+        private static bool FleetSnapshotMatches(SpaceFleetRosterState roster, string gameId, bool b)
+        {
+            if (roster == null || roster.DataVersion != 3 || roster.GameId != gameId
+                || !roster.Initialized || roster.NextId != (b ? 3 : 2)
+                || roster.Entries == null || roster.Entries.Count != 1
+                || roster.KnownShipItemGuids == null
+                || roster.KnownShipItemGuids.Count != (b ? 2 : 1)
+                || !roster.KnownShipItemGuids.Contains(FleetSnapshotWeaponA)
+                || (b && !roster.KnownShipItemGuids.Contains(FleetSnapshotWeaponB))) return false;
+            var entry = roster.Entries[0];
+            return entry != null && entry.Id == "fleet-1"
+                && entry.BlueprintGuid == SpaceFleetCatalog.GrandCruiserGuid
+                && entry.Name == (b ? "快照 B · 改名舰" : "快照 A · 原名舰")
+                && entry.BroadsideExtraShots == (b ? 2 : 1)
+                && entry.NonBroadsideExtraShots == (b ? 1 : 0)
+                && entry.BroadsideExtraRange == (b ? 3 : 1)
+                && entry.NonBroadsideExtraRange == (b ? 2 : 0)
+                && entry.Loadout != null && entry.Loadout.Count == 1 && entry.Loadout[0] != null
+                && entry.Loadout[0].SlotKey == "weapon:Starboard:0"
+                && entry.Loadout[0].ItemGuid == (b ? FleetSnapshotWeaponB : FleetSnapshotWeaponA);
+        }
+
+        private static bool FleetSnapshotReferencesDisjoint(SpaceFleetRosterState a, SpaceFleetRosterState b)
+        {
+            if (a == null || b == null || ReferenceEquals(a, b)
+                || ReferenceEquals(a.Entries, b.Entries)
+                || ReferenceEquals(a.KnownShipItemGuids, b.KnownShipItemGuids)
+                || a.Entries == null || b.Entries == null) return false;
+            foreach (var left in a.Entries)
+                foreach (var right in b.Entries)
+                {
+                    if (left == null || right == null || ReferenceEquals(left, right)
+                        || left.Loadout == null || right.Loadout == null
+                        || ReferenceEquals(left.Loadout, right.Loadout)) return false;
+                    foreach (var lc in left.Loadout)
+                        foreach (var rc in right.Loadout)
+                            if (lc != null && ReferenceEquals(lc, rc)) return false;
+                }
+            return true;
+        }
+
+        private static void RequireFleetSnapshot(bool condition, string detail)
+        {
+            if (!condition) throw new InvalidOperationException(detail);
+        }
+
+        private static long FullFleet(FleetBudgetRates rates, string hullGuid, int count,
+            int bs, int ns, int br, int nr)
+        {
+            return FleetBudget.Mul(count, FullShip(rates, hullGuid, bs, ns, br, nr));
+        }
+
+        private static long FullShip(FleetBudgetRates rates, string hullGuid,
+            int bs, int ns, int br, int nr)
+        {
+            var hull = SpaceFleetCatalog.Find(hullGuid);
+            var entry = new SpaceFleetEntry
+            {
+                BlueprintGuid = hullGuid,
+                BroadsideExtraShots = bs,
+                NonBroadsideExtraShots = ns,
+                BroadsideExtraRange = br,
+                NonBroadsideExtraRange = nr
+            };
+            foreach (var slot in hull.Slots)
+                entry.Loadout.Add(new SpaceFleetLoadoutChoice
+                {
+                    SlotKey = slot.Key,
+                    ItemGuid = string.IsNullOrEmpty(slot.OriginalItemGuid)
+                        ? "00000000000000000000000000000001"
+                        : "00000000000000000000000000000002"
+                });
+            return FleetBudget.Cost(entry, rates).Total;
         }
 
         // ---------------------------------------------------------------- 舰船

@@ -134,6 +134,7 @@ namespace DynastyRetinue
         /// </summary>
         public static void RegisterAll()
         {
+            Register("guardreserve", GuardReserve.Execute);
             // 招募：两台机器各自生成同一个卫兵。
             //   参数全部由发起方解析好 —— 分型下标、精英下标、是否跳过名额上限。
             //   执行侧一个本机设置都不读，否则两个玩家的解锁开关不同就会分叉。

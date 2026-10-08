@@ -22,8 +22,9 @@ namespace DynastyRetinue
         private static int _sequence;
         private static int _outboundRetryFrames;
         private static int _timeoutFrameSkip;
-        private static string _rearmKind = "";
-        private static int _rearmAtTick;
+        // 进入船区时 hideguards 与 spaceescort 会同时工作；每个 kind 必须独立重试。
+        private static readonly Dictionary<string, int> RearmAt =
+            new Dictionary<string, int>(StringComparer.Ordinal);
 
         private sealed class Tx
         {
@@ -51,8 +52,9 @@ namespace DynastyRetinue
             if (!ValidKind(kind) || payload == null || !CoopState.IsConfirmedHost) return false;
             string key = TransactionKey(kind, payload);
             if (string.IsNullOrEmpty(key)) return false;
-            if (kind != "rescue" && string.Equals(_rearmKind, kind, StringComparison.Ordinal)
-                && NetworkTick() < _rearmAtTick) return false;
+            int rearmAt;
+            if (kind != "rescue" && RearmAt.TryGetValue(kind, out rearmAt)
+                && NetworkTick() < rearmAt) return false;
             foreach (var tx in Transactions.Values)
                 if (string.Equals(tx.Key, key, StringComparison.Ordinal)) return true;
 
@@ -160,11 +162,8 @@ namespace DynastyRetinue
             try
             {
                 Commit(tx.Kind, tx.Plan);
-                if (tx.Kind == "placeguards" || tx.Kind == "hideguards")
-                {
-                    _rearmKind = "";
-                    _rearmAtTick = 0;
-                }
+                if (tx.Kind == "placeguards" || tx.Kind == "hideguards" || tx.Kind == "spaceescort")
+                    RearmAt.Remove(tx.Kind);
             }
             catch (Exception e) { Main.LogError("[合作事务] " + tx.Kind + " 提交异常：" + e); }
             finally { Remove(tx.Id); }
@@ -184,19 +183,22 @@ namespace DynastyRetinue
         internal static void Tick()
         {
             if (ReadyReplies.Count == 0 && Decisions.Count == 0 && Transactions.Count == 0
-                && string.IsNullOrEmpty(_rearmKind)) return;
+                && RearmAt.Count == 0) return;
 
             bool timeoutDue = ++_timeoutFrameSkip >= RetryFrames;
             if (timeoutDue)
             {
                 _timeoutFrameSkip = 0;
-                if (!string.IsNullOrEmpty(_rearmKind) && NetworkTick() >= _rearmAtTick)
+                int rearmNow = NetworkTick();
+                var dueKinds = new List<string>();
+                foreach (var pair in RearmAt)
+                    if (rearmNow >= pair.Value) dueKinds.Add(pair.Key);
+                dueKinds.Sort(StringComparer.Ordinal);
+                foreach (string kind in dueKinds)
                 {
-                    string kind = _rearmKind;
-                    _rearmKind = "";
-                    _rearmAtTick = 0;
-                    // 所有端保留 pending；真正发起仍由 TickPending 的房主闸限定。
-                    RetinueLifecycle.RearmPlacement();
+                    RearmAt.Remove(kind);
+                    // 所有端保留 pending；真正发起仍由各业务自己的房主闸限定。
+                    Rearm(kind);
                     if (CoopState.IsConfirmedHost)
                         Main.Log("[合作事务] " + kind + " 固定 5 秒重试已到，重新规划。");
                 }
@@ -287,10 +289,15 @@ namespace DynastyRetinue
 
         private static void ScheduleRearm(string kind, int now, string reason)
         {
-            if (kind != "placeguards" && kind != "hideguards") return;
-            _rearmKind = kind;
-            _rearmAtTick = now + RearmDelayTicks;
+            if (kind != "placeguards" && kind != "hideguards" && kind != "spaceescort") return;
+            RearmAt[kind] = now + RearmDelayTicks;
             Main.Log("[合作事务] " + kind + " " + reason + "；5 秒后重试。");
+        }
+
+        private static void Rearm(string kind)
+        {
+            if (kind == "spaceescort") { SpaceEscortService.RearmPending(); return; }
+            RetinueLifecycle.RearmPlacement();
         }
 
         private static bool TryPrepare(string kind, string[] payload, out object plan,
@@ -299,6 +306,7 @@ namespace DynastyRetinue
             if (kind == "placeguards") return RetinueLifecycle.TryPrepareSynchronizedPlacement(payload, out plan, out signature, out failure);
             if (kind == "hideguards") return RetinueLifecycle.TryPrepareSynchronizedHide(payload, out plan, out signature, out failure);
             if (kind == "rescue") return StuckWatch.TryPrepareSynchronizedRescue(payload, out plan, out signature, out failure);
+            if (kind == "spaceescort") return SpaceEscortService.TryPrepareSynchronizedEscort(payload, out plan, out signature, out failure);
             plan = null; signature = ""; failure = "未知事务类型"; return false;
         }
 
@@ -307,6 +315,7 @@ namespace DynastyRetinue
             if (kind == "placeguards" || kind == "hideguards")
                 return RetinueLifecycle.CanCommitSynchronizedPlan(plan, out failure);
             if (kind == "rescue") return StuckWatch.CanCommitSynchronizedRescue(plan, out failure);
+            if (kind == "spaceescort") return SpaceEscortService.CanCommitSynchronizedEscort(plan, out failure);
             failure = "未知事务类型"; return false;
         }
 
@@ -315,6 +324,7 @@ namespace DynastyRetinue
             if (kind == "placeguards" || kind == "hideguards")
                 return RetinueLifecycle.CanCommitSynchronizedPlanInHandler(plan, out failure);
             if (kind == "rescue") return StuckWatch.CanCommitSynchronizedRescue(plan, out failure);
+            if (kind == "spaceescort") return SpaceEscortService.CanCommitSynchronizedEscortInHandler(plan, out failure);
             failure = "未知事务类型"; return false;
         }
 
@@ -323,6 +333,7 @@ namespace DynastyRetinue
             if (kind == "placeguards") { RetinueLifecycle.CommitSynchronizedPlacement(plan); return; }
             if (kind == "hideguards") { RetinueLifecycle.CommitSynchronizedHide(plan); return; }
             if (kind == "rescue") { StuckWatch.CommitSynchronizedRescue(plan); return; }
+            if (kind == "spaceescort") { SpaceEscortService.CommitSynchronizedEscort(plan); return; }
             throw new InvalidOperationException("未知事务类型 " + kind);
         }
 
@@ -349,7 +360,8 @@ namespace DynastyRetinue
 
         private static bool ValidKind(string kind)
         {
-            return kind == "placeguards" || kind == "hideguards" || kind == "rescue";
+            return kind == "placeguards" || kind == "hideguards" || kind == "rescue"
+                || kind == "spaceescort";
         }
 
         private static string TransactionKey(string kind, string[] payload)
@@ -357,6 +369,12 @@ namespace DynastyRetinue
             if (kind == "rescue")
                 return payload != null && payload.Length > 0 && !string.IsNullOrEmpty(payload[0])
                     ? "rescue:" + payload[0] : "";
+            if (kind == "spaceescort")
+            {
+                if (!SpaceEscortService.ValidTransactionHeader(payload)) return "";
+                // 同一 encounter 的 spawn/cleanup 共用 key，禁止两个写实体事务并发。
+                return "spaceescort:" + payload[2];
+            }
             return kind;
         }
 
@@ -369,27 +387,27 @@ namespace DynastyRetinue
 
         private static void ClearProtocolState()
         {
-            bool rearm = !string.IsNullOrEmpty(_rearmKind);
-            if (!rearm)
-                foreach (var tx in Transactions.Values)
-                    if (tx.Kind == "placeguards" || tx.Kind == "hideguards") { rearm = true; break; }
+            var rearmKinds = new HashSet<string>(RearmAt.Keys, StringComparer.Ordinal);
+            foreach (var tx in Transactions.Values)
+                if (tx.Kind == "placeguards" || tx.Kind == "hideguards" || tx.Kind == "spaceescort")
+                    rearmKinds.Add(tx.Kind);
             Transactions.Clear();
             ReadyReplies.Clear();
             Decisions.Clear();
             _outboundRetryFrames = 0;
             _timeoutFrameSkip = 0;
-            _rearmKind = "";
-            _rearmAtTick = 0;
-            if (rearm) RetinueLifecycle.RearmPlacement();
+            RearmAt.Clear();
+            foreach (string kind in rearmKinds) Rearm(kind);
         }
 
         internal static string Status()
         {
+            var kinds = new List<string>(RearmAt.Keys);
+            kinds.Sort(StringComparer.Ordinal);
             return "active=" + Transactions.Count.ToString(CultureInfo.InvariantCulture)
                  + " readyOut=" + ReadyReplies.Count.ToString(CultureInfo.InvariantCulture)
                  + " decisions=" + Decisions.Count.ToString(CultureInfo.InvariantCulture)
-                 + (string.IsNullOrEmpty(_rearmKind) ? "" : " rearm=" + _rearmKind
-                    + "@" + _rearmAtTick.ToString(CultureInfo.InvariantCulture));
+                 + (kinds.Count == 0 ? "" : " rearm=" + string.Join(",", kinds.ToArray()));
         }
 
         private static int NetworkTick()

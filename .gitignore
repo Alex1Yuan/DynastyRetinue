@@ -4,64 +4,42 @@ obj/
 *.dll.*.cache
 *.dll.*.cache.pdb
 
-# ── ref/ 是分析工作区：反编译源码、蓝图索引、各种 dump，共 168MB。
-#    全部可以从游戏重新生成，不入库；只保留笔记和分析脚本（见末尾取反规则）。
-ref/*
-!ref/*.md
-!ref/rt_probe/
-ref/rt_probe/*
-!ref/rt_probe/*.py
-!ref/bbp/
-ref/bbp/*
-!ref/bbp/Program.cs
-!ref/bbp/bbp.csproj
-
-# 存档备份（含个人存档）
-savebackup_*/
-
-# 游戏内导出的大表，可由 mod 面板按钮重新导出
-*_zh.tsv
-items.tsv
-features.tsv
-armor_rank.tsv
-autotest.tsv
-
-# 工作流 agent 的反编译产物（并发写入，别让 git 去索引）
-_tmp/lance/
-_tmp/hull/
+# 发布包
 dist/
 
-# archetypes.json 的临时回滚点（改配表前 cp 一份，纯本地安全网）
-src/KgdRetinue/archetypes.json.pre-*
-# src 下划线开头的是一次性排查脚本，不入库
-src/KgdRetinue/_*.py
-
-# 发布物料（截图/录屏，体积大且是二进制）与本机 mod 目录备份
-_press/*
-!_press/*.md
-# ★子目录要单独豁免★ !_press/*.md 只作用于顶层；_press/* 把子目录整个挡在外面，
-#   git 连进去看都不看。各次更新的发布文案放在 _press/<版本>/ 下，要显式放行。
-!_press/update/
-_press/update/*
-!_press/update/*.md
-
-# 宣传片：★源码进版本控制，素材不进★
-#   public/footage 是 122 MB 的切片、out/ 是渲染产物、vo/ 是 TTS 输出，
-#   三者都能从 Film.tsx + 原录屏 + 配音稿重新生成，没有进 git 的理由。
-#   但时间轴本身（哪一秒切哪个镜头、为什么这么切）是真正的工作量。
-!_press/video/
-_press/video/*
-!_press/video/src/
-!_press/video/package.json
-!_press/video/package-lock.json
-!_press/video/tsconfig.json
-!_press/video/remotion.config.ts
-_backup/
-
-# Remotion 的 agent skills（做宣传视频用的第三方工具，跟 mod 本身无关）
-.agents/
-.claude/skills/
-skills-lock.json
-
-# 本机构建路径（每台机器不同，不入库）
+# Machine-local game paths, personal data and generated diagnostics
 src/DynastyRetinue/local.props
+**/Settings.xml
+*.zks
+*.log
+*.pdb
+*.dll
+*.exe
+*.zip
+*.cache
+dynasty_*.txt
+dynasty_dev.flag
+
+# Development/reverse-engineering workspace and media are not public source
+_tmp/
+_backup/
+ref/
+_press/
+feedback/
+model/
+savebackup_*/
+.agents/
+.claude/
+.codex/
+node_modules/
+__pycache__/
+*.pyc
+*.bak
+*.pre-*
+
+# 改配表前的本地回滚点
+src/DynastyRetinue/archetypes.json.pre-*
+src/DynastyRetinue/archetypes.json.bak-*
+
+# 一次性排查脚本
+src/DynastyRetinue/_*.py

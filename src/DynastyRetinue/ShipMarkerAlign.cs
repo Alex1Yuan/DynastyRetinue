@@ -96,7 +96,7 @@ namespace DynastyRetinue
             try
             {
                 var ship = unit as StarshipEntity;
-                if (ship == null) return Vector3.zero;
+                if (ship == null || ship.IsDisposed || ship.IsDisposingNow) return Vector3.zero;
                 if (ship.SizeRect.Width <= 1) return Vector3.zero;   // 护卫舰：原版本来就一致
 
                 float cell = Kingmaker.Pathfinding.GraphParamsMechanicsCache.GridCellSize;
@@ -704,6 +704,8 @@ namespace DynastyRetinue
                 }
 
                 var ship = ShipPathContext.Current;
+                // 过图时 UI 仍可能持有上一张地图的舰船；先于任何 Part/坐标访问退出。
+                if (ship == null || ship.IsDisposed || ship.IsDisposingNow) return;
                 var s = ShipMarkerAlign.Shift(ship);
 
                 var game = Kingmaker.Game.Instance;

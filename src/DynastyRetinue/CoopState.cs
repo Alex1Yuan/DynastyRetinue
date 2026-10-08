@@ -289,6 +289,13 @@ namespace DynastyRetinue
             // 单机外观偏好。HideGearLook 只过滤渲染层 EquipmentEntity，不写实体状态。
             "LookMatrix", "HideGearLook",
 
+            // 海战卫队开关只决定「本机单机 / 联机房主是否发起事务」。加入方执行 commit
+            // 只认事务载荷，绝不读这个字段；双方个人偏好不同不会改变同一局模拟状态。
+            "SpaceEscortEnabled",
+            // 舰队 PF 只限制房主/单机编辑；战斗由房主 payload 固化，不读取加入方成本。
+            "FleetPfFrigate", "FleetPfCruiser", "FleetPfGrandCruiser",
+            "FleetPfRefitPerSlot", "FleetPfPerShot", "FleetPfPerRange",
+
             // 纯开发测试：代码另有 Main.DevMode 硬闸，普通发布环境即使旧设置残留 true 也不生效。
             // 算进指纹只会让作者开发机和普通玩家永久假红。
             "AutoEndPlayerTurn",

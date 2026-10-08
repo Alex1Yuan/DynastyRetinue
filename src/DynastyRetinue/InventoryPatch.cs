@@ -30,13 +30,17 @@ namespace DynastyRetinue
             {
                 if (!Main.Enabled) return true;
                 var u = __instance.ConcreteOwner as BaseUnitEntity;
-                if (u == null || !RetinueRegistry.IsProtected(u)) return true;
+                var ship = u as StarshipEntity;
+                if (u == null || (!RetinueRegistry.IsProtected(u)
+                    && !SpaceEscortService.IsFleetOwnedShip(ship))) return true;
 
+                // ★舰队 marker 在 Faction.Set(PlayerFaction) 之前写入★
+                // 否则同步触发的 RestoreSharedInventory 会把整船模块/舰炮倒进玩家仓库。
                 // ★门在「详细日志」后面★ 这行说的是"按设计正常工作了"，
                 //   而它对**每个卫兵、每次换阵营/读档**都会打 —— 实测一份日志里 194 行。
                 //   拦截失败才是需要知道的事，而那种情况会走下面的 catch。
                 if (Main.Settings != null && Main.Settings.WatchMomentum)
-                    Main.Log("[背包] 已拦截 RestoreSharedInventory —— 保住卫兵 "
+                    Main.Log("[背包] 已拦截 RestoreSharedInventory —— 保住受保护单位 "
                              + (u.Blueprint != null ? u.Blueprint.name : "?") + " 的自带装备");
                 return false;
             }

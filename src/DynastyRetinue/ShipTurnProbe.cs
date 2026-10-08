@@ -22,6 +22,7 @@ namespace DynastyRetinue
     ///
     /// ★默认关闭★ 只在面板勾了「详细日志」时才工作。
     /// </summary>
+    [Main.DevOnly, Main.DiagOnly]
     [HarmonyPatch(typeof(AbstractUnitEntity), "SetOrientation")]
     internal static class ShipTurnProbe
     {
@@ -71,7 +72,7 @@ namespace DynastyRetinue
         {
             try
             {
-                if (!Main.Enabled) return;
+                if (!Main.Enabled || !Main.DevMode) return;
                 var s = Main.Settings;
                 if (s == null || !s.WatchMomentum) return;   // 复用「详细日志」开关
                 if (__instance == null) return;

@@ -1,7 +1,13 @@
 using System;
 using System.IO;
 using System.Text;
+using Kingmaker.Controllers.Combat;
+using Kingmaker.EntitySystem.Entities;
+using Kingmaker.Items.Slots;
+using Kingmaker.RuleSystem.Rules.Starships;
+using Kingmaker.SpaceCombat.StarshipLogic.Parts;
 using UnityEngine;
+using Warhammer.SpaceCombat.Blueprints;
 
 namespace DynastyRetinue
 {
@@ -208,6 +214,10 @@ namespace DynastyRetinue
             });
             Try(sb, "废料       : ", delegate { return ShipDialog.Scrap().ToString(); });
             Try(sb, "利润因子   : ", delegate { return ProfitFactorGate.Summary(); });
+            Try(sb, "舰队名册   : ", FleetRosterText);
+            Try(sb, "当前部署   : ", DeployedFleetText);
+            Try(sb, "失效舰炮目标: ", delegate { return SpaceFleetDisposedTargetPatch.SkippedCount + " 次已安全终止"; });
+            Try(sb, "舰队档案恢复: ", delegate { return SpaceEscortService.ProfileRestoreFailures + " 次失败"; });
             Try(sb, "分型模板   : ", delegate
             {
                 var a = Archetypes.All;
@@ -216,6 +226,172 @@ namespace DynastyRetinue
                 return a.Length + " 个 —— " + string.Join(" / ", names);
             });
             sb.AppendLine();
+        }
+
+        private static string FleetRosterText()
+        {
+            var roster = SpaceEscortService.CurrentRoster(false);
+            var entries = roster != null && roster.Entries != null
+                ? new System.Collections.Generic.List<SpaceFleetEntry>(roster.Entries)
+                : new System.Collections.Generic.List<SpaceFleetEntry>();
+            long used = FleetBudget.Used(entries);
+            int limit = FleetBudget.Limit();
+            var outp = new StringBuilder();
+            outp.Append(entries.Count).Append(" 艘，DataVersion ")
+                .Append(roster != null ? roster.DataVersion : 0)
+                .Append("，容量 ").Append(SpaceEscortService.CapacityUsed()).Append('/')
+                .Append(SpaceEscortService.FleetCapacity)
+                .Append("，PF ").Append(used).Append('/').Append(limit >= 0 ? limit.ToString() : "?");
+            if (limit >= 0)
+            {
+                long remaining = (long)limit - used;
+                outp.Append(remaining >= 0 ? "，剩余 " : "，超出 ")
+                    .Append(Math.Abs(remaining));
+            }
+            foreach (var e in entries)
+            {
+                if (e == null) continue;
+                var cost = FleetBudget.Cost(e);
+                outp.Append("\n    ").Append(e.Id).Append("  ")
+                    .Append(string.IsNullOrEmpty(e.Name) ? "(未命名)" : e.Name)
+                    .Append("  bp=").Append(e.BlueprintGuid ?? "")
+                    .Append("  PF=").Append(cost.Total)
+                    .Append(" (hull ").Append(cost.Hull)
+                    .Append(" + refit ").Append(cost.Refit)
+                    .Append(" + shots ").Append(cost.Shots)
+                    .Append(" + range ").Append(cost.Range).Append(')')
+                    .Append("  bonus=").Append(e.BroadsideExtraShots).Append('/')
+                    .Append(e.NonBroadsideExtraShots).Append('/')
+                    .Append(e.BroadsideExtraRange).Append('/')
+                    .Append(e.NonBroadsideExtraRange)
+                    .Append("  loadout=").Append(e.Loadout != null ? e.Loadout.Count : 0);
+            }
+            return outp.ToString();
+        }
+
+        private static string DeployedFleetText()
+        {
+            try
+            {
+                var game = Kingmaker.Game.Instance;
+                var state = game != null && game.State != null && game.State.LoadedAreaState != null
+                    ? game.State.LoadedAreaState.MainState : null;
+                if (state == null || state.AllEntityData == null) return "MainState 不可用";
+                int count = 0;
+                var outp = new StringBuilder();
+                foreach (var entity in state.AllEntityData)
+                {
+                    var ship = entity as Kingmaker.EntitySystem.Entities.StarshipEntity;
+                    if (ship == null || ship.IsDisposed || ship.IsDisposingNow) continue;
+                    if (!SpaceEscortService.IsMarkedEscort(ship)) continue;
+                    count++;
+                    outp.Append("\n    ").Append(ship.UniqueId);
+                    try
+                    {
+                        outp.Append("  ").Append(ship.CharacterName).Append("  bp=")
+                            .Append(ship.Blueprint != null ? ship.Blueprint.AssetGuid.ToString() : "");
+                        SpaceFleetRuntimeProfile profile;
+                        if (SpaceEscortService.TryGetRuntimeProfile(ship, out profile))
+                            outp.Append("  profile=").Append(profile.EntryId).Append(' ')
+                                .Append(profile.BroadsideExtraShots).Append('/')
+                                .Append(profile.NonBroadsideExtraShots).Append('/')
+                                .Append(profile.BroadsideExtraRange).Append('/')
+                                .Append(profile.NonBroadsideExtraRange);
+                        else outp.Append("  profile=legacy/missing");
+                        outp.AppendLine();
+                        AppendDeployedFleetDetails(outp, ship);
+                    }
+                    catch (Exception e) { outp.AppendLine("  (本舰读取失败: " + e.Message + ")"); }
+                }
+                return count + " 艘" + outp;
+            }
+            catch (Exception e) { return "读取失败: " + e.Message; }
+        }
+
+        // 仅从手动 Export -> RuntimeState -> DeployedFleetText 调用。
+        // 读取现有实体/槽位，不创建 part、不触发战斗规则，也不刷新实体属性。
+        private static void AppendDeployedFleetDetails(StringBuilder sb, StarshipEntity ship)
+        {
+            var hull = ship.GetOptional<PartStarshipHull>();
+            var slots = hull != null ? hull.HullSlots : null;
+            Try(sb, "      component:PlasmaDrives ", delegate
+            { return FleetComponentText(slots != null ? slots.PlasmaDrives : null); });
+            Try(sb, "      component:VoidShieldGenerator ", delegate
+            { return FleetComponentText(slots != null ? slots.VoidShieldGenerator : null); });
+            Try(sb, "      component:AugerArray ", delegate
+            { return FleetComponentText(slots != null ? slots.AugerArray : null); });
+            Try(sb, "      component:ArmorPlating ", delegate
+            { return FleetComponentText(slots != null ? slots.ArmorPlating : null); });
+
+            Try(sb, "      航行(final/current): ", delegate
+            {
+                var nav = ship.GetOptional<PartStarshipNavigation>();
+                var combat = ship.GetOptional<PartUnitCombatState>();
+                var part = ship.GetOptional<PartStarship>();
+                var speed = combat != null ? combat.WarhammerInitialAPBlue : null;
+                return "CurrentSpeed=" + (nav != null ? nav.CurrentSpeed.ToString() : "?")
+                    + " SpeedMode=" + (nav != null ? nav.SpeedMode.ToString() : "?")
+                    + " WarhammerInitialAPBlue(stat base/final)="
+                    + (speed != null ? speed.BaseValue + "/" + speed.ModifiedValue : "?")
+                    + " Inertia(stat final)=" + (part != null ? part.Inertia.ToString() : "?")
+                    + " Evasion(stat final)=" + (part != null ? part.Evasion.ToString() : "?");
+            });
+            Try(sb, "      最低航程(final)=?；实际门槛/余量: ", delegate
+            {
+                var nav = ship.GetOptional<PartStarshipNavigation>();
+                var combat = ship.GetOptional<PartUnitCombatState>();
+                // CanEndTurn 还取决于可站位置及 AI 状态；阈值不冒充最低航程。
+                return "FinishingTilesCount=" + (nav != null ? nav.FinishingTilesCount.ToString() : "?")
+                    + " PushPhaseTilesCount=" + (nav != null ? nav.PushPhaseTilesCount.ToString() : "?")
+                    + " ActionPointsBlue(remaining)=" + (combat != null
+                        ? combat.ActionPointsBlue.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture) : "?")
+                    + " (结束阶段阈值，不等同最低航程；不查询路径/CanEndTurn)";
+            });
+
+            var shields = ship.GetOptional<PartStarshipShields>();
+            Try(sb, "      护盾 current/max [Fore,Port,Starboard,Aft]: ", delegate
+            {
+                return FleetShieldText(shields, StarshipHitLocation.Fore) + " | "
+                    + FleetShieldText(shields, StarshipHitLocation.Port) + " | "
+                    + FleetShieldText(shields, StarshipHitLocation.Starboard) + " | "
+                    + FleetShieldText(shields, StarshipHitLocation.Aft);
+            });
+            Try(sb, "      装甲 final(GetLocationDeflection) [Fore,Port,Starboard,Aft]: ", delegate
+            {
+                return hull == null ? "?" : hull.GetLocationDeflection(StarshipHitLocation.Fore)
+                    + " | " + hull.GetLocationDeflection(StarshipHitLocation.Port)
+                    + " | " + hull.GetLocationDeflection(StarshipHitLocation.Starboard)
+                    + " | " + hull.GetLocationDeflection(StarshipHitLocation.Aft);
+            });
+        }
+
+        private static string FleetComponentText(ItemSlot slot)
+        {
+            if (slot == null) return "? (slot 不可用)";
+            var item = slot.MaybeItem;
+            if (item == null) return "空槽 name=- GUID=- UID=-";
+            var bp = item.Blueprint;
+            string text = "name=" + (string.IsNullOrWhiteSpace(item.Name) ? "(无名称)" : item.Name)
+                + " GUID=" + (bp != null ? bp.AssetGuid.ToString() : "?") + " UID=" + item.UniqueId;
+            var drive = bp as BlueprintItemPlasmaDrives;
+            if (drive != null)
+                text += " blueprint base: Speed=" + drive.Speed + " Inertia=" + drive.Inertia
+                    + " Evasion=" + drive.Evasion + " PushPhase=" + drive.PushPhase
+                    + " FinishPhase=" + drive.FinishPhase;
+            var auger = bp as BlueprintItemAugerArray;
+            if (auger != null)
+                // 原版命中规则直接读取这两个基础值；最终概率依赖武器、目标和规则修正。
+                text += " blueprint base: hitChances=" + auger.hitChances
+                    + " critChances=" + auger.critChances
+                    + "；final hit/crit=? (依武器/目标/规则；不触发规则推算)";
+            return text;
+        }
+
+        private static string FleetShieldText(PartStarshipShields shields, StarshipHitLocation location)
+        {
+            if (shields == null) return "?";
+            var sector = shields.GetShields(location);
+            return sector != null ? sector.Current + "/" + sector.Max : "?";
         }
 
         private static void LogTail(StringBuilder sb, string dir)

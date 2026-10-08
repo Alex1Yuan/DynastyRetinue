@@ -55,8 +55,8 @@ namespace DynastyRetinue
                 var s = Main.Settings;
                 if (s == null || !s.ShipRangeFocusFix) return;
 
-                var caster = Caster();
-                if (caster == null) return;
+                var caster = Caster() as Kingmaker.EntitySystem.Entities.StarshipEntity;
+                if (!SpaceEscortService.IsOurShip(caster)) return;
 
                 var center = ShipCenterCell(caster);
                 if (center == null) return;

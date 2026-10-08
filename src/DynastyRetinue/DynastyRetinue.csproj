@@ -41,6 +41,7 @@
     <Reference Include="netstandard"><HintPath>$(GameManaged)\netstandard.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="System"><HintPath>$(GameManaged)\System.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="System.Core"><HintPath>$(GameManaged)\System.Core.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="System.Xml"><HintPath>$(GameManaged)\System.Xml.dll</HintPath><Private>false</Private></Reference>
     <!-- 游戏与引擎 -->
     <Reference Include="Code"><HintPath>$(GameManaged)\Code.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="Kingmaker.UnitLogic.Enums"><HintPath>$(GameManaged)\Kingmaker.UnitLogic.Enums.dll</HintPath><Private>false</Private></Reference>
@@ -62,6 +63,8 @@
     <Reference Include="StateHasher"><HintPath>$(GameManaged)\StateHasher.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine"><HintPath>$(GameManaged)\UnityEngine.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine.CoreModule"><HintPath>$(GameManaged)\UnityEngine.CoreModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Owlcat.Runtime.Visual"><HintPath>$(GameManaged)\Owlcat.Runtime.Visual.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Unity.RenderPipelines.Core.Runtime"><HintPath>$(GameManaged)\Unity.RenderPipelines.Core.Runtime.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine.IMGUIModule"><HintPath>$(GameManaged)\UnityEngine.IMGUIModule.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine.InputLegacyModule"><HintPath>$(GameManaged)\UnityEngine.InputLegacyModule.dll</HintPath><Private>false</Private></Reference>
     <!-- 游戏内 uGUI 窗口（路线 B）。Canvas/RenderMode 在 UIModule，不加会 CS1069 "已转发到"。

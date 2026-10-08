@@ -183,7 +183,7 @@ namespace DynastyRetinue
 
                 foreach (var g in list)
                 {
-                    if (g == null) continue;
+                    if (g == null || GuardReserve.IsReserved(g) || !g.IsInGame) continue;
                     string id;
                     try { id = g.UniqueId; } catch { continue; }
                     if (string.IsNullOrEmpty(id)) continue;
@@ -293,7 +293,7 @@ namespace DynastyRetinue
 
         internal static void PlaceAt(BaseUnitEntity unit, Vector3 exactPosition)
         {
-            if (unit == null) return;
+            if (unit == null || GuardReserve.IsReserved(unit) || !unit.IsInGame) return;
             try { unit.Commands.InterruptAiCommands(); } catch { }
             try
             {
@@ -348,7 +348,8 @@ namespace DynastyRetinue
                 for (int i = 0; i < guards.Count; i++)
                     if (guards[i] != null && string.Equals(guards[i].UniqueId, uid, StringComparison.Ordinal))
                     { unit = guards[i]; break; }
-            if (unit == null) { failure = "rescue 找不到卫兵 " + uid; return false; }
+            if (unit == null || GuardReserve.IsReserved(unit) || !unit.IsInGame)
+            { failure = "rescue 找不到出战卫兵 " + uid; return false; }
             var bp = unit.OriginalBlueprint ?? unit.Blueprint;
             if (bp == null) { failure = "rescue 卫兵蓝图为空 " + uid; return false; }
 
@@ -386,6 +387,7 @@ namespace DynastyRetinue
                 if (!string.Equals(plan.Area, RetinueLifecycle.CurrentAreaId(), StringComparison.Ordinal))
                 { failure = "区域已变化"; return false; }
                 if (plan.Unit == null || plan.Unit.IsDisposed || !RetinueRegistry.IsGuard(plan.Unit)
+                    || GuardReserve.IsReserved(plan.Unit) || !plan.Unit.IsInGame
                     || !string.Equals(plan.Unit.UniqueId, plan.Uid, StringComparison.Ordinal))
                 { failure = "卫兵已不在册"; return false; }
                 var leader = game.Player.MainCharacterEntity;

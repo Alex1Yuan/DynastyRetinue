@@ -58,6 +58,9 @@ namespace DynastyRetinue
         public static int GrantFeatures(BaseUnitEntity g, ChainProbe.Archetype arch, int tier = 0)
         {
             if (g == null || arch == null) return 0;
+            // 独立的装备调用也必须过滤；提前返回避免按阶位撤销老兵已有 Facts。
+            if (GuardGrowth.RestrictBootstrap(g))
+                return GuardGrowth.GrantGearProficiencies(g, arch, tier);
 
             // ---- 本次应当拥有的 = 常驻 ∪ 本阶位 ----
             var keep = new List<string>();

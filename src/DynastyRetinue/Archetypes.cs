@@ -62,10 +62,11 @@ namespace DynastyRetinue
             /// <summary>同 rank 的备选：兄弟条目已落地，这条只是没被挑中。
             /// 按段合成时一个槽位会从多个源各取一个候选，只能落一个 —— 那是设计冗余不是缺失。</summary>
             public int Alt;
+            public int Skipped;   // 属性模式有意消费的 rank，不在切回完整模式时补发
             public int MissA, MissB, MissC;
             public string Detail = "";
             /// <summary>应生效的条目数（扣掉没走到的 rank）。</summary>
-            public int Applicable { get { return Total - Unreached - Alt; } }
+            public int Applicable { get { return Total - Unreached - Alt - Skipped; } }
             /// <summary>方案覆盖率：应生效的里面落实了多少。</summary>
             public int Percent { get { return Applicable > 0 ? (int)(100.0 * Ok / Applicable) : 0; } }
         }
@@ -650,6 +651,8 @@ namespace DynastyRetinue
             LastSeen = 0; LastNoOption = 0; LastPlanHits = 0; LastFallbacks = 0;
             LastAudit = new PlanAudit();
             if (guard == null || arch == null) return 0;
+            if (RetinueRegistry.IsGuard(guard) && !Main.Settings.AutoLevelUp) return 0;
+            bool attributesOnly = GuardGrowth.AttributesOnly(guard);
 
             // 已到上限就一步都别走。v0.1.5 实测：满 55 级后 while 里的
             // CharacterLevel < levelCap 拦不住 LevelUpManager 继续吃 rank
@@ -700,7 +703,7 @@ namespace DynastyRetinue
             // 之前只判 Facts.Contains 然后直接 Add，于是变成"两个家园世界 + 两个背景"。
             // 不只是显示难看：BlueprintSelectionFeature.GetSelectionItems 会把 unit.Facts 里
             // 所有 AddFeaturesToLevelUp 并进候选池，旧背景会一直往后面的选择点里掺东西。
-            if (plan != null)
+            if (!GuardGrowth.RestrictBootstrap(guard) && plan != null)
             {
                 GrantChargen(guard, plan.Homeworld, FeatureGroup.ChargenHomeworld, "家园世界");
                 GrantChargen(guard, plan.Origin,    FeatureGroup.ChargenOccupation, "背景/起源");
@@ -708,7 +711,7 @@ namespace DynastyRetinue
             // 额外前置：方案存不下、但不给就整段天赋都不出现的东西，目前是灵能学派。
             // Pyromancy_Base_Feature / Biomancy_Base_Feature 各带 9 个 AddFeaturesToLevelUp，
             // 不授予的话火系/生物系灵能一条都进不了候选池（实测火杖行刑者 7 条全灭）。
-            if (preGrant != null)
+            if (!GuardGrowth.RestrictBootstrap(guard) && preGrant != null)
                 foreach (var pg in preGrant) GrantPlain(guard, pg, "前置");
             int planHits = 0, fallbacks = 0, seen = 0, noOpt = 0;
 
@@ -744,6 +747,10 @@ namespace DynastyRetinue
                     if (!plan.Sel.ContainsKey(chain[i]))
                         Main.LogError("    方案里没有这条 path: " + PathName(chain[i]) + " —— 该段将全部回退");
             }
+
+            // 属性模式从这里分流，完全绕过 LevelUpManager、固定 Features 和 LateGrant。
+            if (attributesOnly)
+                return GuardGrowth.Apply(guard, chain, chainDepth, levelCap, plan, attrPriority, preGrant);
 
             // 每条 path 实际走到的 rank —— 收尾核对要靠它区分"没点上"和"等级压根没到"。
             // 普通卫兵只到 38 级，方案却写到 55 级；不记这个，没走到的 rank 会被
@@ -866,7 +873,7 @@ namespace DynastyRetinue
                 if (guard.Progression.CharacterLevel >= levelCap) break;
             }
             LastSeen = seen; LastNoOption = noOpt; LastPlanHits = planHits; LastFallbacks = fallbacks;
-            LateGrant(guard, plan, chain, chainDepth);
+            LateGrant(guard, plan, chain, chainDepth, reachedRank);
             LastAudit = VerifyPlan(guard, plan, chain, chainDepth, reachedRank);
             Main.Log("    加点: 选择点 " + seen + " 个（无可选项 " + noOpt + "）"
                      + "，按方案命中 " + planHits + "，回退 " + fallbacks
@@ -1039,10 +1046,12 @@ namespace DynastyRetinue
         /// 那个选项弹出来时角色才 33 级，两条分支都差一点，于是永远选不上。
         /// 等整条链跑完卫兵是 55 级，39 级那条早就满足了。
         ///
-        /// 这不是绕过门槛：只补**此刻确实合格**的条目，求值不出来的一律不补。
+        /// 只补本单位已经走到的职业 rank；主角解锁 T2/T3 不代表新兵也走到了那些 rank。
+        /// 再检查此刻的前置，求值不出来的一律不补。
         /// 全是方案里已有的原版蓝图，不产生新 AssetId。
         /// </summary>
-        private static void LateGrant(BaseUnitEntity guard, BuildPlans.Plan plan, string[] chain, int chainDepth)
+        private static void LateGrant(BaseUnitEntity guard, BuildPlans.Plan plan, string[] chain, int chainDepth,
+                                      Dictionary<string, int> reachedRank)
         {
             if (plan == null || guard == null) return;
             try
@@ -1053,7 +1062,12 @@ namespace DynastyRetinue
                 {
                     Dictionary<int, List<string>> byRank;
                     if (!plan.Sel.TryGetValue(chain[i], out byRank)) continue;
+                    int reached;
+                    if (reachedRank == null || !reachedRank.TryGetValue(chain[i], out reached) || reached < 1) continue;
                     foreach (var kv in byRank)
+                    {
+                        if (kv.Key > reached) continue;
+                        if (GuardGrowth.Skipped(guard, chain[i], kv.Key)) continue;
                         foreach (var g in kv.Value)
                         {
                             BlueprintFeature bp = null;
@@ -1072,6 +1086,7 @@ namespace DynastyRetinue
                             }
                             catch (Exception e) { Main.LogError("    补选失败 " + BpName(bp) + ": " + e.Message); }
                         }
+                    }
                 }
                 if (n > 0) Main.Log("    补选合计 " + n + " 条");
             }
@@ -1126,6 +1141,7 @@ namespace DynastyRetinue
                             bool has = false;
                             try { has = bp != null && guard.Facts.Contains(bp); } catch { }
                             if (has) { ok++; continue; }
+                            if (GuardGrowth.Skipped(guard, chain[i], kv.Key)) { audit.Skipped++; continue; }
 
                             // D 必须排在 A/B/C 前面：没走到的 rank 谈不上"没选上"
                             if (kv.Key > reached) { missD.Add(nm + where); continue; }

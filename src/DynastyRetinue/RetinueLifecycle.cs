@@ -361,6 +361,22 @@ namespace DynastyRetinue
         internal static void RearmPlacement() { ArmPlacement(); }
         internal static void CancelPendingPlacement() { ResetPlacementPending(); }
 
+        internal static bool TryPlanDeployment(List<BaseUnitEntity> guards, bool reserved,
+            out List<Vector3> positions)
+        {
+            positions = new List<Vector3>(guards.Count);
+            var occupied = new HashSet<GraphNode>();
+            var leader = Game.Instance.Player.MainCharacterEntity;
+            foreach (var guard in guards)
+            {
+                Vector3 position = guard.Position;
+                if (!reserved && InPartyArea()
+                    && !TryPlanPosition(guard, leader.Position, occupied, out position)) return false;
+                positions.Add(position);
+            }
+            return true;
+        }
+
         private static void ArmPlacement()
         {
             _placementPending = InPartyArea();
@@ -458,6 +474,11 @@ namespace DynastyRetinue
             foreach (var guard in guards)
             {
                 if (guard == null || string.IsNullOrEmpty(guard.UniqueId)) continue;
+                if (GuardReserve.IsReserved(guard))
+                {
+                    result.Add(new Placement { Unit = guard, Uid = guard.UniqueId, Position = guard.Position });
+                    continue;
+                }
                 Vector3 target;
                 if (!TryPlanPosition(guard, anchor, reserved, out target))
                 {
@@ -473,6 +494,7 @@ namespace DynastyRetinue
         {
             foreach (var p in placements)
             {
+                if (GuardReserve.IsReserved(p.Unit)) continue;
                 Vector3 before = p.Unit.Position;
                 try { p.Unit.Commands.InterruptAiCommands(); } catch { }
                 try { if (p.Unit.View != null && p.Unit.View.AgentASP != null) p.Unit.View.AgentASP.Blocker.Unblock(); } catch { }
@@ -505,6 +527,7 @@ namespace DynastyRetinue
             public string[] Payload;
             public List<Placement> Placements;
             public Vector3 LeaderPosition;
+            public string ReserveSnapshot;
         }
 
         private sealed class HideTransactionPlan
@@ -558,7 +581,8 @@ namespace DynastyRetinue
                 { failure = "placeguards UID 为空或重复"; return false; }
                 BaseUnitEntity unit;
                 if (!rosterById.TryGetValue(uid, out unit)) { failure = "找不到卫兵 " + uid; return false; }
-                if (!unit.CanBeTurnedOn) { failure = "卫兵不能启用 " + uid; return false; }
+                if (!GuardReserve.IsReserved(unit) && !unit.CanBeTurnedOn)
+                { failure = "卫兵不能启用 " + uid; return false; }
                 placements.Add(new Placement { Unit = unit, Uid = uid, Position = new Vector3(x, y, z) });
             }
             if (!RosterMatches(roster, seen, out failure)) return false;
@@ -567,7 +591,8 @@ namespace DynastyRetinue
             {
                 Area = area, Language = language, SettingsFrom = settingsFrom,
                 Payload = (string[])args.Clone(), Placements = placements,
-                LeaderPosition = game.Player.MainCharacterEntity.Position
+                LeaderPosition = game.Player.MainCharacterEntity.Position,
+                ReserveSnapshot = GuardReserve.Snapshot
             };
             if (!TryBuildPrepareSignature("placeguards", plan.Payload, settingsFrom,
                                           placements, game.Player.MainCharacterEntity,
@@ -698,6 +723,7 @@ namespace DynastyRetinue
                     catch { }
 
                     AddSignatureField(raw, p.Uid);
+                    AddSignatureField(raw, GuardReserve.IsReserved(unit) ? "reserve" : "deployed");
                     AddSignatureField(raw, bp != null ? bp.AssetGuid.ToString() : "");
                     AddSignatureField(raw, archIndex.ToString(CultureInfo.InvariantCulture));
                     AddSignatureField(raw, eliteArch.ToString(CultureInfo.InvariantCulture));
@@ -907,6 +933,8 @@ namespace DynastyRetinue
                 if (opaquePlan is PlacementTransactionPlan)
                 {
                     var placement = (PlacementTransactionPlan)opaquePlan;
+                    if (!string.Equals(placement.ReserveSnapshot, GuardReserve.Snapshot, StringComparison.Ordinal))
+                    { failure = "卫兵出战状态在 prepare 后已变化"; return false; }
                     var leader = game.Player.MainCharacterEntity;
                     if (leader == null || (leader.Position - placement.LeaderPosition).sqrMagnitude > 0.01f)
                     { failure = "主角在 prepare 后又发生位移"; return false; }
@@ -1080,7 +1108,8 @@ namespace DynastyRetinue
                 else
                 {
                     ApplyExactPositions(placements);
-                    foreach (var p in placements) RetinueTest.ReapplyBrain(p.Unit);
+                    foreach (var p in placements)
+                        if (!GuardReserve.IsReserved(p.Unit)) RetinueTest.ReapplyBrain(p.Unit);
                     ResetPlacementPending();
                 }
             }

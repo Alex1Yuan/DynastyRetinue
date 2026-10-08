@@ -20,10 +20,12 @@ except Exception:
 
 SRC = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src", "DynastyRetinue")
 TAB = os.path.join(SRC, "l10n_en.json")
+ARCH = os.path.join(SRC, "archetypes.json")
+LOOKS = os.path.join(SRC, "looks.json")
 
 # L.T(TextValue) —— 参数是 const 标识符，正则扫不到，但运行时确实会查这个 key
 KNOWN_NONLITERAL = [
-    u"（护卫队）关于我的护卫队……",
+    u"（卫队）关于地面卫队与护航舰队的事宜……",
     # ShipModelCatalog.HullName 走 L.T(Hull)，Hull 是 ShipModel 的只读字段，
     # 取值就是下面这 11 个字面量（见 ShipModelCatalog.All 的初始化列表）。
     # 没有把 L.T 贴到字面量上，是因为 Hull 同时还被当**数据**用
@@ -39,6 +41,8 @@ KNOWN_NONLITERAL = [
     u"Sword 级护卫舰",
     u"Falchion 级护卫舰",
     u"Firestorm/Tempest 级护卫舰",
+    # ShipUiPatches 先把原版 slot enum 映射成这些中文显示名，再动态 L.T(slotZh)。
+    u"左舷", u"右舷", u"船脊", u"舰首", u"船底",
 ]
 
 # 语言自己的名字不该被翻译
@@ -127,6 +131,33 @@ def main():
     for k in KNOWN_NONLITERAL:
         used.setdefault(k, []).append("(非字面量)")
 
+    # 招募 UI 直接 L.T(elite.Name)，值来自 archetypes.json，静态 C# 字面量扫描天然看不到。
+    # 分型 name 刻意保留「近战 Melee」这种双语标签，不走 L.T；只登记精英显示名。
+    arch_data = json.loads(io.open(ARCH, encoding="utf-8-sig").read())
+    elite_names = set()
+    for arch in arch_data.get("archetypes", []):
+        for elite in arch.get("elites") or []:
+            elite_name = elite.get("name")
+            if elite_name:
+                elite_names.add(elite_name)
+                used.setdefault(elite_name, []).append("archetypes.json:elite.name")
+
+    # looks.json 自带 name/name_en，不走 l10n_en；这也是动态显示文本，必须单独强校验。
+    look_data = json.loads(io.open(LOOKS, encoding="utf-8-sig").read())
+    bad_look_names = []
+    for look in look_data.get("looks", []):
+        if not look.get("id"):
+            continue
+        zh, en = look.get("name"), look.get("name_en")
+        if not isinstance(zh, str) or not zh or not isinstance(en, str) or not en or HAS_CJK.search(en):
+            bad_look_names.append((look.get("id"), zh, en))
+
+    # 已由配置权威集合覆盖的 L.T(ed.Name) 不再留在“需人工确认”噪声里。
+    nonlit = [s for s in nonlit if not ("RetinueUI.cs: L.T(ed.Name)" in s
+                                         or "RetinueUI.cs: L.T(elite.Name)" in s
+                                         or "RecruitWindow.cs: L.T(ed.Name)" in s
+                                         or "LookCatalog.cs: L.T(Name" in s)]
+
     fail = 0
 
     missing = [k for k in used if HAS_CJK.search(k) and k not in tab
@@ -160,6 +191,11 @@ def main():
     for v in cjk[:10]:
         print("    %s" % v[:70])
     fail += len(cjk)
+
+    print("\nlooks.json 名称缺英文/英文含中文: %d" % len(bad_look_names))
+    for look_id, zh, en in bad_look_names[:10]:
+        print("    %s  name=%r  name_en=%r" % (look_id, zh, en))
+    fail += len(bad_look_names)
 
     # 不计入 fail：不是错，是**扫不到**。但必须让人看见，否则漏的那格永远没人发现。
     # 处理办法二选一：把 L.T 贴到字面量上（首选，代码自解释），或登记进 KNOWN_NONLITERAL。

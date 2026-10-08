@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net472</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <EnableNETAnalyzers>false</EnableNETAnalyzers>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+  <Import Project="../../../src/DynastyRetinue/local.props" Condition="Exists('../../../src/DynastyRetinue/local.props')" />
+  <PropertyGroup>
+    <GameManaged Condition="'$(GameManaged)' == ''">C:\Program Files (x86)\Steam\steamapps\common\Warhammer 40,000 Rogue Trader\WH40KRT_Data\Managed</GameManaged>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../../src/DynastyRetinue/GuardFriendlyFire.cs" Link="GuardFriendlyFire.cs" />
+    <Reference Include="0Harmony"><HintPath>$(GameManaged)/0Harmony.dll</HintPath></Reference>
+  </ItemGroup>
+</Project>

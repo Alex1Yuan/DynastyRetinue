@@ -1,3 +1,0 @@
-pos0  8ca60374722b4eeea27d99c3b17fb09e  zh=痛苦尖叫  int=BladeOfMalice_Item  rar=Unique
-pos1  8c304b20633145f39577a392201d2047  zh=自主攻击能量剑  int=AutoStriking_PowerSword_Item  rar=Unique
-pos2  eaa742e43d8e48a3a450c4d59431b03e  zh=哀恸之刃  int=DeathCultSwordCH2Unique_Item  rar=Unique

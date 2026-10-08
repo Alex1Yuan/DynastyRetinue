@@ -1,0 +1,3 @@
+# Preserve exact data bytes used by BuildManifest diagnostics and release packages.
+*.json -text
+*.sh text eol=lf

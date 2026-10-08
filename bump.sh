@@ -27,14 +27,15 @@ set -e
 
 [ -n "$1" ] || { echo "用法: sh bump.sh <版本号> [pack]"; exit 1; }
 VER="$1"
+PYTHON_BIN="${DR_PYTHON:-py}"
 R=src/DynastyRetinue
 # ★译表完整性闸门★ 原来这里只有 [ -f l10n_en.json ]（查文件在不在），
 # 于是「新加一句 L.T(...) 忘了补译文」会一路绿灯发出去，
 # 英文玩家界面上就多一句中文，且没有任何报错。
-py tools/check_l10n.py || { echo "x 本地化校验未通过，已中止。"; exit 1; }
+"$PYTHON_BIN" tools/check_l10n.py || { echo "x 本地化校验未通过，已中止。"; exit 1; }
 # 名字用字门禁：游戏中文字体是子集，生僻字在名条上会渲染成方框，
 # 而 mod 面板用 Unity 默认字体显示正常 —— 对着面板永远查不出来。
-py tools/check_names.py || { echo "x 名字用字校验未通过，已中止。"; exit 1; }
+"$PYTHON_BIN" tools/check_names.py || { echo "x 名字用字校验未通过，已中止。"; exit 1; }
 BIN=$R/bin/Release
 # 部署目录。默认按 Windows 上 UMM 给这个游戏的标准位置推导（$HOME 就是 C:\Users\你）。
 # 装在别处的话，跑之前设一下环境变量即可：
@@ -44,7 +45,7 @@ D="${DR_DEPLOY:-$HOME/AppData/LocalLow/Owlcat Games/Warhammer 40000 Rogue Trader
 # ★先生成数据文件指纹，再编译★ 顺序不能反 —— BuildManifest.cs 要参与编译。
 # 指纹只用于诊断包里标注"这份配表被改过没有"，不做任何拦截，正常玩家无感。
 echo "生成数据指纹……"
-py tools/gen_manifest.py "$VER"
+"$PYTHON_BIN" tools/gen_manifest.py "$VER"
 
 # ★先编译，且编译失败就停★
 # 只查 DLL 存在是不够的：编译失败时上一次的 DLL 还在，于是 Info.json 涨到新版、
@@ -65,7 +66,7 @@ fi
 # 风格选项凭空消失且毫无提示 —— 和 l10n 一样是静默失败，所以也挡一道。
 [ -f "$R/looks.json" ]       || { echo "x $R/looks.json 不存在（外观风格会全部消失）"; exit 1; }
 
-py -c "
+"$PYTHON_BIN" -c "
 import io,re
 p=r'$R/Info.json'; s=io.open(p,encoding='utf-8-sig').read()
 s=re.sub(r'\"Version\"\s*:\s*\"[^\"]*\"','\"Version\": \"$VER\"',s)
@@ -91,22 +92,9 @@ if [ -f "$R/l10n_en.json" ]; then cp "$R/l10n_en.json" "$D/"; fi
 echo "已部署 v$VER 到本机"
 
 if [ "$2" = "pack" ]; then
-  OUT=dist/DynastyRetinue
-  rm -rf dist && mkdir -p "$OUT"
-  cp "$R/Info.json" "$R/archetypes.json" "$R/plans.json" "$R/looks.json" "$OUT/"
-  # 译文表：缺了只是界面不显示英文，不影响功能；但既然有就该发
-  if [ -f "$R/l10n_en.json" ]; then cp "$R/l10n_en.json" "$OUT/"; fi
-  cp "$BIN/DynastyRetinue.dll" "$OUT/"
-  if [ -f README.md ]; then cp README.md "$OUT/"; fi
-  # 许可证必须随包发 —— MIT 要求"保留本许可文件"，不发就等于自己没遵守自己的条款
-  [ -f LICENSE ] || { echo "x LICENSE 不存在"; exit 1; }
-  cp LICENSE "$OUT/"
-  # 不打 pdb（玩家用不上，只让包变大）；不打 Settings.xml（那是本机配置）；
-  # 不打 *.tsv / dynasty_log.txt（调试数据，且日志含本机绝对路径）
-  py -c "
-import shutil; shutil.make_archive(r'dist/DynastyRetinue-$VER','zip','dist','DynastyRetinue')"
+  # 只写本次 ZIP，保留 dist 中的历史发布包；交付物来自显式白名单。
+  "$PYTHON_BIN" tools/pack_release.py "$VER"
   echo "发布包: dist/DynastyRetinue-$VER.zip"
-  ls -l dist/
 fi
 
 grep '"Version"' "$D/Info.json"

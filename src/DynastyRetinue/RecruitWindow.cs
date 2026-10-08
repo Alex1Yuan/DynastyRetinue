@@ -141,7 +141,7 @@ namespace DynastyRetinue
                 if (!string.IsNullOrEmpty(label)) GUILayout.Label("<b>" + label + "</b>", GUILayout.Width(80));
                 var ed = GearTool.NextElite(archIndex, group, roster);
                 string text;
-                if (ed != null) text = L.F("下一个精英: {0}", ed.Name);
+                if (ed != null) text = L.F("下一个精英: {0}", L.T(ed.Name));
                 else if (arch.Elites == null || arch.Elites.Length == 0)
                     text = L.T("<color=#aaaaaa>本分型没有配精英</color>");
                 else if (WeaponGate.HasMissingRecruitBlockedElite(archIndex, arch, roster, group))

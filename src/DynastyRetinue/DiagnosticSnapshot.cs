@@ -24,6 +24,9 @@ namespace DynastyRetinue
             sb.AppendLine("-------- 联机 / 回合快照 --------");
             AppendNetwork(sb);
             AppendTurn(sb);
+            sb.AppendLine("卫队友伤保护 : enabled=" + GuardFriendlyFire.Enabled
+                + " blockedHits=" + GuardFriendlyFire.PreventedHits
+                + " skippedPsykerExecutions=" + GuardFriendlyFire.PreventedPhenomena);
             sb.AppendLine();
         }
 

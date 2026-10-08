@@ -305,8 +305,7 @@ namespace DynastyRetinue
             if (!Main.Enabled || Main.Settings == null || !Main.Settings.ShipMountFallback) return;
             if (!Resolve()) return;
 
-            // ---- 只管我们换过船模的玩家座舰 ----
-            if (string.IsNullOrEmpty(StarshipViewTool.CurrentPrefab)) return;
+            // ---- 只管玩家当前座舰或本 mod 的 marker 僚舰 ----
             object entity = null;
             try
             {
@@ -314,10 +313,16 @@ namespace DynastyRetinue
                 if (uev != null) entity = Get(uev, "Data");
             }
             catch { }
+            var ship = entity as Kingmaker.EntitySystem.Entities.StarshipEntity;
+            if (!SpaceEscortService.IsOurShip(ship)) return;
+
+            // 玩家座舰仍只在我们换过船模时介入；原版原船模缺挂点属于原版行为。
+            // 海战卫队允许原版大舰/虚拟装配，必须按实际已装武器补缺失美术挂点。
             object player = null;
             try { player = Game.Instance != null && Game.Instance.Player != null
                          ? (object)Game.Instance.Player.PlayerShip : null; } catch { }
-            if (entity == null || player == null || !ReferenceEquals(entity, player)) return;
+            if (player != null && ReferenceEquals(entity, player)
+                && string.IsNullOrEmpty(StarshipViewTool.CurrentPrefab)) return;
 
             var list = Get(view, "ItemSlots") as IList;
             if (list == null) return;

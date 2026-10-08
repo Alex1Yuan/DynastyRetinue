@@ -466,8 +466,8 @@ namespace DynastyRetinue
                 var item = Get(tpl, "m_Item");
                 if (item == null) return null;
 
-                string tier = StarshipChargesPatch.UiTierName();
-                string head = "<color=#c8a45c>【卫队 Mod · " + tier + "】</color>\n";
+                string tier = L.T(StarshipChargesPatch.UiTierName());
+                string head = L.F("<color=#c8a45c>【卫队 Mod · {0}】</color>\n", tier);
 
                 // ---- 武器：多打 + 射程 ----
                 if (item.GetType().Name == "ItemEntityStarshipWeapon")
@@ -481,20 +481,18 @@ namespace DynastyRetinue
                                   : slot == "Dorsal" ? "船脊" : slot == "Prow" ? "舰首"
                                   : slot == "Keel" ? "船底" : slot;
 
-                    var sb = new StringBuilder(head);
-                    sb.Append(slotZh).Append("槽位：");
+                    var effects = new List<string>();
                     if (shots > 0)
                     {
                         int baseCharges = StarshipChargesPatch.UiBaseCharges(item);
-                        if (baseCharges >= 0)
-                            sb.Append("每轮 <color=#7ec8ff>×").Append(baseCharges + shots)
-                              .Append("</color> 次开火（原本 ").Append(baseCharges).Append(" 次）");
-                        else
-                            sb.Append("每轮 <color=#7ec8ff>额外 +").Append(shots).Append("</color> 次开火");
-                        if (range > 0) sb.Append(" · ");
+                        effects.Add(baseCharges >= 0
+                            ? L.F("每轮 <color=#7ec8ff>×{0}</color> 次开火（原本 {1} 次）",
+                                  baseCharges + shots, baseCharges)
+                            : L.F("每轮 <color=#7ec8ff>额外 +{0}</color> 次开火", shots));
                     }
-                    if (range > 0) sb.Append("射程 <color=#7ec8ff>+").Append(range).Append("</color>");
-                    return sb.ToString();
+                    if (range > 0)
+                        effects.Add(L.F("射程 <color=#7ec8ff>+{0}</color>", range));
+                    return head + L.F("{0}槽位：{1}", L.T(slotZh), string.Join(" · ", effects.ToArray()));
                 }
 
                 // ---- 船板：装甲 ----
@@ -502,8 +500,8 @@ namespace DynastyRetinue
                 if (bp != null && bp.GetType().Name == "BlueprintItemArmorPlating")
                 {
                     if (armourPct <= 0) return null;
-                    return head + "所有方向的减伤 <color=#7ec8ff>+" + armourPct
-                         + "%</color>（下方船形图上的数字已是加成后的实际值）";
+                    return head + L.F("所有方向的减伤 <color=#7ec8ff>+{0}%</color>（下方船形图上的数字已是加成后的实际值）",
+                                      armourPct);
                 }
 
                 // ---- 护盾发生器 ----
@@ -511,8 +509,8 @@ namespace DynastyRetinue
                     || (bp != null && bp.GetType().Name == "BlueprintVoidShieldGenerator"))
                 {
                     if (shieldPct <= 0) return null;
-                    return head + "四个扇区的护盾上限 <color=#7ec8ff>+" + shieldPct
-                         + "%</color>（下方船形图上的数字已是加成后的实际值）";
+                    return head + L.F("四个扇区的护盾上限 <color=#7ec8ff>+{0}%</color>（下方船形图上的数字已是加成后的实际值）",
+                                      shieldPct);
                 }
 
                 return null;

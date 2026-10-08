@@ -1,8 +1,9 @@
-﻿using System;
+using System;
 using System.Reflection;
 using HarmonyLib;
 using Kingmaker;
 using Kingmaker.Enums;
+using Kingmaker.EntitySystem.Entities;
 using Kingmaker.EntitySystem.Stats.Base;
 
 namespace DynastyRetinue
@@ -59,8 +60,7 @@ namespace DynastyRetinue
         {
             try
             {
-                if (!Main.Enabled || Main.Settings == null || !Main.Settings.ShipExtraShots) return;
-                if (__instance == null) return;
+                if (!Main.Enabled || Main.Settings == null || __instance == null) return;
 
                 int cur = GetInt(__instance, "Charges");
                 // 0 = 被 StarshipBlockRecharge 封锁，或本来就没弹。别把封锁状态解开。
@@ -73,8 +73,9 @@ namespace DynastyRetinue
                 if (!_logged)
                 {
                     _logged = true;
+                    var owner = SupportedWeaponOwner(__instance);
                     Main.Log("[舰船] 多打生效：" + SlotName(__instance) + " charges " + cur + " -> " + (cur + bonus)
-                             + "（舰船分档 " + ShipSize() + "）。本次会话只报这一条。");
+                             + "（舰船分档 " + SizeOf(owner) + "）。本次会话只报这一条。");
                 }
             }
             catch (Exception e) { Main.LogError("[舰船] 多打 Postfix 失败: " + e.Message); }
@@ -117,50 +118,44 @@ namespace DynastyRetinue
         /// 所以它做不到"只加舷炮"，这也是我们不复用那个组件的原因）。
         /// </summary>
         /// <summary>
-        /// 这把炮是不是**玩家座舰**上的。
-        ///
-        /// ★为什么必须有这一道★ BonusFor / RangeBonusFor 都是
-        /// 「读玩家座舰的分档 → 作用在传进来的武器上」，两件事之间**没有任何关联**。
-        /// 而射程那条挂在 RuleCalculateAbilityRange.OnTrigger 上，
-        /// **每条船算射程都会过一遍** —— 于是玩家一升巡洋舰，全场敌舰的非舷炮也跟着 +3，
-        /// 大巡则是舷炮 +3、船脊/舰首 +5。玩家看不见任何提示，只会觉得仗突然变难。
-        /// 多打那条挂在 Reload 的 Postfix 上，触发面窄一些，但同一个洞。
-        ///
-        /// 同文件里护盾(:256) 和装甲(:345) 都做了 ReferenceEquals(owner, ship)，
-        /// 只有这两个漏了 —— 抄的时候漏抄了判据，不是设计如此。
-        ///
-        /// ★fail-closed★ 取不到船主一律返回 false（不给加成）。
-        /// 反过来（取不到就给）会让一个反射失败静默地把加成撒给全场。
+        /// 取武器所属舰，并统一限定为玩家座舰或本 mod 的 marker 僚舰。
+        /// 取不到 owner 一律 fail-closed，绝不能把加成撒给敌舰/剧情友军。
         /// </summary>
-        private static bool IsPlayerShipWeapon(object weapon)
+        private static StarshipEntity SupportedWeaponOwner(object weapon)
         {
             try
             {
-                if (weapon == null) return false;
-                // ItemEntityStarshipWeapon.Starship => (StarshipEntity)HoldingSlot.Owner
-                //   ref/rt_probe/dec/Warhammer.SpaceCombat.StarshipLogic.Weapon/ItemEntityStarshipWeapon.cs:31
-                var st = Get(weapon, "Starship");
-                if (st == null) return false;
-                var ship = Game.Instance != null && Game.Instance.Player != null
-                         ? (object)Game.Instance.Player.PlayerShip : null;
-                return ship != null && ReferenceEquals(st, ship);
+                var ship = Get(weapon, "Starship") as StarshipEntity;
+                return SpaceEscortService.IsOurShip(ship) ? ship : null;
             }
-            catch { return false; }
+            catch { return null; }
+        }
+
+        private static Size SizeOf(StarshipEntity ship)
+        {
+            try { return ship != null ? ship.Size : Size.Frigate_1x2; }
+            catch { return Size.Frigate_1x2; }
         }
 
         private static int BonusFor(object weapon)
         {
-            if (!IsPlayerShipWeapon(weapon)) return 0;   // ★别把加成撒给敌舰★
-            var sz = ShipSize();
-            if (sz != Size.Cruiser_2x4 && sz != Size.GrandCruiser_3x6) return 0;
-
+            var owner = SupportedWeaponOwner(weapon);
+            if (owner == null) return 0;
             string slot = SlotName(weapon);
+            // 只识别开放炮位；未知/None/Keel 不能按非舷炮发放加成。
+            if (slot != "Port" && slot != "Starboard" && slot != "Prow" && slot != "Dorsal")
+                return 0;
             bool broadside = slot == "Port" || slot == "Starboard";
 
+            SpaceFleetRuntimeProfile profile;
+            if (SpaceEscortService.TryGetRuntimeProfile(owner, out profile))
+                return Math.Max(0, profile.Shots(broadside));
+            if (Main.Settings == null || !Main.Settings.ShipExtraShots) return 0;
+
+            var sz = SizeOf(owner);
+            if (sz != Size.Cruiser_2x4 && sz != Size.GrandCruiser_3x6) return 0;
             if (sz == Size.Cruiser_2x4)
                 return broadside ? Math.Max(0, Main.Settings.ShipCruiserBroadside) : 0;
-
-            // GrandCruiser
             return broadside ? Math.Max(0, Main.Settings.ShipGrandBroadside)
                              : Math.Max(0, Main.Settings.ShipGrandProw);
         }
@@ -201,8 +196,7 @@ namespace DynastyRetinue
             {
                 try
                 {
-                    if (!Main.Enabled || Main.Settings == null || !Main.Settings.ShipExtraShots) return;
-                    if (__instance == null) return;
+                    if (!Main.Enabled || Main.Settings == null || __instance == null) return;
 
                     var ability = Get(__instance, "Ability");
                     if (ability == null) return;
@@ -218,8 +212,9 @@ namespace DynastyRetinue
                     if (!_rangeLogged)
                     {
                         _rangeLogged = true;
+                        var owner = SupportedWeaponOwner(weapon);
                         Main.Log("[舰船] 射程加成生效：" + SlotName(weapon) + " +" + add
-                                 + "（分档 " + ShipSize() + "）。本次会话只报这一条。");
+                                 + "（分档 " + SizeOf(owner) + "）。本次会话只报这一条。");
                     }
                 }
                 catch (Exception e) { Main.LogError("[舰船] 射程 Prefix 失败: " + e.Message); }
@@ -231,17 +226,23 @@ namespace DynastyRetinue
         /// <summary>这门炮能加多少射程。舷炮不加 —— 它们靠次数。</summary>
         private static int RangeBonusFor(object weapon)
         {
-            if (!IsPlayerShipWeapon(weapon)) return 0;   // ★别把加成撒给敌舰★
-            var sz = ShipSize();
-            if (sz != Size.Cruiser_2x4 && sz != Size.GrandCruiser_3x6) return 0;
-
+            var owner = SupportedWeaponOwner(weapon);
+            if (owner == null) return 0;
             string slot = SlotName(weapon);
+            // 只识别开放炮位；未知/None/Keel 不能按非舷炮发放加成。
+            if (slot != "Port" && slot != "Starboard" && slot != "Prow" && slot != "Dorsal")
+                return 0;
             bool broadside = slot == "Port" || slot == "Starboard";
 
+            SpaceFleetRuntimeProfile profile;
+            if (SpaceEscortService.TryGetRuntimeProfile(owner, out profile))
+                return Math.Max(0, profile.Range(broadside));
+            if (Main.Settings == null || !Main.Settings.ShipExtraShots) return 0;
+
+            var sz = SizeOf(owner);
+            if (sz != Size.Cruiser_2x4 && sz != Size.GrandCruiser_3x6) return 0;
             if (sz == Size.Cruiser_2x4)
                 return broadside ? 0 : Math.Max(0, Main.Settings.ShipCruiserRange);
-
-            // 大巡洋舰：舷炮也吃射程，船脊/船首更多
             return broadside ? Math.Max(0, Main.Settings.ShipGrandRangeBroadside)
                              : Math.Max(0, Main.Settings.ShipGrandRangeProw);
         }
@@ -285,11 +286,15 @@ namespace DynastyRetinue
             {
                 try
                 {
-                    if (!Main.Enabled || Main.Settings == null || !Main.Settings.ShipExtraShots) return;
+                    if (!Main.Enabled || Main.Settings == null) return;
                     if (__result <= 0 || __instance == null) return;
-                    if (!IsPlayerShipShields(__instance)) return;   // ★ 敌舰不加 ★
+                    var owner = SupportedShieldOwner(__instance);
+                    if (owner == null) return;
 
-                    int pct = ShieldPct();
+                    SpaceFleetRuntimeProfile profile;
+                    int pct = SpaceEscortService.TryGetRuntimeProfile(owner, out profile)
+                        ? profile.ShieldPct
+                        : Main.Settings.ShipExtraShots ? ShieldPct(SizeOf(owner)) : 0;
                     if (pct <= 0) return;
 
                     int before = __result;
@@ -299,39 +304,36 @@ namespace DynastyRetinue
                     {
                         _shieldLogged = true;
                         Main.Log("[舰船] 护盾加成生效：扇区上限 " + before + " -> " + __result
-                                 + "（+" + pct + "%，分档 " + ShipSize() + "）。本次会话只报这一条。");
+                                 + "（+" + pct + "%，分档 " + SizeOf(owner) + "）。本次会话只报这一条。");
                     }
                 }
                 catch (Exception e) { Main.LogError("[舰船] 护盾 Postfix 失败: " + e.Message); }
             }
 
-            /// <summary>这组扇区护盾是不是玩家座舰的。m_Owner 是 PartStarshipShields，它的 Owner 才是船。</summary>
-            private static bool IsPlayerShipShields(object sectorShields)
+            /// <summary>从扇区护盾反查所属舰，只放行玩家座舰或本 mod 僚舰。</summary>
+            private static StarshipEntity SupportedShieldOwner(object sectorShields)
             {
                 try
                 {
                     var part = Get(sectorShields, "m_Owner");
-                    if (part == null) return false;
-                    var owner = Get(part, "Owner");
-                    if (owner == null) return false;
-                    var ship = Game.Instance != null && Game.Instance.Player != null
-                             ? (object)Game.Instance.Player.PlayerShip : null;
-                    return ship != null && ReferenceEquals(owner, ship);
+                    var owner = part != null ? Get(part, "Owner") as StarshipEntity : null;
+                    return SpaceEscortService.IsOurShip(owner) ? owner : null;
                 }
-                catch { return false; }
+                catch { return null; }
             }
         }
 
         private static bool _shieldLogged;
 
         /// <summary>当前分档的护盾加成百分比。护卫舰无加成。</summary>
-        private static int ShieldPct()
+        private static int ShieldPct(Size sz)
         {
-            var sz = ShipSize();
             if (sz == Size.Cruiser_2x4)      return Math.Max(0, Main.Settings.ShipCruiserShieldPct);
             if (sz == Size.GrandCruiser_3x6) return Math.Max(0, Main.Settings.ShipGrandShieldPct);
             return 0;
         }
+
+        private static int ShieldPct() { return ShieldPct(ShipSize()); }
 
         // ---------------------------------------------------------------- 装甲（减伤）
 
@@ -370,15 +372,16 @@ namespace DynastyRetinue
             {
                 try
                 {
-                    if (!Main.Enabled || Main.Settings == null || !Main.Settings.ShipExtraShots) return;
+                    if (!Main.Enabled || Main.Settings == null) return;
                     if (__result <= 0 || __instance == null) return;
 
-                    var owner = Get(__instance, "Owner");
-                    var ship = Game.Instance != null && Game.Instance.Player != null
-                             ? (object)Game.Instance.Player.PlayerShip : null;
-                    if (ship == null || !ReferenceEquals(owner, ship)) return;
+                    var owner = Get(__instance, "Owner") as StarshipEntity;
+                    if (!SpaceEscortService.IsOurShip(owner)) return;
 
-                    int pct = ArmourPct();
+                    SpaceFleetRuntimeProfile profile;
+                    int pct = SpaceEscortService.TryGetRuntimeProfile(owner, out profile)
+                        ? profile.ArmourPct
+                        : Main.Settings.ShipExtraShots ? ArmourPct(SizeOf(owner)) : 0;
                     if (pct <= 0) return;
 
                     int before = __result;
@@ -388,7 +391,7 @@ namespace DynastyRetinue
                     {
                         _armourLogged = true;
                         Main.Log("[舰船] 装甲加成生效：减伤 " + before + " -> " + __result
-                                 + "（+" + pct + "%，分档 " + ShipSize() + "）。"
+                                 + "（+" + pct + "%，分档 " + SizeOf(owner) + "）。"
                                  + "落点在 GetLocationDeflection，所以界面上的数字也会跟着变。"
                                  + "本次会话只报这一条。");
                     }
@@ -399,13 +402,14 @@ namespace DynastyRetinue
 
         private static bool _armourLogged;
 
-        private static int ArmourPct()
+        private static int ArmourPct(Size sz)
         {
-            var sz = ShipSize();
             if (sz == Size.Cruiser_2x4)      return Math.Max(0, Main.Settings.ShipCruiserArmourPct);
             if (sz == Size.GrandCruiser_3x6) return Math.Max(0, Main.Settings.ShipGrandArmourPct);
             return 0;
         }
+
+        private static int ArmourPct() { return ArmourPct(ShipSize()); }
 
         // ---------------------------------------------------------------- 撞角距离
 
@@ -447,14 +451,14 @@ namespace DynastyRetinue
             {
                 try
                 {
-                    if (!Main.Enabled || Main.Settings == null || !Main.Settings.ShipExtraShots) return;
-                    if (owner == null) return;
+                    if (!Main.Enabled || Main.Settings == null) return;
+                    var ship = owner as StarshipEntity;
+                    if (!SpaceEscortService.IsOurShip(ship)) return;
 
-                    var ship = Game.Instance != null && Game.Instance.Player != null
-                             ? (object)Game.Instance.Player.PlayerShip : null;
-                    if (ship == null || !ReferenceEquals(owner, ship)) return;
-
-                    int pct = RamPct();
+                    SpaceFleetRuntimeProfile profile;
+                    int pct = SpaceEscortService.TryGetRuntimeProfile(ship, out profile)
+                        ? profile.RamPct
+                        : Main.Settings.ShipExtraShots ? RamPct(SizeOf(ship)) : 0;
                     if (pct <= 0) return;
 
                     int speed = 0;
@@ -480,7 +484,7 @@ namespace DynastyRetinue
                     {
                         _ramLogged = true;
                         Main.Log("[舰船] 撞角加距生效：额外距离 " + before + " -> " + __result
-                                 + "（速度 " + speed + " × " + pct + "%，分档 " + ShipSize() + "）。"
+                                 + "（速度 " + speed + " × " + pct + "%，分档 " + SizeOf(ship) + "）。"
                                  + "本次会话只报这一条。");
                     }
                 }
@@ -490,13 +494,14 @@ namespace DynastyRetinue
 
         private static bool _ramLogged;
 
-        private static int RamPct()
+        private static int RamPct(Size sz)
         {
-            var sz = ShipSize();
             if (sz == Size.Cruiser_2x4)      return Math.Max(0, Main.Settings.ShipCruiserRamPct);
             if (sz == Size.GrandCruiser_3x6) return Math.Max(0, Main.Settings.ShipGrandRamPct);
             return 0;
         }
+
+        private static int RamPct() { return RamPct(ShipSize()); }
 
         // ---------------------------------------------------------------- 反射小工具
 

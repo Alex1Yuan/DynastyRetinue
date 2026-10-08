@@ -88,7 +88,11 @@ namespace DynastyRetinue
             return Unit;
         }
 
-        public string Display() { return L.T(Name ?? Id ?? "?"); }
+        public string Display()
+        {
+            if (L.Current == L.EnGB && !string.IsNullOrEmpty(NameEn)) return NameEn;
+            return Name ?? Id ?? "?";
+        }
     }
 
     /// <summary>

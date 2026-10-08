@@ -36,6 +36,7 @@ namespace DynastyRetinue
     ///   先确认真实取值再决定改什么。上一轮的教训是"没确认这个方法真的产出你要改的东西"
     ///   就动手，白费了十几个版本和玩家很多轮测试。
     /// </summary>
+    [Main.DevOnly, Main.DiagOnly]
     [HarmonyPatch]
     internal static class ShipWeaponSlotProbe
     {
@@ -48,6 +49,7 @@ namespace DynastyRetinue
 
         private static bool Prepare()
         {
+            if (!Main.DevMode) return false;
             var m = TargetMethod();
             Main.Log("[炮组参数] 探针挂载 " + (m != null
                 ? "成功 → WeaponSlot.GetRestrictedFiringArcNodes"
@@ -64,6 +66,7 @@ namespace DynastyRetinue
             try
             {
                 var s = Main.Settings;
+                if (!Main.Enabled || !Main.DevMode) return;
                 if (s == null || !s.WatchMomentum) return;
                 if (__instance == null) return;
 

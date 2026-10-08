@@ -204,7 +204,7 @@ namespace DynastyRetinue
                     string id = StableId(u);
                     if (string.IsNullOrEmpty(id)) continue;
                     _rosterMeleeEliteIds.Add(id);
-                    if (activeArea) _activeMeleeEliteIds.Add(id);
+                    if (activeArea && !GuardReserve.IsReserved(u)) _activeMeleeEliteIds.Add(id);
                 }
             }
             catch { }
@@ -1035,11 +1035,15 @@ namespace DynastyRetinue
     ///     ReaperBloodOath_Ability   鲜血誓言   实测一场放 8~11 次
     ///     ReaperBladeShroud_Ability 森罗刃网   实测一场放 1~2 次
     ///   而 AI 没有「我快死了别放了」的判断，于是**把自己烧死**（作者实机遇到）。
-    ///   次数差一个量级，主犯是鲜血誓言。
+    ///   另外 TacticianFervourAbility（战术狂热）直接执行 ContextActionDealDamage，
+    ///   不带 AbilityResourceWounds，同样必须拦截。2026-09-06 实测旧门禁在 17% HP
+    ///   已拦住收割者技能，锈行猎手随后仍释放战术狂热并承受 64 点直击自伤。
     ///
     /// ★为什么补 IsAvailable★ 它是 AI 和 UI 共用的「这招现在能不能放」，
     ///   Postfix **只收紧不放宽**（原版说不行就直接返回），是最小侵入的挂点。
     ///   同一个 getter 上已经有 OncePerTurnPatch，Harmony 支持多个补丁共存。
+    ///   原版 UnitUseAbility.OnAction 在实际执行前还会重读 IsAvailable，因此无需新加
+    ///   施法/伤害钩子；只拒绝释放，不篡改已发生的伤害或补血。
     ///
     /// ★阈值可调★ 默认 50%。设成 0 等于关掉这道闸。
     /// ★只管我们的近战精英★ 原版收割者 NPC 该怎么自尽还怎么自尽，不干预。
@@ -1051,6 +1055,7 @@ namespace DynastyRetinue
         {
             "590c990c1d684fd09ae883754d28a8ac",   // ReaperBloodOath_Ability   鲜血誓言
             "8b7bcaa093224422ac66c80ffcf69f6d",   // ReaperBladeShroud_Ability 森罗刃网
+            "305858b91e6e4d89bff75431fa6030e6",   // TacticianFervourAbility   战术狂热（直接自伤动作）
         };
 
 
@@ -1116,27 +1121,36 @@ namespace DynastyRetinue
                 if (!WeaponGate.IsGateTarget(caster)) return;
 
                 var h = caster.GetHealthOptional();
-                if (h == null || h.MaxHitPoints <= 0) return;
-                float frac = (float)h.HitPointsLeft / h.MaxHitPoints;
-                if (frac < s.WoundAbilityHpFloor / 100f)
+                if (h == null) return;
+                int hp = h.HitPointsLeft, maxHp = h.MaxHitPoints;
+                if (IsBelowHpFloor(hp, maxHp, s.WoundAbilityHpFloor))
                 {
                     __result = false;
-                    WoundGateNote(caster, frac);
+                    WoundGateNote(caster, bp, hp, maxHp, s.WoundAbilityHpFloor);
                 }
             }
             catch { }
         }
 
+        /// <summary>严格低于阈值；不计临时 HP。整数比较保证恰好 50% 放行且无浮点舍入。</summary>
+        internal static bool IsBelowHpFloor(int hp, int maxHp, int floorPercent)
+        {
+            return maxHp > 0 && floorPercent > 0
+                && (long)hp * 100 < (long)maxHp * floorPercent;
+        }
+
         /// <summary>只记一次，别每次刷新 UI 都打。</summary>
         private static bool _logged;
-        private static void WoundGateNote(BaseUnitEntity u, float frac)
+        private static void WoundGateNote(BaseUnitEntity u, Kingmaker.Blueprints.SimpleBlueprint bp,
+            int hp, int maxHp, int floorPercent)
         {
             Blocked++;
             if (_logged) return;
             _logged = true;
             Main.Log("[血量闸] " + (u != null ? u.CharacterName : "?")
-                   + " 血量 " + (int)(frac * 100) + "% 低于阈值，暂停烧血技能（鲜血誓言/森罗刃网）。"
-                   + "这两招的消耗是生命值，而 AI 不会自己收手。");
+                   + " HP=" + hp + "/" + maxHp + " 低于 " + floorPercent
+                   + "% 阈值，暂停自伤技能（鲜血誓言/森罗刃网/战术狂热）。"
+                   + "本次被拦技能=" + bp.AssetGuid + "。本次会话只报这一条。");
         }
 
         internal static int Blocked;

@@ -85,12 +85,12 @@ namespace DynastyRetinue
         public static string Summary()
         {
             int pf = Current();
-            if (pf < 0) return "利润因子读不到（不在游戏内？）——暂不限制";
+            if (pf < 0) return L.T("利润因子暂不可读取；名额暂按硬上限开放");
 
             int un = Unlocked(), cap = HardCap(), next = NextThreshold();
-            string s = "利润因子 " + pf + "　已解锁 " + un + " / " + cap + " 名";
-            if (next > 0) s += "　（再到 " + next + " 解锁第 " + (un + 1) + " 名，还差 " + (next - pf) + "）";
-            else s += "　（已全部解锁）";
+            string s = L.F("利润因子 {0}　已解锁 {1} / {2} 名", pf, un, cap);
+            if (next > 0) s += L.F("　（到 {0} 解锁第 {1} 名，还差 {2}）", next, un + 1, next - pf);
+            else s += L.T("　（已全部解锁）");
             return s;
         }
 

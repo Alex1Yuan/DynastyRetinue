@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Kingmaker.EntitySystem.Entities;   // BaseUnitEntity（逐个改名那段用）
 using Kingmaker.UnitLogic.Parts;         // PartUnitDescription
@@ -59,7 +59,7 @@ namespace DynastyRetinue
             // 用 #if DEBUG 编译掉的话，我自己测的就不是发出去的那个二进制了 ——
             // 发布版独有的代码路径永远没被跑过。同一个 DLL、只切可见性，
             // 才能保证"我测过的"和"玩家拿到的"逐字节一致。
-            // bump.sh pack 只打四个具名文件，这个 flag 永远进不了发布包。
+            // 发布包只使用具名文件白名单，这个 flag 永远进不了发布包。
             try
             {
                 DevMode = System.IO.File.Exists(
@@ -113,6 +113,8 @@ namespace DynastyRetinue
 
             RetinueLifecycle.Subscribe();
             DeathRules.Subscribe();
+            SpaceEscortService.Subscribe();
+            SpaceFleetItemLedger.Subscribe();
             CombatWatch.Install();
 
             // ★必须在载入时装，不能懒装★
@@ -168,6 +170,9 @@ namespace DynastyRetinue
         [AttributeUsage(AttributeTargets.Class)]
         internal sealed class DiagOnlyAttribute : Attribute { }
 
+        [AttributeUsage(AttributeTargets.Class)]
+        internal sealed class DevOnlyAttribute : Attribute { }
+
         private static void PatchAllSafe(Harmony harmony, System.Reflection.Assembly asm)
         {
             if (harmony == null || asm == null)
@@ -203,6 +208,14 @@ namespace DynastyRetinue
                 // ★诊断专用补丁：开关关着就整个跳过，一个钩子都不装★
                 if (isPatchClass)
                 {
+                    bool devOnly;
+                    try { devOnly = t.GetCustomAttributes(typeof(DevOnlyAttribute), false).Length > 0; }
+                    catch { devOnly = false; }
+                    if (devOnly && !DevMode)
+                    {
+                        skippedDiag++;
+                        continue;
+                    }
                     bool diagOnly;
                     try { diagOnly = t.GetCustomAttributes(typeof(DiagOnlyAttribute), false).Length > 0; }
                     catch { diagOnly = false; }
@@ -285,7 +298,11 @@ namespace DynastyRetinue
         /// </summary>
         private static bool OnUnload(UnityModManager.ModEntry modEntry)
         {
-            try { OnToggle(modEntry, false); } catch (Exception e) { LogError("[卸载] 停用流程出错: " + e.Message); }
+            try
+            {
+                if (!OnToggle(modEntry, false)) return false;
+            }
+            catch (Exception e) { LogError("[卸载] 停用流程出错: " + e.Message); return false; }
 
             try
             {
@@ -299,11 +316,24 @@ namespace DynastyRetinue
 
         private static bool OnToggle(UnityModManager.ModEntry modEntry, bool value)
         {
+            if (!value && Enabled)
+            {
+                bool shared;
+                if (!CoopState.TryGetSharedGameplayRequired(out shared) || shared)
+                {
+                    LogError("[海战舰队] 合作会话中不能停用本 mod；请先退出合作房间。");
+                    return false;
+                }
+            }
             Enabled = value;
             if (value)
             {
                 RetinueLifecycle.Subscribe();
                 DeathRules.Subscribe();
+                SpaceEscortService.Subscribe();
+                SpaceFleetItemLedger.Subscribe();
+                SpaceEscortService.EnableCatchUp();
+                SpaceFleetItemLedger.SeedCurrentPlayer();
                 // ★事件驱动缓存的启用恢复入口★ 若 mod 在已加载区域内从关→开，
                 //   本次 OnAreaDidLoad 早已过去，不会再播种。这里只在用户切开关的低频操作
                 //   扫一次名册；绝不能把 All() 放进 OnUpdate 或补丁热路径。
@@ -316,6 +346,10 @@ namespace DynastyRetinue
                 try { GuardMatrixTest.CancelAndCleanup("mod 被禁用/卸载"); }
                 catch (Exception e) { LogError("[卫队矩阵] 停用收尾失败: " + e.Message); }
                 try { FullTest.CancelForDisable(); } catch { }
+                try { SpaceEscortService.CleanupForDisable(); }
+                catch (Exception e) { LogError("[海战卫队] 停用收尾失败: " + e.Message); }
+                SpaceFleetItemLedger.Unsubscribe();
+                SpaceEscortService.Unsubscribe();
                 RetinueLifecycle.Unsubscribe();
                 DeathRules.Unsubscribe();
                 // OnUpdate 停止后不会再有任何自愈轮询；事件驱动集合必须主动清。
@@ -701,6 +735,13 @@ namespace DynastyRetinue
             return GUILayout.Button(c, GUILayout.Width(w));
         }
 
+        private static void DrawFleetCostSlider(string label, ref int value)
+        {
+            GUILayout.Label(label, GUILayout.Width(130));
+            value = (int)GUILayout.HorizontalSlider(value, 0f, 100f, GUILayout.Width(100));
+            GUILayout.Label(value.ToString(), GUILayout.Width(32));
+        }
+
         /// <summary>当前"画笔"：点格子会把它刷进去。空串 = 跟随装备。</summary>
         /// <summary>每张分表一支画笔 —— 见 LookCatalog.Groups 的头注。</summary>
         private static readonly System.Collections.Generic.Dictionary<int, string> _lookBrushes
@@ -1036,7 +1077,7 @@ namespace DynastyRetinue
             GUILayout.Space(8);
             GUILayout.Label(L.T("<b>招募入口</b>（挂在 NPC 身上的原生点击交互，不进存档）"));
             Settings.NpcRecruitEntry = GUILayout.Toggle(Settings.NpcRecruitEntry, L.T("点击 NPC 弹招募面板（原生点击交互）"));
-            Settings.DialogRecruitEntry = GUILayout.Toggle(Settings.DialogRecruitEntry, L.T("在 NPC 对话里加一条「征募护卫队」选项"));
+            Settings.DialogRecruitEntry = GUILayout.Toggle(Settings.DialogRecruitEntry, L.T("在 NPC 对话里加一条「卫队管理」选项"));
             GUILayout.BeginHorizontal();
             GUILayout.Label(L.T("目标 NPC 关键字"), GUILayout.Width(110));
             Settings.RecruitNpcKeys = GUILayout.TextField(Settings.RecruitNpcKeys ?? "", GUILayout.Width(220));
@@ -1097,6 +1138,23 @@ namespace DynastyRetinue
 
             if (Fold(ref Settings.PanelShowShip, L.T("舰船"), L.T("分档加成 / 换船模 / 挂点")))
             {
+            // ---------- 海战卫队 ----------
+            GUILayout.Space(8);
+            Settings.SpaceEscortEnabled = GUILayout.Toggle(Settings.SpaceEscortEnabled,
+                L.T("<b>海战舰队</b>　每场太空战自动部署名册中的全部原版 AI 舰"));
+            GUILayout.Label(L.T("<color=#aaaaaa>舰队招募、改名、逐槽换装和强化位于「卫队管理」的「护航舰队」页。这里仅保留高级 PF 成本设置。</color>"));
+            if (Btn(L.T("管理护航舰队"), 150f)) UI.RetinueUI.OpenFleet();
+            GUILayout.BeginHorizontal();
+            DrawFleetCostSlider(L.T("护卫舰舰体 PF"), ref Settings.FleetPfFrigate);
+            DrawFleetCostSlider(L.T("巡洋舰舰体 PF"), ref Settings.FleetPfCruiser);
+            DrawFleetCostSlider(L.T("大巡洋舰舰体 PF"), ref Settings.FleetPfGrandCruiser);
+            GUILayout.EndHorizontal();
+            GUILayout.BeginHorizontal();
+            DrawFleetCostSlider(L.T("每个换装槽 PF"), ref Settings.FleetPfRefitPerSlot);
+            DrawFleetCostSlider(L.T("每级开火 PF"), ref Settings.FleetPfPerShot);
+            DrawFleetCostSlider(L.T("每格射程 PF"), ref Settings.FleetPfPerRange);
+            GUILayout.EndHorizontal();
+
             // ---------- 舰船 ----------
             GUILayout.Space(8);
             // 状态行：不点任何按钮就能看出"现在到底是不是巡洋舰"。
@@ -1285,7 +1343,7 @@ namespace DynastyRetinue
             // ---------- 船坞（原来整块只能改 XML）----------
             GUILayout.Space(8);
             Settings.ShipDialogEntry = GUILayout.Toggle(Settings.ShipDialogEntry,
-                L.T("<b>在 NPC 对话里加「船坞」选项</b>（用废料买改装，可还原退款）"));
+                L.T("<b>在 NPC 对话里加「船坞」选项</b>（座舰改装消耗废料）"));
             GUILayout.BeginHorizontal();
             GUILayout.Label(L.T("巡洋总价"), GUILayout.Width(70));
             Settings.ShipPriceCruiser = (int)GUILayout.HorizontalSlider(Settings.ShipPriceCruiser, 0f, 5000f, GUILayout.Width(150));
@@ -1429,6 +1487,12 @@ namespace DynastyRetinue
             GUILayout.Space(8);
             Settings.AlignExperience  = GUILayout.Toggle(Settings.AlignExperience, L.T("招募时按主角经验设起点"));
             Settings.AutoLevelUp      = GUILayout.Toggle(Settings.AutoLevelUp, L.T("自动成长（每次进区域按当前阶位补升级）"));
+            bool growthGuiEnabled = GUI.enabled;
+            GUI.enabled = growthGuiEnabled && Settings.AutoLevelUp;
+            Settings.GuardAttributesOnly = GUILayout.Toggle(Settings.GuardAttributesOnly,
+                L.T("　只加属性（不学习职业技能和其他天赋）"));
+            GUI.enabled = growthGuiEnabled;
+            GUILayout.Label(L.T("<color=#aaaaaa>关闭自动成长：停止后续职业加点。只加属性：保留属性成长与装备资格。\n已学能力不会删除；要使用完整的简化方案，请在设置后重新招募。\n单位自带能力和装备效果仍然保留。</color>"));
             Settings.ScaleGuardXp     = GUILayout.Toggle(Settings.ScaleGuardXp, L.T("卫兵经验按比例缩放（不影响队友那份）"));
             Settings.EquipGraduationGear = GUILayout.Toggle(Settings.EquipGraduationGear,
                 L.T("<b>给卫兵发装备</b>　<color=#aaaaaa>开：按 archetypes.json 的配表凭空生成一整套"
@@ -1484,6 +1548,9 @@ namespace DynastyRetinue
             if (Fold(ref Settings.PanelShowCombat, L.T("战斗与行为"), L.T("士气池 / 镜头 / 缠斗 / 跟随")))
             {
             GUILayout.Space(8);
+            Settings.GuardFriendlyFireProtection = GUILayout.Toggle(Settings.GuardFriendlyFireProtection,
+                L.T("卫队友伤保护（含灵能现象与亚空间灾难，默认关闭）"));
+            GUILayout.Label(L.T("<color=#aaaaaa>开启：拦截友方卫兵直接造成的友军生命伤害，跳弹排除友军，并阻止卫队施法触发自动灵能现象与亚空间灾难。\n关闭：上述项目恢复原版规则；不改变下方独立的「卫兵灵能不推高亚空间威胁」设置。\n自身技能耗血、玩家角色和敌人的伤害规则保持原样。</color>"));
             Settings.AttachFollow     = GUILayout.Toggle(Settings.AttachFollow, L.T("跟随队长"));
             Settings.IsolateMomentum  = GUILayout.Toggle(Settings.IsolateMomentum, L.T("士气隔离（卫兵受伤/倒地不扣队伍士气）"));
             Settings.SeparateMomentumPool = GUILayout.Toggle(Settings.SeparateMomentumPool, L.T("卫队独立士气池（大招花自己的；代价是卫兵的 Resolve 也不再进你的池子）"));
@@ -1812,8 +1879,8 @@ namespace DynastyRetinue
             GUILayout.BeginHorizontal();
             Settings.AutoEndPlayerTurn = GUILayout.Toggle(Settings.AutoEndPlayerTurn,
                 "自动结束我的回合", GUILayout.Width(150));
-            GUILayout.Label("<color=#ff8080>★你自己的角色会整场什么都不做★ 只为省去反复手点，"
-                          + "看完卫兵行为记得关掉。（CanEndTurn 内含 !AnyUnitIsBusy，不会打断动画）</color>");
+            GUILayout.Label("<color=#ff8080>★单机测试：地面角色和海战座舰都会自动跳过回合★ "
+                          + "海战略过最低航程，等待动作结束；看完卫兵/护航舰行为记得关掉。</color>");
             GUILayout.EndHorizontal();
             GUILayout.Space(8);
 
@@ -2563,6 +2630,8 @@ namespace DynastyRetinue
         /// <summary>卫兵放灵能不推高帷幕（亚空间威胁）。
         /// 帷幕是区域级的单一值，做不了独立池，只能选择计不计入。</summary>
         public bool GuardPsykerNoVeil = true;
+        /// <summary>统一控制友方卫兵直接友伤、跳弹友方目标及自动灵能现象/灾难保护。</summary>
+        public bool GuardFriendlyFireProtection = false;
         /// <summary>在船上的 NPC 身上挂招募入口（走原生点击交互，不进存档）。</summary>
         public bool NpcRecruitEntry = true;
         /// <summary>挂载目标的蓝图名关键字，逗号分隔、大小写不敏感、子串匹配。
@@ -2585,6 +2654,24 @@ namespace DynastyRetinue
         /// <summary>上次看到的植入物层级（AugmentTier）。-1 = 还没记录过。
         /// 用来判断"剧情解锁了"，从而给已有卫兵补发更好的植入物。存在 UMM 的设置文件里，不进游戏存档。</summary>
         public int LastAugmentTier = -1;
+
+        /// <summary>
+        /// 每场太空战自动部署一艘原版 AI 僚舰；舰型由玩家在舰船区选择。
+        /// 单机由本机决定；合作中只允许房主据此发起同步事务，执行端不得再读本机值。
+        /// </summary>
+        public bool SpaceEscortEnabled = true;
+        /// <summary>海战舰队 PF 占用：护卫舰舰体。</summary>
+        public int FleetPfFrigate = 10;
+        /// <summary>海战舰队 PF 占用：巡洋舰舰体。</summary>
+        public int FleetPfCruiser = 20;
+        /// <summary>海战舰队 PF 占用：大巡洋舰舰体。</summary>
+        public int FleetPfGrandCruiser = 30;
+        /// <summary>每个偏离原装的开放槽占用 PF。</summary>
+        public int FleetPfRefitPerSlot = 2;
+        /// <summary>每个受影响武器槽每 +1 次开火占用 PF。</summary>
+        public int FleetPfPerShot = 2;
+        /// <summary>每个受影响武器槽每 +1 格射程占用 PF。</summary>
+        public int FleetPfPerRange = 1;
 
         /// <summary>舰船「多打」：按舰船分档给武器槽加每回合开火次数。不改蓝图、不改配置界面。</summary>
         public bool ShipExtraShots = true;
@@ -2658,8 +2745,8 @@ namespace DynastyRetinue
         public bool GuardsCanShootInMelee = true;
 
         /// <summary>
-        /// 自动结束玩家回合。**纯测试用**：观察卫兵 AI 时不用一直手点结束回合。
-        /// 只在开发模式下生效且默认关闭 —— 它会让你自己的角色整场什么都不做。
+        /// 自动结束玩家回合。**纯测试用**：观察卫兵/护航舰 AI，无需手点或移动座舰。
+        /// 只在单机开发模式下生效且默认关闭；海战只略过座舰最低航程，保留忙碌检查。
         /// </summary>
         public bool AutoEndPlayerTurn = false;
 
@@ -2716,6 +2803,8 @@ namespace DynastyRetinue
         public bool GuardKillFeedsOwnPool = true;
         // 每次区域加载按当前阶位补升级 —— 卫兵"跟久了自己成长"
         public bool AutoLevelUp = true;
+        // Subordinate to AutoLevelUp. Existing learned facts are never removed by this option.
+        public bool GuardAttributesOnly = false;
         // 0=先锋 1=狙击 2=连射 3=灵能
         public int ArchetypeIndex = 0;
         // 毕业装备：凭空生成（不动玩家仓库）。精英拿 gear，普通拿玩家自配的 playerGear
@@ -2755,6 +2844,38 @@ namespace DynastyRetinue
         // 遣散 = 永久销毁，默认不给热键，只能从面板点
         public KeyCode DespawnKey = KeyCode.None;
 
-        public override void Save(UnityModManager.ModEntry modEntry) => Save(this, modEntry);
+        public bool TrySaveAtomic(UnityModManager.ModEntry modEntry)
+        {
+            if (modEntry == null) return false;
+            string path = GetPath(modEntry);
+            string temp = path + ".tmp";
+            try
+            {
+                if (System.IO.File.Exists(temp)) System.IO.File.Delete(temp);
+                using (var stream = new System.IO.FileStream(temp, System.IO.FileMode.CreateNew,
+                    System.IO.FileAccess.Write, System.IO.FileShare.None))
+                using (var writer = new System.IO.StreamWriter(stream, new System.Text.UTF8Encoding(false)))
+                {
+                    var serializer = new System.Xml.Serialization.XmlSerializer(typeof(Settings));
+                    serializer.Serialize(writer, this);
+                    writer.Flush();
+                    stream.Flush(true);
+                }
+                if (System.IO.File.Exists(path)) System.IO.File.Replace(temp, path, null);
+                else System.IO.File.Move(temp, path);
+                return true;
+            }
+            catch (Exception e)
+            {
+                try { if (System.IO.File.Exists(temp)) System.IO.File.Delete(temp); } catch { }
+                Main.LogError("[设置] 原子保存失败，旧 Settings.xml 已保留: " + e.Message);
+                return false;
+            }
+        }
+
+        public override void Save(UnityModManager.ModEntry modEntry)
+        {
+            TrySaveAtomic(modEntry);
+        }
     }
 }

@@ -327,9 +327,7 @@ namespace DynastyRetinue
             _scanLogged = true;
             try
             {
-                Main.Log("[名册] 一次全量扫描要过 " + scanned + " 个实体，其中卫兵 " + guards + " 名。"
-                       + "\n    这个数越大，把 All() 放在每帧/每秒路径上的代价越高。"
-                       + "\n    几百上千 ⇒「走路掉帧」的诊断成立；只有几十 ⇒ 我找错方向，得回头重查。");
+                Main.Log("[Roster] One-time snapshot: " + scanned + " entities, " + guards + " guards.");
                 Main.FlushLog(true);
             }
             catch { }
@@ -552,7 +550,9 @@ namespace DynastyRetinue
                 string nm = null;
                 try { nm = u.CharacterName; } catch { }
                 parts.Add((string.IsNullOrEmpty(nm) ? "" : nm + " ")
-                          + "lv" + u.Progression.CharacterLevel + " hp" + hp + " " + an + (down ? L.T(" [倒地]") : ""));
+                          + "lv" + u.Progression.CharacterLevel + " hp" + hp + " " + an
+                          + " " + (GuardReserve.IsReserved(u) ? L.T("留守中") : L.T("出战中"))
+                          + (down ? L.T(" [倒地]") : ""));
             }
             return string.Join(" | ", parts);
         }

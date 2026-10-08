@@ -1,7 +1,0 @@
-using UnityEngine;
-
-namespace Kingmaker.Visual;
-
-public class DrawPreviewAttribute : PropertyAttribute
-{
-}

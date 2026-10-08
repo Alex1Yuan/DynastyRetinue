@@ -859,6 +859,7 @@ namespace DynastyRetinue
             {
                 try { RetinueRegistry.FlushPendingDestroy(); } catch { }
                 try { CleanupOrphansOutsideCombat(); } catch { }
+                try { SpaceEscortService.NotifyTurnBasedExit(); } catch { }
             }
         }
 

@@ -273,14 +273,13 @@ namespace DynastyRetinue
         }
 
         /// <summary>
-        /// 自动结束玩家回合 —— 纯测试便利：观察卫兵 AI 时不用一直手点结束回合。
+        /// 自动结束玩家回合 —— 纯测试便利：观察卫兵/护航舰 AI 时不用一直手点。
         ///
         /// ★只在开发模式 + 显式打开时生效★ 它会让**你自己的角色什么都不做**，
         /// 这在实战里显然是灾难，所以默认关闭、且不出现在玩家区。
         ///
-        /// 安全性：CanEndTurn 内含 !AnyUnitIsBusy（TurnController.cs:242-249），
-        /// 所以不会在动画/结算中途插进去；RequestEndTurn 只是置一个标志位，幂等。
-        /// 仍然加了节流，避免同一回合内每帧刷一次请求。
+        /// 地面沿用 CanEndTurn；海战仅对座舰略过最低航程，保留原版 AnyUnitIsBusy
+        /// 的检查。先节流再枚举，只在单机开发测试的玩家回合每 0.4 秒检查一次。
         /// </summary>
         private static float _lastEnd;
         private static void AutoEndTurn()
@@ -291,14 +290,27 @@ namespace DynastyRetinue
                 // 测试便利功能直接写 EndTurnRequested，不走原版同步 EndTurnManually 命令；
                 // 合作中必须完全禁用，不能让开发机单边跳过玩家回合。
                 if (CoopState.SharedGameplayRequired) return;
-                var tc = Game.Instance != null ? Game.Instance.TurnController : null;
+                var game = Game.Instance;
+                if (game == null || game.IsPaused) return;
+                var tc = game.TurnController;
                 if (tc == null || !tc.TurnBasedModeActive || !tc.InCombat) return;
-                if (!tc.IsPlayerTurn || !tc.CanEndTurn) return;
+                if (!tc.IsPlayerTurn || tc.EndTurnRequested) return;
 
                 float t = UnityEngine.Time.realtimeSinceStartup;
-                if (t - _lastEnd < 0.4f) return;     // 节流：一回合只请求一次就够
+                if (t - _lastEnd < 0.4f) return;
                 _lastEnd = t;
+                if (tc.IsSpaceCombat)
+                {
+                    if (game.Player == null || !(tc.CurrentUnit is StarshipEntity)
+                        || !ReferenceEquals(tc.CurrentUnit, game.Player.PlayerShip)) return;
+                    // 与 TurnController.AnyUnitIsBusy 同谓词，只跳过最低航程限制。
+                    foreach (var unit in tc.AllUnits)
+                        if (unit.IsInCombat && unit.IsBusy) return;
+                }
+                else if (!tc.CanEndTurn) return;
                 tc.RequestEndTurn();
+                if (tc.IsSpaceCombat)
+                    Main.Log("[海战测试] 已自动结束座舰回合，交由护航舰和敌舰行动。");
             }
             catch { }
         }

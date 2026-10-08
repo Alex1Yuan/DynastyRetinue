@@ -55,7 +55,7 @@ namespace DynastyRetinue
             // 不是纯颜色；必须随招募命令同步，不能命令返回后再读各自本机矩阵。
             "LookMatrix", "HideGearLook",
             // —— 等级与经验（今天翻车的就在这一组）
-            "AlignExperience", "AutoLevelUp", "ScaleGuardXp", "XpRatio",
+            "AlignExperience", "AutoLevelUp", "GuardAttributesOnly", "ScaleGuardXp", "XpRatio",
             "XpCatchUp", "XpCatchUpMax", "XpCatchUpSpan",
             // —— 名额闸门（NoCountCap / NoPfGate / NoLevelCap 的原始输入）
             "UnlockTierLimits", "UnlockPfGate", "UnlockCountCap", "UnlockLevelCap",
@@ -350,11 +350,13 @@ namespace DynastyRetinue
                 case "GuardKillFeedsOwnPool": return zh ? "卫兵击杀给卫队池加分" : "Guard kills feed guard pool";
                 case "NoCameraFollowGuards": return zh ? "卫兵行动时镜头不跟随" : "Do not follow guards with camera";
                 case "GuardPsykerNoVeil": return zh ? "卫兵灵能不推高帷幕" : "Guard psykers do not raise veil";
+                case "GuardFriendlyFireProtection": return zh ? "卫队友伤保护（含灵能现象与灾难）" : "Guard friendly-fire and psychic protection";
                 case "GuardsCanShootInMelee": return zh ? "卫兵缠斗中可开火" : "Guards can shoot in melee";
                 case "RecruitUsePfGate": return zh ? "用利润因子解锁名额" : "Use profit factor for slots";
                 case "RecruitPfPerGuard": return zh ? "每名卫兵所需利润因子" : "Profit factor per guard";
                 case "RecruitMaxGuards": return zh ? "卫兵硬上限" : "Maximum guards";
                 case "AutoLevelUp": return zh ? "过图自动补升级" : "Auto level-up on area load";
+                case "GuardAttributesOnly": return zh ? "成长只加属性" : "Attributes-only progression";
                 case "EquipGraduationGear": return zh ? "发放配表装备" : "Equip configured gear";
                 case "GearTierOverride": return zh ? "装备档位覆盖" : "Gear tier override";
                 case "EliteLimitPerArchetype": return zh ? "每种精英数量上限" : "Elite limit per definition";

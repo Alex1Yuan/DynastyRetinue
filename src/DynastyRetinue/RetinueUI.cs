@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using TMPro;
@@ -381,9 +381,13 @@ namespace DynastyRetinue.UI
         private const string RootName = "DynastyRetinue_UI";
 
         private static GameObject _root;
-        // 页签：0 = 当前卫队，1 = 招募卫队
+        // 一级页：地面卫队 / 护航舰队；地面子页保留在册、招募和外观。
+        private static int _section;
         private static int _tab;
         private static GameObject _pageRoster, _pageRecruit, _pageLooks;
+        private static GameObject _pageFleet, _groundTabs;
+        private static bool _fleetBuilt;
+        private static readonly List<Button> _sectionBtns = new List<Button>();
         private static Transform _looksContent;
         /// <summary>外观页的"画笔"：点格子会把它刷进去。空串 = 跟随装备。</summary>
         /// <summary>每张分表一支画笔。分表依据见 LookCatalog.Groups —— 机械教和前五条线
@@ -463,8 +467,16 @@ namespace DynastyRetinue.UI
         //   —— 那正是 1.0.48~1.0.52 的故障。船坞是 KeepDialog=true，不受影响，仍然登记。
         public static void OpenFromDialog() { Open(); }
 
+        public static void OpenFleet()
+        {
+            if (IsOpen) { SwitchSection(1); return; }
+            _section = 1;
+            Open();
+        }
+
         public static void Open()
         {
+            ShipYardUI.Close();
             if (IsOpen) { Refresh(); return; }
             try
             {
@@ -485,13 +497,9 @@ namespace DynastyRetinue.UI
 
                 BuildClickBlocker(_root.transform);
                 EnsureEventSystem(_root.transform);
-                BuildFrame(_root.transform);
-
                 _selected = -1;
                 _selectedRecruitGroup = null;
-                RefreshProfitFactor();   // ★别漏★ 首次开窗原本只调 Rebuild*，状态条永远是空的
-                RebuildArchetypes();
-                RebuildUnits();
+                BuildFrame(_root.transform);
 
                 // ★ 放最后：此时整棵树已建好，SetLayerRecursive 一次盖到底
                 ApplyVanillaRenderPath(c);
@@ -511,6 +519,13 @@ namespace DynastyRetinue.UI
             }
             catch (Exception e) { Main.LogError("[UI] 关窗异常: " + e.Message); }
             _root = null; _host = null;
+            FleetPanel.Reset();
+            _fleetBuilt = false;
+            _pageFleet = null; _groundTabs = null;
+            _pageRoster = null; _pageRecruit = null; _pageLooks = null;
+            _pfLabel = null; _rosterContent = null; _looksContent = null;
+            _reserveReply = null; _reserveAllButton = null; _deployAllButton = null; _reserveResult = "";
+            _sectionBtns.Clear(); _tabBtns.Clear();
             _archContent = null; _unitContent = null; _titleRight = null;
             _selected = -1; _selectedRecruitGroup = null;
         }
@@ -563,7 +578,20 @@ namespace DynastyRetinue.UI
 
         public static void Toggle() { if (IsOpen) Close(); else Open(); }
 
-        public static void Refresh() { RefreshProfitFactor(); RebuildArchetypes(); RebuildUnits(); if (_tab == 0) RebuildRoster(); }
+        public static void Refresh()
+        {
+            if (!IsOpen) return;
+            RefreshProfitFactor();
+            if (_section == 1) FleetPanel.Refresh();
+            else
+            {
+                RebuildArchetypes();
+                RebuildUnits();
+                if (_tab == 0) RebuildRoster();
+                else if (_tab == 2) RebuildLooks();
+            }
+            MarkLayerDirty();
+        }
 
         /// <summary>
         /// 重画标题下那条利润因子状态。
@@ -574,6 +602,11 @@ namespace DynastyRetinue.UI
             if (_pfLabel == null) return;
             try
             {
+                if (_section == 1)
+                {
+                    _pfLabel.text = FleetPanel.BudgetText();
+                    return;
+                }
                 if (Main.Settings != null && Main.Settings.NoCountCap())
                 {
                     _pfLabel.text = L.T("<color=#7ec8ff>已在面板解除数量上限 —— 招募名额不受利润因子约束</color>");
@@ -652,7 +685,7 @@ namespace DynastyRetinue.UI
             PaintPanel(panel.AddComponent<Image>(), PanelTex(), VanillaSkin.Ink);
 
             // 标题栏
-            TextMeshProUGUI title = MakeLabel(panel.transform, L.T("卫队招募"), 34f, VanillaSkin.Gold,
+            TextMeshProUGUI title = MakeLabel(panel.transform, L.T("卫队管理"), 34f, VanillaSkin.Gold,
                                               TextAlignmentOptions.Left);
             RectTransform trt = (RectTransform)title.transform;
             trt.anchorMin = new Vector2(0f, 1f); trt.anchorMax = new Vector2(1f, 1f);
@@ -677,21 +710,36 @@ namespace DynastyRetinue.UI
             crt.pivot = new Vector2(1f, 1f);
             crt.anchoredPosition = new Vector2(-28f, -22f);
 
-            // ---- 页签 ----
+            // ---- 一级页签 ----
+            GameObject sections = NewUI("Sections", panel.transform);
+            RectTransform sectionRt = (RectTransform)sections.transform;
+            sectionRt.anchorMin = new Vector2(0f, 1f); sectionRt.anchorMax = new Vector2(1f, 1f);
+            sectionRt.pivot = new Vector2(0.5f, 1f);
+            sectionRt.offsetMin = new Vector2(28f, -152f); sectionRt.offsetMax = new Vector2(-28f, -112f);
+            var sectionLayout = sections.AddComponent<HorizontalLayoutGroup>();
+            sectionLayout.spacing = 8f;
+            sectionLayout.childForceExpandWidth = false; sectionLayout.childForceExpandHeight = true;
+            sectionLayout.childControlWidth = false; sectionLayout.childControlHeight = true;
+            _sectionBtns.Clear();
+            _sectionBtns.Add(MakeButton(sections.transform, L.T("地面卫队"), 200f, 40f, () => SwitchSection(0)));
+            _sectionBtns.Add(MakeButton(sections.transform, L.T("护航舰队"), 200f, 40f, () => SwitchSection(1)));
+
+            // ---- 地面卫队子页签 ----
             // ★为什么要分页★ 原来一个窗口既是招募界面又是卫队一览，两件事的操作对象不同
             //   （招募看的是"分型/精英"，管理看的是"具体某个人"），混在一起谁都不好找。
             GameObject tabs = NewUI("Tabs", panel.transform);
+            _groundTabs = tabs;
             RectTransform tbrt = (RectTransform)tabs.transform;
             tbrt.anchorMin = new Vector2(0f, 1f); tbrt.anchorMax = new Vector2(1f, 1f);
             tbrt.pivot = new Vector2(0.5f, 1f);
-            tbrt.offsetMin = new Vector2(28f, -152f); tbrt.offsetMax = new Vector2(-28f, -112f);
+            tbrt.offsetMin = new Vector2(28f, -200f); tbrt.offsetMax = new Vector2(-28f, -160f);
             HorizontalLayoutGroup tlg = tabs.AddComponent<HorizontalLayoutGroup>();
             tlg.spacing = 8f; tlg.childForceExpandWidth = false; tlg.childForceExpandHeight = true;
             tlg.childControlWidth = false; tlg.childControlHeight = true;
 
             _tabBtns.Clear();
-            _tabBtns.Add(MakeButton(tabs.transform, L.T("当前卫队"), 200f, 40f, () => SwitchTab(0)));
-            _tabBtns.Add(MakeButton(tabs.transform, L.T("招募卫队"), 200f, 40f, () => SwitchTab(1)));
+            _tabBtns.Add(MakeButton(tabs.transform, L.T("在册"), 200f, 40f, () => SwitchTab(0)));
+            _tabBtns.Add(MakeButton(tabs.transform, L.T("招募"), 200f, 40f, () => SwitchTab(1)));
             _tabBtns.Add(MakeButton(tabs.transform, L.T("外观"), 200f, 40f, () => SwitchTab(2)));
             // ★两个颜色都必须先有值★ 原版按钮克隆出来时 Image 可能挂在**子物体**上，
             //   GetComponent 取不到 —— 那样 _tabActive 会保持 default(Color) = 全透明，
@@ -725,7 +773,7 @@ namespace DynastyRetinue.UI
             lrt.anchorMin = new Vector2(0f, 0f); lrt.anchorMax = new Vector2(0f, 1f);
             lrt.pivot = new Vector2(0f, 0.5f);
             lrt.offsetMin = new Vector2(28f, 28f);
-            lrt.offsetMax = new Vector2(28f + 320f, -160f);
+            lrt.offsetMax = new Vector2(28f + 320f, -208f);
             PaintPanel(left.AddComponent<Image>(), RowTex(), VanillaSkin.RowBg);
             MakeSectionLabel(left.transform, L.T("分型"));
             _archContent = MakeScrollArea(left.transform, 44f);
@@ -736,12 +784,37 @@ namespace DynastyRetinue.UI
             rrt.anchorMin = new Vector2(0f, 0f); rrt.anchorMax = new Vector2(1f, 1f);
             rrt.pivot = new Vector2(0.5f, 0.5f);
             rrt.offsetMin = new Vector2(28f + 320f + 16f, 28f);
-            rrt.offsetMax = new Vector2(-28f, -160f);
+            rrt.offsetMax = new Vector2(-28f, -208f);
             PaintPanel(right.AddComponent<Image>(), RowTex(), VanillaSkin.RowBg);
             _titleRight = MakeSectionLabel(right.transform, L.T("请先选择左侧分型"));
             _unitContent = MakeScrollArea(right.transform, 44f);
         
-            SwitchTab(_tab);
+            _pageFleet = NewUI("PageFleet", panel.transform);
+            var fleetRt = (RectTransform)_pageFleet.transform;
+            fleetRt.anchorMin = Vector2.zero; fleetRt.anchorMax = Vector2.one;
+            fleetRt.offsetMin = new Vector2(28f, 28f);
+            fleetRt.offsetMax = new Vector2(-28f, -156f);
+            SwitchSection(_section);
+        }
+
+        private static void SwitchSection(int section)
+        {
+            _section = section == 1 ? 1 : 0;
+            _confirmUid = null;
+            if (_groundTabs != null) _groundTabs.SetActive(_section == 0);
+            if (_pageFleet != null) _pageFleet.SetActive(_section == 1);
+            if (_section == 1 && !_fleetBuilt && _pageFleet != null)
+            {
+                FleetPanel.Build(_pageFleet.transform, RefreshProfitFactor);
+                _fleetBuilt = true;
+            }
+            for (int i = 0; i < _sectionBtns.Count; i++)
+            {
+                var image = _sectionBtns[i] != null ? _sectionBtns[i].GetComponentInChildren<Image>() : null;
+                if (image != null) image.color = i == _section ? _tabActive : _tabNormal;
+            }
+            SwitchTab(_tab, false);
+            Refresh();
         }
 
         // ------------------------------------------------------------- 当前卫队页
@@ -752,8 +825,8 @@ namespace DynastyRetinue.UI
             RectTransform brt = (RectTransform)box.transform;
             brt.anchorMin = new Vector2(0f, 0f); brt.anchorMax = new Vector2(1f, 1f);
             brt.pivot = new Vector2(0.5f, 0.5f);
-            brt.offsetMin = new Vector2(28f, 28f + 52f);   // 底部给操作条留 52
-            brt.offsetMax = new Vector2(-28f, -160f);
+            brt.offsetMin = new Vector2(28f, 132f);   // 操作条和留守状态说明
+            brt.offsetMax = new Vector2(-28f, -208f);
             PaintPanel(box.AddComponent<Image>(), RowTex(), VanillaSkin.RowBg);
             MakeSectionLabel(box.transform, L.T("在册卫兵"));
             _rosterContent = MakeScrollArea(box.transform, 44f);
@@ -769,23 +842,61 @@ namespace DynastyRetinue.UI
             art.anchorMin = art.anchorMax = new Vector2(1f, 0.5f);
             art.pivot = new Vector2(1f, 0.5f);
             art.anchoredPosition = new Vector2(-4f, 0f);
+            Button reserve = MakeButton(bar.transform, L.T("全部留守"), 160f, 40f,
+                delegate { OnReserve(null, true); });
+            var reserveRT = (RectTransform)reserve.transform;
+            reserveRT.anchorMin = reserveRT.anchorMax = reserveRT.pivot = new Vector2(0f, 0.5f);
+            reserveRT.anchoredPosition = new Vector2(4f, 0f);
+            Button deploy = MakeButton(bar.transform, L.T("全部出战"), 160f, 40f,
+                delegate { OnReserve(null, false); });
+            var deployRT = (RectTransform)deploy.transform;
+            deployRT.anchorMin = deployRT.anchorMax = deployRT.pivot = new Vector2(0f, 0.5f);
+            deployRT.anchoredPosition = new Vector2(176f, 0f);
+            _reserveReply = MakeLabel(parent, "", 16f, VanillaSkin.TextDim, TextAlignmentOptions.TopLeft);
+            var replyRT = (RectTransform)_reserveReply.transform;
+            replyRT.anchorMin = new Vector2(0f, 0f); replyRT.anchorMax = new Vector2(1f, 0f);
+            replyRT.offsetMin = new Vector2(32f, 78f); replyRT.offsetMax = new Vector2(-32f, 124f);
+            _reserveReply.overflowMode = TextOverflowModes.Overflow;
+            _reserveAllButton = reserve; _deployAllButton = deploy;
+        }
+
+        private static TextMeshProUGUI _reserveReply;
+        private static Button _reserveAllButton, _deployAllButton;
+        private static string _reserveResult = "";
+
+        private static void OnReserve(string uid, bool reserved)
+        {
+            string result;
+            GuardReserve.Request(uid, reserved, out result);
+            ShowReserveResult(result);
+        }
+
+        internal static void ShowReserveResult(string result)
+        {
+            if (_root == null) return;
+            _reserveResult = result ?? "";
+            RebuildRoster();
+            MarkLayerDirty();
         }
 
         /// <summary>切页。两页共用同一块区域，靠 SetActive 换。</summary>
-        private static void SwitchTab(int tab)
+        private static void SwitchTab(int tab, bool rebuild = true)
         {
             _tab = tab;
             // 换页就取消待确认的遣散 —— 否则回来时随手一点就把人删了
             _confirmUid = null;
-            if (_pageRoster  != null) _pageRoster.SetActive(tab == 0);
-            if (_pageRecruit != null) _pageRecruit.SetActive(tab == 1);
-            if (_pageLooks   != null) _pageLooks.SetActive(tab == 2);
+            if (_pageRoster  != null) _pageRoster.SetActive(_section == 0 && tab == 0);
+            if (_pageRecruit != null) _pageRecruit.SetActive(_section == 0 && tab == 1);
+            if (_pageLooks   != null) _pageLooks.SetActive(_section == 0 && tab == 2);
             for (int i = 0; i < _tabBtns.Count; i++)
             {
                 Image img = _tabBtns[i] != null ? _tabBtns[i].GetComponentInChildren<Image>() : null;
                 if (img != null) img.color = (i == tab) ? _tabActive : _tabNormal;
             }
+            if (_section != 0 || !rebuild) return;
+            RefreshProfitFactor();
             if (tab == 0) RebuildRoster();
+            else if (tab == 1) RebuildUnits();
             else if (tab == 2) RebuildLooks();
             MarkLayerDirty();
         }
@@ -795,12 +906,19 @@ namespace DynastyRetinue.UI
         {
             if (_rosterContent == null) return;
             ClearChildren(_rosterContent);
+            string reason;
+            bool editable = GuardReserve.CanRequest(out reason);
+            SetInteractable(_reserveAllButton, editable);
+            SetInteractable(_deployAllButton, editable);
+            if (_reserveReply != null) _reserveReply.text = !string.IsNullOrEmpty(_reserveResult)
+                ? _reserveResult : !editable ? reason
+                : L.T("留守保留卫兵及装备，仍占招募名额；出战状态随游戏存档保存。战斗中不可切换。");
 
             System.Collections.Generic.List<BaseUnitEntity> list = null;
             try { list = RetinueRegistry.All(); } catch (Exception e) { Main.LogError(e.Message); }
             if (list == null || list.Count == 0)
             {
-                MakeLabel(_rosterContent, L.T("还没有卫兵。去「招募卫队」页招一个。"), 20f,
+                MakeLabel(_rosterContent, L.T("还没有卫兵。去「招募」页招一个。"), 20f,
                           VanillaSkin.TextDim, TextAlignmentOptions.Left);
                 return;
             }
@@ -853,7 +971,7 @@ namespace DynastyRetinue.UI
             nameTxt.overflowMode = TextOverflowModes.Overflow;
             RectTransform nrt = (RectTransform)nameTxt.transform;
             nrt.anchorMin = new Vector2(0f, 0.46f); nrt.anchorMax = new Vector2(1f, 1f);
-            nrt.offsetMin = new Vector2(84f, 0f); nrt.offsetMax = new Vector2(-190f, -6f);
+            nrt.offsetMin = new Vector2(84f, 0f); nrt.offsetMax = new Vector2(-330f, -6f);
 
             TextMeshProUGUI subTxt = MakeLabel(row.transform, RosterSubtitle(g), 17f,
                                                VanillaSkin.TextDim, TextAlignmentOptions.Left);
@@ -861,7 +979,16 @@ namespace DynastyRetinue.UI
             subTxt.overflowMode = TextOverflowModes.Overflow;
             RectTransform srt = (RectTransform)subTxt.transform;
             srt.anchorMin = new Vector2(0f, 0f); srt.anchorMax = new Vector2(1f, 0.46f);
-            srt.offsetMin = new Vector2(84f, 6f); srt.offsetMax = new Vector2(-190f, 0f);
+            srt.offsetMin = new Vector2(84f, 6f); srt.offsetMax = new Vector2(-330f, 0f);
+            bool reserved = GuardReserve.IsReserved(g);
+            subTxt.text = (reserved ? L.T("留守中") : L.T("出战中")) + "　" + subTxt.text;
+            Button status = MakeButton(row.transform, reserved ? L.T("出战") : L.T("留守"),
+                130f, 36f, delegate { OnReserve(uid, !reserved); });
+            var statusRT = (RectTransform)status.transform;
+            statusRT.anchorMin = statusRT.anchorMax = statusRT.pivot = new Vector2(1f, 0.5f);
+            statusRT.anchoredPosition = new Vector2(-176f, 0f);
+            string reserveReason;
+            SetInteractable(status, GuardReserve.CanRequest(out reserveReason));
 
             // ★遣散要点两次★ 这一步不可撤销（卫兵连同身上的装备一起没），
             //   而按钮就排在每一行的同一个位置 —— 手滑的代价太大。
@@ -929,7 +1056,7 @@ namespace DynastyRetinue.UI
             brt.anchorMin = new Vector2(0f, 0f); brt.anchorMax = new Vector2(1f, 1f);
             brt.pivot = new Vector2(0.5f, 0.5f);
             brt.offsetMin = new Vector2(28f, 28f);
-            brt.offsetMax = new Vector2(-28f, -160f);
+            brt.offsetMax = new Vector2(-28f, -208f);
             PaintPanel(box.AddComponent<Image>(), RowTex(), VanillaSkin.RowBg);
             MakeSectionLabel(box.transform, L.T("外观"));
             _looksContent = MakeScrollArea(box.transform, 10f);
@@ -1262,7 +1389,7 @@ namespace DynastyRetinue.UI
                     //   （作者要求「关闭招募他们的选项」）。联机下 Active 恒真，不会隐藏。
                     if (WeaponGate.IsRecruitBlocked(ed.UnitId)) continue;
                     string sub = EliteSubtitle(_selected, ed);
-                    AddUnitRow(ed.UnitId, ed.Name, sub, _selected, ed);
+                    AddUnitRow(ed.UnitId, L.T(ed.Name), sub, _selected, ed);
                 }
             }
             ReapplyLayer();   // 立即补：我们自己 new 的子物体
@@ -1568,7 +1695,7 @@ namespace DynastyRetinue.UI
             // 但按钮不能点了没反应 —— 那看起来像坏了，实测用户就是这么反馈的。
             string who = elite != null ? elite.Name : "普通卫兵";
             // 日志固定中文（诊断用），界面那份单独走本地化
-            string whoShown = elite != null ? elite.Name : L.T("普通卫兵");
+            string whoShown = elite != null ? L.T(elite.Name) : L.T("普通卫兵");
             if (_titleRight != null)
                 _titleRight.text = L.F("「{0}」装备编辑属于第二阶段，尚未实现（当前用固定装备组：按玩家阶位发 T1/T2/T3）", whoShown);
             Main.Log("[装备] 改装备尚未实现（第二阶段）: archIndex=" + archIndex + " " + who);
@@ -1687,6 +1814,12 @@ namespace DynastyRetinue.UI
 
         /// <summary>标记"这次改动之后可能有新的 TMP 子网格"，由 UiHost 连补几帧。</summary>
         internal static void MarkLayerDirty() { _layerDirty = 3; }
+
+        /// <summary>只补当前窗口的动态控件层级，不重新搜索场景 Canvas。</summary>
+        internal static void ReapplyLayer(Transform root)
+        {
+            if (root != null) SetLayerRecursive(root, UiLayer);
+        }
 
         internal static void ReapplyLayer()
         {

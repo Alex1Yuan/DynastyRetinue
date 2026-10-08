@@ -160,16 +160,19 @@ namespace DynastyRetinue
             private static bool Prepare() { return TargetMethod() != null; }
 
             /// <summary>返回 false = 跳过这件武器的美术装配。</summary>
-            private static bool Prefix(object weaponBP, bool isEquip)
+            private static bool Prefix(object __instance, object weaponBP, bool isEquip)
             {
                 try
                 {
                     if (!Main.Enabled || Main.Settings == null || !Main.Settings.ShipArtPreferLance) return true;
                     if (!isEquip || weaponBP == null) return true;   // 卸装永远放行
 
-                    var ship = Game.Instance != null && Game.Instance.Player != null
-                             ? (object)Game.Instance.Player.PlayerShip : null;
-                    if (ship == null) return true;
+                    // EquipWeapon 是所有舰共用方法，必须从本次 StarshipView 反查实际 owner；
+                    // 旧版恒拿 PlayerShip，会用玩家的冲突表误抑制敌舰/僚舰美术。
+                    var view = __instance as UnityEngine.Component;
+                    var uev = view != null ? Get(view, "UnitEntityView") as UnityEngine.Component : null;
+                    var ship = uev != null ? Get(uev, "Data") as Kingmaker.EntitySystem.Entities.StarshipEntity : null;
+                    if (!SpaceEscortService.IsOurShip(ship)) return true;
 
                     var win = Winners(ship);
                     if (win == null || win.Count == 0) return true;   // 没有争用

@@ -96,7 +96,7 @@ namespace DynastyRetinue
         /// <summary>本地化 key。文案不走反射写字段（LocalizedString 根本没有缓存字段，
         /// 它每次都去 LocalizationManager.CurrentPack 查表），改成 Harmony 钩查表函数。</summary>
         public const string TextKey = "dynasty_recruit_answer";
-        public const string TextValue = "（护卫队）关于我的护卫队……";
+        public const string TextValue = "（卫队）关于地面卫队与护航舰队的事宜……";
 
         /// <summary>
         /// 让本地化查表认识我们的 key。

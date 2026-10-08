@@ -366,9 +366,10 @@ namespace DynastyRetinue
         /// 为什么会丢：这些 Part 全类零 [JsonProperty]，而序列化器是 OptIn
         /// （OptInContractResolver），存档里只剩一个空壳 {"$id":..,"$type":..}。
         /// </summary>
-        public static void ApplyRuntimeState(BaseUnitEntity g, BaseUnitEntity leader)
+        public static void ApplyRuntimeState(BaseUnitEntity g, BaseUnitEntity leader, bool deploymentOnly = false)
         {
             if (g == null) return;
+            if (GuardReserve.IsReserved(g)) { GuardReserve.Hide(g); return; }
 
             // a0) 普通灵能卫的原版底盘 OfficersDeckGuardAstro 是舰桥站桩 NPC：
             //     BlueprintUnit.WarhammerInitialAPBlue=0、Yellow=6。我们以前只看了它的
@@ -382,6 +383,11 @@ namespace DynastyRetinue
             //     不在这里灌满；原版会在 PrepareForNewTurn 中按修正后的 ModifiedValue 正常重算。
             try { RepairOrdinaryPsykerMovement(g); }
             catch (Exception e) { Main.LogError("灵能卫移动力自愈: " + e.Message); }
+
+            // The gunner has 5 native MP, but OnPosition reapplies CantMove on its turns.
+            // Remove the encounter-specific source and any saved buff on this guard only.
+            try { GuardMovementRepair.Repair(g); }
+            catch (Exception e) { Main.LogError("连射卫移动力自愈: " + e.Message); }
 
             // a) IsInGame —— SceneLoader.cs:1490 在区域卸载时无条件重置为
             //    Player.Party.Contains(...)，卫兵不在队伍里 ⇒ 变 false，必须自己置回
@@ -418,11 +424,13 @@ namespace DynastyRetinue
             //    ★ 这是 v0.0.x 一直存在但没测出来的 bug：读档后士气隔离只剩敌方半边。
             if (Main.Settings.IsolateMomentum)
             {
-                try { g.GetMechanicFeature(MechanicsFeatureType.DeathAndTraumasDoesNotAffectMomentum).Retain(); }
+                try { if (!g.GetMechanicFeature(MechanicsFeatureType.DeathAndTraumasDoesNotAffectMomentum))
+                    g.GetMechanicFeature(MechanicsFeatureType.DeathAndTraumasDoesNotAffectMomentum).Retain(); }
                 catch (Exception e) { Main.LogError("士气隔离: " + e.Message); }
             }
             // 保险：ForceAIControl 的检查早于 companion 分支，双保险防止变可直控
-            try { g.GetMechanicFeature(MechanicsFeatureType.ForceAIControl).Retain(); }
+            try { if (!g.GetMechanicFeature(MechanicsFeatureType.ForceAIControl))
+                g.GetMechanicFeature(MechanicsFeatureType.ForceAIControl).Retain(); }
             catch (Exception e) { Main.LogError("ForceAIControl: " + e.Message); }
 
             // c1b) 缠斗中允许开火。
@@ -439,7 +447,8 @@ namespace DynastyRetinue
             // 关掉的话上面那两条死路就是卫兵的常态，而那不是"更硬核"，只是"不会打架"。
             if (Main.Settings.GuardsCanShootInMelee)
             {
-                try { g.GetMechanicFeature(MechanicsFeatureType.CanShootInMelee).Retain(); }
+                try { if (!g.GetMechanicFeature(MechanicsFeatureType.CanShootInMelee))
+                    g.GetMechanicFeature(MechanicsFeatureType.CanShootInMelee).Retain(); }
                 catch (Exception e) { Main.LogError("CanShootInMelee: " + e.Message); }
             }
 
@@ -480,14 +489,15 @@ namespace DynastyRetinue
             //      CustomName 是 [JsonProperty] 的**裸 string**，进存档但不产生 AssetId ——
             //      卸载 mod 后它只是个陌生字段，不会让反序列化失败。原版自己也走这条路
             //      给宠物改名（SetPetCustomNameGameCommand.cs:55）。
-            try { ApplyName(g); } catch (Exception e) { Main.LogError("改名: " + e.Message); }
+            if (!deploymentOnly)
+                try { ApplyName(g); } catch (Exception e) { Main.LogError("改名: " + e.Message); }
 
             // d) 按当前阶位补升级 —— 这是 v0.1.2 的核心改动。
             //    原版 Player.GainPartyExperience（Player.cs:1079-1084）会给 AllCharacters 里
             //    Master==null 且经验低于主角的单位发**全额**队伍经验，卫兵三个条件全中。
             //    但 ApplyChain 原来只在 SpawnOne 调一次 ⇒ 经验一路涨却没人消费，
             //    T1 招的卫兵到 T3 还卡在 15 级。挪到这里，每次区域加载按当前阶位重算上限再升。
-            if (Main.Settings.AutoLevelUp && leader != null)
+            if (!deploymentOnly && Main.Settings.AutoLevelUp && leader != null)
             {
                 try
                 {
@@ -510,7 +520,7 @@ namespace DynastyRetinue
 
                     // 种族覆盖必须在升级之前 —— 种族门控的天赋要靠它才会出现在候选里。
                     // SetRace 是实体级（PartUnitProgression.cs:196），不动蓝图。
-                    if (ed != null && !string.IsNullOrEmpty(ed.RaceId))
+                    if (!GuardGrowth.RestrictBootstrap(g) && ed != null && !string.IsNullOrEmpty(ed.RaceId))
                     {
                         try
                         {
@@ -554,7 +564,8 @@ namespace DynastyRetinue
                     // ★1.7.75 机械教线：装上召唤机仆能力★
                     //   放在装配链之后，因为它要读等级/精英身份来决定召唤普通机仆还是战斗机仆。
                     //   幂等，重复调用不会叠加。
-                    try { ServitorSummon.EnsureGranted(g); } catch { }
+                    if (!GuardGrowth.RestrictBootstrap(g))
+                        try { ServitorSummon.EnsureGranted(g); } catch { }
 
                     if (g.Progression.CharacterLevel != lvBefore)
                         Main.Log("  成长: lv" + lvBefore + " -> " + g.Progression.CharacterLevel
@@ -566,7 +577,7 @@ namespace DynastyRetinue
             // d2) 装备 —— 必须在补升级**之后**：装备的 CanBeEquippedBy 可能有等级要求。
             //     精英发毕业套装、普通发玩家自配的那套，由 GearTool 内部判定；
             //     自带幂等判据，重复调用不会叠加。
-            try
+            if (!deploymentOnly) try
             {
                 int ai2 = RetinueRegistry.ArchetypeOf(g);
                 var arch2 = Archetypes.Get(ai2 >= 0 ? ai2 : Main.Settings.ArchetypeIndex);
@@ -590,6 +601,13 @@ namespace DynastyRetinue
                 }
                 catch (Exception e) { Main.LogError("Follow: " + e.Message); }
             }
+
+            // Cross-scene cold-load restores NPC-derived modifiers before the area CR is ready.
+            // Refresh the existing MobStatManager only, after growth/equipment/faction restoration;
+            // independent of AutoLevelUp and growth mode. Returning from reserve also needs it:
+            // reserved guards skipped area restoration, then deploy through deploymentOnly=true.
+            try { GuardGrowth.RefreshExistingMobStats(g); }
+            catch (Exception e) { Main.LogError("卫兵原生属性刷新: " + e.Message); }
         }
 
         /// <summary>
